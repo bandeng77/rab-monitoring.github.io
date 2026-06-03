@@ -4,9 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>RAB Pro | Ultimate Budget Tracker</title>
+
+  <!-- ==================== GATEKEEPER AUTOMATIC REDIRECT ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Mencegat render halaman sejak awal jika token tidak valid / belum login
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+
+  <!-- ==================== EXTERNAL LIBS & DEPENDENCIES ==================== -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
@@ -217,6 +240,7 @@
     <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
   </div>
 
+  <!-- Modules Context Containers -->
   <div id="dashboardPage" class="page">
     <div class="cards" id="cardsContainer"></div>
     <div class="section">
@@ -401,10 +425,12 @@
   </div>
 </div>
 
+<!-- Overlays Modals Layouts -->
 <div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Project Assignment Baru</h3><div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div><div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div><div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div></div></div>
 <div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Komponen Struktur RAB</h3><div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div><div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
 <div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div></div></div>
 
+<!-- MODAL USER MANAGEMENT -->
 <div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Daftarkan Pengguna Sistem Baru</h3><div class="form-group"><label>Alamat Email Pengguna</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div></div></div>
 
 <script type="module" src="app.js"></script>
