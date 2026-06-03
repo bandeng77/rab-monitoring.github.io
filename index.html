@@ -40,27 +40,30 @@
       color: transparent;
     }
 
-    .role-context {
+    .user-profile-box {
       background: rgba(255, 255, 255, 0.1);
-      padding: 12px;
-      border-radius: 16px;
+      padding: 14px;
+      border-radius: 20px;
       margin-bottom: 25px;
       font-size: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .role-context label {
-      display: block;
-      margin-bottom: 6px;
-      color: #cbd5e1;
-      font-weight: 500;
-    }
-    .role-context select {
-      width: 100%;
-      padding: 8px;
-      border-radius: 8px;
-      background: #1e293b;
+    .user-profile-box .user-email {
+      font-weight: 600;
       color: #fff;
-      border: 1px solid #475569;
-      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .user-profile-box .user-role {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
     }
 
     .sidebar ul { list-style: none; }
@@ -79,40 +82,25 @@
     .sidebar ul li.active { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; box-shadow: 0 6px 14px rgba(59,130,246,0.3); }
     .sidebar ul li.restricted { display: none !important; }
 
-    .main {
-      margin-left: 280px;
-      width: calc(100% - 280px);
-      padding: 28px 36px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    .header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #1e293b, #3b82f6);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .btn {
-      padding: 10px 24px;
-      border-radius: 40px;
-      border: none;
-      font-weight: 600;
+    .btn-logout-sidebar {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 16px;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      transition: 0.25s;
+      font-weight: 600;
+      transition: 0.2s;
     }
+    .btn-logout-sidebar:hover { background: #ef4444; color: white; }
+
+    .main { margin-left: 280px; width: calc(100% - 280px); padding: 28px 36px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+    .header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #1e293b, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+    .btn { padding: 10px 24px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.25s; }
     .btn-primary { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
     .btn-success { background: linear-gradient(95deg, #10b981, #34d399); color: white; }
@@ -122,52 +110,16 @@
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 24px;
-      margin-bottom: 36px;
-    }
-    .card {
-      background: rgba(255,255,255,0.95);
-      padding: 24px 22px;
-      border-radius: 32px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
-      transition: 0.3s;
-    }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px; }
+    .card { background: rgba(255,255,255,0.95); padding: 24px 22px; border-radius: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: 0.3s; }
     .card:hover { transform: translateY(-6px); }
     .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
     .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    .section {
-      background: rgba(255,255,255,0.92);
-      padding: 28px 32px;
-      border-radius: 36px;
-      margin-bottom: 32px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
-    }
-    .section h2 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: #1f2a48;
-    }
+    .section { background: rgba(255,255,255,0.92); padding: 28px 32px; border-radius: 36px; margin-bottom: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); }
+    .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1f2a48; }
 
-    .info-box {
-      background: #eef2ff;
-      padding: 16px;
-      border-radius: 24px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-      color: #3b82f6;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
+    .info-box { background: #eef2ff; padding: 16px; border-radius: 24px; margin-bottom: 16px; font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
     th { background: #f1f5f9; font-weight: 700; color: #334155; }
@@ -187,7 +139,6 @@
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    /* FILE MANAGER ARCHITECTURE STYLE - TREE HIERARCHY */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -203,7 +154,6 @@
     .file-node .delete-file-btn:hover { color: #dc2626; transform: scale(1.2); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
-    /* MODAL LAYOUTS */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; }
     .modal-overlay.active { visibility: visible; opacity: 1; }
     .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
@@ -215,7 +165,6 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
 
-    /* NOTIFIKASI POP-UP ANIMASI ELEGAN */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
     .notify-popup.active { transform: translateX(0); }
     .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
@@ -242,13 +191,9 @@
 <div class="sidebar">
   <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
   
-  <div class="role-context">
-    <label><i class="fas fa-user-shield"></i> Peran Pengguna:</label>
-    <select id="roleSimulator">
-      <option value="Administrator">Administrator</option>
-      <option value="Finance">Finance</option>
-      <option value="Project Manager">Project Manager</option>
-    </select>
+  <div class="user-profile-box">
+    <div class="user-email" id="sbUserEmail">Loading...</div>
+    <div class="user-role" id="sbUserRole">Peran</div>
   </div>
 
   <ul id="sidebarMenu">
@@ -262,6 +207,8 @@
     <li data-page="upload-document"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
     <li data-page="user-management"><i class="fas fa-users"></i> Manajemen User</li>
   </ul>
+
+  <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
 </div>
 
 <div class="main">
@@ -442,11 +389,11 @@
 
   <div id="userManagementPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-users"></i> Akun Manajemen Sistem</h2>
-      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
+      <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
+      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Daftarkan User Baru</button>
       <table style="margin-top:20px;">
         <thead>
-          <tr><th>Username</th><th>Akses Peran Menu</th><th>Status</th><th>Action</th></tr>
+          <tr><th>Email Pengguna</th><th>Akses Peran Menu</th><th>Tanggal Dibuat</th><th>Action</th></tr>
         </thead>
         <tbody id="userTableBody"></tbody>
       </table>
@@ -457,847 +404,10 @@
 <div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Project Assignment Baru</h3><div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div><div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div><div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div></div></div>
 <div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Komponen Struktur RAB</h3><div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div><div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
 <div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div></div></div>
-<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Buat Akun Kredensial Pengguna Baru</h3><div class="form-group"><label>Username</label><input type="text" id="modalUsername" placeholder="Contoh: andri_pm"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses</label><select id="modalRole"><option>Administrator</option><option>Finance</option><option>Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Buat Akun</button></div></div></div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<!-- MODAL MANAJEMEN USER REALTIME DATABASE + FIREBASE CREATION -->
+<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Daftarkan Pengguna Sistem Baru</h3><div class="form-group"><label>Alamat Email</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div><div class="form-group"><label>Kata Sandi Awal</label><input type="password" id="modalUserPassword" placeholder="Minimal 6 karakter"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div></div></div>
 
-  // ==================== URL DOMAIN BACKEND NODE.JS ====================
-  const API_BASE_URL = "https://api.genetek.co.id"; 
-
-  const firebaseConfig = {
-    databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  let projects = [];
-  let rabItems = [];
-  let claims = [];
-  let users = [];
-  let truenasFiles = [];
-
-  let currentSelectedProjectId = null;
-  let currentRole = "Administrator";
-
-  const rolePermissions = {
-    "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'claim-request', 'monitoring', 'reports', 'upload-document', 'user-management'],
-    "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document'],
-    "Project Manager": ['dashboard', 'master-project', 'import-rab', 'claim-request', 'monitoring', 'upload-document']
-  };
-
-  function triggerNotification(message, isSuccess = true) {
-    const popup = document.getElementById('customPopupNotice');
-    const icon = document.getElementById('noticeIcon');
-    const msgSpan = document.getElementById('noticeMessage');
-
-    msgSpan.innerText = message;
-    if(isSuccess) {
-      popup.className = "notify-popup active success";
-      icon.className = "fas fa-check-circle";
-    } else {
-      popup.className = "notify-popup active error";
-      icon.className = "fas fa-exclamation-circle";
-    }
-
-    setTimeout(() => { popup.classList.remove('active'); }, 4500);
-  }
-
-  function formatRp(val) { 
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
-  }
-  
-  function getBadge(real, budget) { 
-    if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
-    if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
-    return '<span class="badge badge-success">Aman</span>'; 
-  }
-
-  function enforceRoleVisibility() {
-    const allowedPages = rolePermissions[currentRole] || [];
-    document.querySelectorAll('#sidebarMenu li').forEach(li => {
-      const pageKey = li.getAttribute('data-page');
-      if (allowedPages.includes(pageKey)) {
-        li.classList.remove('restricted');
-      } else {
-        li.classList.add('restricted');
-      }
-    });
-    
-    const activeLi = document.querySelector('#sidebarMenu li.active');
-    if (activeLi && activeLi.classList.contains('restricted')) {
-       document.querySelector('#sidebarMenu li[data-page="dashboard"]').click();
-    }
-  }
-
-  function initCloudDatabaseListeners() {
-    onValue(ref(db, 'projects'), (snapshot) => {
-      const data = snapshot.val();
-      projects = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-      updateWholeUI();
-    });
-
-    onValue(ref(db, 'rabItems'), (snapshot) => {
-      const data = snapshot.val();
-      rabItems = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-      updateWholeUI();
-    });
-
-    onValue(ref(db, 'claims'), (snapshot) => {
-      const data = snapshot.val();
-      claims = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-      updateWholeUI();
-    });
-
-    onValue(ref(db, 'users'), (snapshot) => {
-      const data = snapshot.val();
-      users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-      updateWholeUI();
-    });
-
-    onValue(ref(db, 'truenasFiles'), (snapshot) => {
-      const data = snapshot.val();
-      truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-      renderTreeHierarchy();
-    });
-  }
-
-  function updateWholeUI() {
-    renderDashboard();
-    renderMasterProject();
-    renderApprovalList();
-    renderClaimView();
-    renderMonitoringTable();
-    renderReports();
-    renderUsersTable();
-    refreshGraphicCharts();
-    populateDropdownMenus();
-  }
-
-  function populateDropdownMenus() {
-    const upSel = document.getElementById('uploadProjectSelect');
-    if (upSel) {
-      const valBackup = upSel.value;
-      upSel.innerHTML = '<option value="">-- Pilih Project Target --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-      if (valBackup) upSel.value = valBackup;
-    }
-  }
-
-  function renderDashboard() {
-    const totalPaguGlobal = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
-    const totalRealisasiGlobal = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
-    const overCount = rabItems.filter(i => i.realisasi > i.budget).length;
-
-    const cardsContainer = document.getElementById('cardsContainer');
-    if (cardsContainer) {
-      cardsContainer.innerHTML = `
-        <div class="card"><h3>Project Aktif</h3><p>${projects.length}</p></div>
-        <div class="card"><h3>Total Budget</h3><p>${formatRp(totalPaguGlobal)}</p></div>
-        <div class="card"><h3>Total Realisasi</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
-        <div class="card"><h3>Item Over Anggaran</h3><p style="color:#ef4444">${overCount}</p></div>
-      `;
-    }
-
-    const tbody = document.getElementById('monitoringBody');
-    if (tbody) {
-      const limitedSorted = [...rabItems].sort((a,b) => b.budget - a.budget).slice(0, 6);
-      tbody.innerHTML = limitedSorted.map(i => {
-        const p = projects.find(proj => proj.id === i.projectId);
-        return `<tr><td>${p ? p.name : 'Unassigned'}</td><td>${i.itemName}</td><td>${formatRp(i.budget)}</td><td>${formatRp(i.realisasi)}</td><td>${getBadge(i.realisasi, i.budget)}</td></tr>`;
-      }).join('');
-    }
-  }
-
-  function renderMasterProject() {
-    const tbody = document.getElementById('masterProjectBody');
-    if (tbody) {
-      tbody.innerHTML = projects.map(p => {
-        const totalAllocatedToSubItems = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
-        const remainingPagu = p.totalBudget - totalAllocatedToSubItems;
-
-        return `<tr>
-          <td><strong>${p.name}</strong></td>
-          <td>${p.client}</td>
-          <td>${formatRp(p.totalBudget)}</td>
-          <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
-          <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
-        </tr>`;
-      }).join('');
-
-      tbody.querySelectorAll('.btn-danger').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-id');
-          if (confirm('Hapus master project beserta struktur item di dalamnya?')) {
-             remove(ref(db, `projects/${id}`));
-             rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
-          }
-        });
-      });
-    }
-
-    const filter = document.getElementById('filterProjectRAB');
-    if (filter) {
-      const prevFilterValue = currentSelectedProjectId;
-      filter.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-      if (prevFilterValue) filter.value = prevFilterValue;
-    }
-    renderRABItemsSubTable();
-  }
-
-  function renderRABItemsSubTable() {
-    const tbody = document.getElementById('rabItemsMasterBody');
-    if (!tbody) return;
-    
-    if (!currentSelectedProjectId) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Silakan tentukan filter project terlebih dahulu.</td></tr>';
-      return;
-    }
-
-    const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item komponen di dalam project ini.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(i => `
-      <tr>
-        <td>${i.itemName}</td>
-        <td>${formatRp(i.budget)}</td>
-        <td>${formatRp(i.realisasi)}</td>
-        <td>${formatRp(i.budget - i.realisasi)}</td>
-        <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.btn-danger').forEach(btn => {
-      btn.addEventListener('click', () => {
-         const itemId = btn.getAttribute('data-id');
-         if (confirm('Hapus parameter anggaran item ini?')) {
-           remove(ref(db, `rabItems/${itemId}`));
-         }
-      });
-    });
-  }
-
-  document.getElementById('filterProjectRAB').addEventListener('change', (e) => {
-    currentSelectedProjectId = e.target.value;
-    renderRABItemsSubTable();
-  });
-
-  document.getElementById('saveProjectBtn').addEventListener('click', () => {
-    const name = document.getElementById('modalProjectName').value.trim();
-    const client = document.getElementById('modalClientName').value.trim();
-    const totalBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
-
-    if (!name || !client || totalBudget <= 0) { triggerNotification('Form harus diisi lengkap & valid!', false); return; }
-
-    const newProjectRef = push(ref(db, 'projects'));
-    set(newProjectRef, { name, client, totalBudget }).then(() => {
-      document.getElementById('projectModal').classList.remove('active');
-      document.getElementById('modalProjectName').value = '';
-      document.getElementById('modalClientName').value = '';
-      document.getElementById('modalBudget').value = '';
-      triggerNotification('Master project berhasil ditambahkan!');
-    });
-  });
-
-  document.getElementById('openRABModalBtn').addEventListener('click', () => {
-    if (!currentSelectedProjectId) { triggerNotification('Pilih filter project terlebih dahulu!', false); return; }
-    const currentProj = projects.find(p => p.id === currentSelectedProjectId);
-    document.getElementById('rabModalProjectName').value = currentProj ? currentProj.name : '';
-    document.getElementById('rabItemName').value = '';
-    document.getElementById('rabBudget').value = '';
-    document.getElementById('rabModal').classList.add('active');
-  });
-
-  document.getElementById('saveRabBtn').addEventListener('click', () => {
-    const itemName = document.getElementById('rabItemName').value.trim();
-    const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
-
-    if (!itemName || budget <= 0) { triggerNotification('Isi data nominal komponen dengan valid!', false); return; }
-
-    const newRabRef = push(ref(db, 'rabItems'));
-    set(newRabRef, {
-      projectId: currentSelectedProjectId,
-      itemName,
-      budget,
-      realisasi: 0
-    }).then(() => {
-      document.getElementById('rabModal').classList.remove('active');
-      triggerNotification('Item komponen RAB berhasil disimpan!');
-    });
-  });
-
-  let claimItemsListArray = [];
-  function renderClaimItemsBuildLayout() {
-    const container = document.getElementById('itemList');
-    if (!container) return;
-    
-    const targetProjId = document.getElementById('claimProjectSelect').value;
-    const availableItems = rabItems.filter(i => i.projectId === targetProjId);
-
-    if (claimItemsListArray.length === 0) {
-      container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">Belum ada baris item klaim. Klik Tambah Baris Item.</div>';
-      return;
-    }
-
-    container.innerHTML = claimItemsListArray.map((item, idx) => `
-      <div class="item-row">
-        <select data-idx="${idx}" class="item-sel-node">
-          <option value="">-- Tentukan Item RAB --</option>
-          ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
-        </select>
-        <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Nominal Rp" value="${item.nominal || ''}" />
-        <button type="button" class="remove-item" data-idx="${idx}"><i class="fas fa-trash"></i></button>
-      </div>
-    `).join('');
-
-    container.querySelectorAll('.item-sel-node').forEach(sel => {
-      sel.addEventListener('change', (e) => { claimItemsListArray[parseInt(sel.dataset.idx)].itemId = e.target.value; });
-    });
-    container.querySelectorAll('.item-nom-node').forEach(inp => {
-      inp.addEventListener('change', (e) => { claimItemsListArray[parseInt(inp.dataset.idx)].nominal = parseFloat(e.target.value) || 0; });
-    });
-    container.querySelectorAll('.remove-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        claimItemsListArray.splice(parseInt(btn.dataset.idx), 1);
-        renderClaimItemsBuildLayout();
-      });
-    });
-  }
-
-  function renderClaimView() {
-    const selectPr = document.getElementById('claimProjectSelect');
-    if (selectPr) {
-      const backupSelectedVal = selectPr.value;
-      selectPr.innerHTML = '<option value="">-- Pilih Asosiasi Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-      if (backupSelectedVal) selectPr.value = backupSelectedVal;
-    }
-
-    const historyBody = document.getElementById('historyClaimBody');
-    if (historyBody) {
-      historyBody.innerHTML = claims.map(c => {
-        const p = projects.find(pr => pr.id === c.projectId);
-        const summaries = c.items ? c.items.map(ci => {
-          const r = rabItems.find(rab => rab.id === ci.itemId);
-          return `${r ? r.itemName : 'Eksternal Component'}: ${formatRp(ci.nominal)}`;
-        }).join('<br>') : '-';
-
-        let classBadge = 'badge-warning';
-        if (c.status === 'approved') classBadge = 'badge-success';
-        if (c.status === 'rejected') classBadge = 'badge-danger';
-
-        return `<tr>
-          <td><strong>${p ? p.name : 'Unknown'}</strong></td>
-          <td style="font-size:0.8rem; color:#475569;">${summaries}</td>
-          <td style="font-weight:700;">${formatRp(c.totalNominal)}</td>
-          <td>${c.vendor}</td>
-          <td><span class="badge ${classBadge}">${c.status}</span></td>
-          <td>${c.tanggal}</td>
-        </tr>`;
-      }).join('');
-    }
-  }
-
-  document.getElementById('claimProjectSelect').addEventListener('change', () => {
-     claimItemsListArray = [];
-     renderClaimItemsBuildLayout();
-  });
-  document.getElementById('addItemBtn').addEventListener('click', () => {
-     if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Pilih asosiasi project terlebih dahulu!', false); return; }
-     claimItemsListArray.push({ itemId: '', nominal: 0 });
-     renderClaimItemsBuildLayout();
-  });
-
-  document.getElementById('submitClaimMainBtn').addEventListener('click', () => {
-    const projectId = document.getElementById('claimProjectSelect').value;
-    const vendor = document.getElementById('claimVendor').value.trim();
-    const tanggal = document.getElementById('claimDate').value;
-    const desc = document.getElementById('claimDesc').value;
-
-    const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0);
-    if (!projectId || validItems.length === 0 || !vendor || !tanggal) {
-      triggerNotification('Harap isi kelengkapan form klaim multi-item!', false);
-      return;
-    }
-
-    const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
-    const newClaimRef = push(ref(db, 'claims'));
-    
-    set(newClaimRef, {
-      projectId, vendor, tanggal, desc,
-      status: 'pending', totalNominal, items: validItems
-    }).then(() => {
-       claimItemsListArray = [];
-       document.getElementById('claimVendor').value = '';
-       document.getElementById('claimDesc').value = '';
-       renderClaimItemsBuildLayout();
-       triggerNotification('Pengajuan klaim berhasil dikirim ke pipeline!');
-    });
-  });
-
-  function renderApprovalList() {
-    const tbody = document.getElementById('approvalBody');
-    if (!tbody) return;
-
-    const pendingClaims = claims.filter(c => c.status === 'pending');
-    if (pendingClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Antrean persetujuan pipeline bersih.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = pendingClaims.map((c, idx) => {
-      const p = projects.find(pr => pr.id === c.projectId);
-      const names = c.items ? c.items.map(it => {
-         const r = rabItems.find(rab => rab.id === it.itemId);
-         return r ? r.itemName : 'Unknown';
-      }).join(', ') : '';
-
-      return `<tr>
-        <td>${idx+1}</td>
-        <td><strong>${p ? p.name : 'Unknown'}</strong></td>
-        <td>${names}</td>
-        <td style="font-weight:700; color:#2563eb;">${formatRp(c.totalNominal)}</td>
-        <td>${c.vendor}</td>
-        <td><span class="badge badge-warning">PENDING</span></td>
-        <td>
-          <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Setuju</button>
-          <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Tolak</button>
-        </td>
-      </tr>`;
-    }).join('');
-
-    tbody.querySelectorAll('.app-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const claimId = btn.getAttribute('data-id');
-        const targetObj = claims.find(c => c.id === claimId);
-        if (targetObj) {
-          targetObj.items.forEach(item => {
-             const matchedRab = rabItems.find(r => r.id === item.itemId);
-             if (matchedRab) {
-                const existingRealization = parseFloat(matchedRab.realisasi) || 0;
-                update(ref(db, `rabItems/${matchedRab.id}`), { realisasi: existingRealization + item.nominal });
-             }
-          });
-          update(ref(db, `claims/${claimId}`), { status: 'approved' }).then(() => {
-            triggerNotification('Klaim disetujui, anggaran realisasi diperbarui.');
-          });
-        }
-      });
-    });
-
-    tbody.querySelectorAll('.rej-btn').forEach(btn => {
-       btn.addEventListener('click', () => {
-         const claimId = btn.getAttribute('data-id');
-         update(ref(db, `claims/${claimId}`), { status: 'rejected' }).then(() => {
-           triggerNotification('Pengajuan klaim berhasil ditolak.', false);
-         });
-       });
-    });
-  }
-
-  function renderMonitoringTable() {
-    const tbody = document.getElementById('monitoringProjectBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = projects.map((p, index) => {
-      const relatedSubItems = rabItems.filter(i => i.projectId === p.id);
-      const computedBudgets = relatedSubItems.reduce((sum, i) => sum + i.budget, 0);
-      const computedRealizations = relatedSubItems.reduce((sum, i) => sum + i.realisasi, 0);
-      const balance = computedBudgets - computedRealizations;
-      const percentage = computedBudgets > 0 ? ((computedRealizations / computedBudgets) * 100).toFixed(1) : 0;
-
-      return `<tr class="project-row" data-id="${p.id}">
-        <td>${index+1}</td>
-        <td><span class="project-name-link"><i class="fas fa-chart-simple"></i> ${p.name}</span></td>
-        <td>${p.client}</td>
-        <td>${formatRp(computedBudgets)}</td>
-        <td>${formatRp(computedRealizations)}</td>
-        <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#475569'}">${formatRp(balance)}</td>
-        <td><strong>${percentage}%</strong></td>
-      </tr>`;
-    }).join('');
-
-    tbody.querySelectorAll('.project-row').forEach(row => {
-      row.addEventListener('click', () => {
-        const id = row.getAttribute('data-id');
-        const proj = projects.find(p => p.id === id);
-        const elements = rabItems.filter(i => i.projectId === id);
-
-        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> Komponen Konstruksi - ${proj ? proj.name : ''}`;
-        const detailBody = document.getElementById('detailRabBody');
-        
-        if (elements.length === 0) {
-          detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
-        } else {
-          detailBody.innerHTML = elements.map(i => `
-            <tr>
-              <td>${i.itemName}</td>
-              <td>${formatRp(i.budget)}</td>
-              <td>${formatRp(i.realisasi)}</td>
-              <td>${formatRp(i.budget - i.realisasi)}</td>
-              <td>${getBadge(i.realisasi, i.budget)}</td>
-            </tr>
-          `).join('');
-        }
-        document.getElementById('detailRabModal').classList.add('active');
-      });
-    });
-  }
-
-  function renderReports() {
-    const tbody = document.getElementById('laporanBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = projects.map(p => {
-       const insideItems = rabItems.filter(i => i.projectId === p.id);
-       const subBudget = insideItems.reduce((sum, i) => sum + i.budget, 0);
-       const subReal = insideItems.reduce((sum, i) => sum + i.realisasi, 0);
-       const diff = subBudget - subReal;
-       return `<tr>
-         <td><strong>${p.name}</strong></td>
-         <td>${formatRp(subBudget)}</td>
-         <td>${formatRp(subReal)}</td>
-         <td>${formatRp(diff)}</td>
-         <td><span class="badge ${diff < 0 ? 'badge-danger':'badge-success'}">${diff < 0 ? 'Over Budget':'On Track'}</span></td>
-       </tr>`;
-    }).join('');
-  }
-
-  function renderUsersTable() {
-    const tbody = document.getElementById('userTableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = users.map(u => `
-      <tr>
-        <td>${u.username}</td>
-        <td><strong>${u.role}</strong></td>
-        <td><span class="badge badge-success">ACTIVE</span></td>
-        <td><button class="btn btn-danger delete-usr-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}">Hapus</button></td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.delete-usr-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-         const uid = btn.getAttribute('data-id');
-         if (confirm('Hapus hak akses user ini?')) remove(ref(db, `users/${uid}`));
-      });
-    });
-  }
-
-  document.getElementById('saveUserBtn').addEventListener('click', () => {
-    const username = document.getElementById('modalUsername').value.trim();
-    const role = document.getElementById('modalRole').value;
-    if (!username) return;
-
-    const newUserRef = push(ref(db, 'users'));
-    set(newUserRef, { username, role, status: 'Active' }).then(() => {
-       document.getElementById('userModal').classList.remove('active');
-       document.getElementById('modalUsername').value = '';
-       triggerNotification('User baru berhasil didaftarkan.');
-    });
-  });
-
-  document.getElementById('processExcelBtn').addEventListener('click', () => {
-     const inputElement = document.getElementById('excelFileInput').files[0];
-     if (!inputElement) { triggerNotification('Pilih berkas spreadsheet excel terlebih dahulu!', false); return; }
-
-     const reader = new FileReader();
-     reader.onload = (e) => {
-        const rawBytes = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(rawBytes, {type: 'array'});
-        const targetSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const matrices = XLSX.utils.sheet_to_json(targetSheet, {header:1});
-
-        if (matrices.length < 2) return;
-        const columnHeaders = matrices[0].map(c => String(c||"").toLowerCase().trim());
-        const targetProjIndex = columnHeaders.findIndex(h => h.includes('project'));
-        const targetItemIndex = columnHeaders.findIndex(h => h.includes('item'));
-        const targetBudgetIndex = columnHeaders.findIndex(h => h.includes('budget'));
-
-        if (targetProjIndex === -1 || targetItemIndex === -1 || targetBudgetIndex === -1) {
-           triggerNotification('Struktur header salah! Wajib: NAMA_PROJECT, ITEM_RAB, BUDGET', false);
-           return;
-        }
-
-        let importStatsCount = 0;
-        for (let i = 1; i < matrices.length; i++) {
-           let targetProjName = String(matrices[i][targetProjIndex] || "").trim();
-           let targetItemName = String(matrices[i][targetItemIndex] || "").trim();
-           let cleanBudgetNum = parseFloat(String(matrices[i][targetBudgetIndex] || 0).replace(/[^0-9.-]/g, ''));
-
-           if (targetProjName && targetItemName && cleanBudgetNum > 0) {
-              let existProject = projects.find(p => p.name.toLowerCase() === targetProjName.toLowerCase());
-              
-              if (!existProject) {
-                 const generatedProjRef = push(ref(db, 'projects'));
-                 const keyGenerated = generatedProjRef.key;
-                 set(generatedProjRef, { name: targetProjName, client: 'Spreadsheet Auto Import', totalBudget: cleanBudgetNum * 2 });
-                 existProject = { id: keyGenerated };
-              }
-
-              const pushedRabRef = push(ref(db, 'rabItems'));
-              set(pushedRabRef, {
-                 projectId: existProject.id, itemName: targetItemName, budget: cleanBudgetNum, realisasi: 0
-              });
-              importStatsCount++;
-           }
-        }
-        triggerNotification(`Berhasil menyinkronkan ${importStatsCount} data dari Excel!`);
-     };
-     reader.readAsArrayBuffer(inputElement);
-  });
-
-  document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
-     const matricesData = [["NAMA_PROJECT", "ITEM_RAB", "BUDGET"], ["Smart Office Setup", "Cat6 Network Cabling", 7500000]];
-     const worksheet = XLSX.utils.aoa_to_sheet(matricesData);
-     const workbookObj = XLSX.utils.book_new();
-     XLSX.utils.book_append_sheet(workbookObj, worksheet, "RAB Template");
-     XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
-  });
-
-  // ==================== OPERASI BACKEND DISK POOL STORAGE TRUENAS ====================
-  document.getElementById('trueNasUploadForm').addEventListener('submit', function(e) {
-     e.preventDefault();
-     const fileInputElement = document.getElementById('trueNasFile');
-     const attachedProjectId = document.getElementById('uploadProjectSelect').value;
-     const targetFolderSelection = document.getElementById('uploadFolderSelect').value;
-
-     if (!attachedProjectId || fileInputElement.files.length === 0) {
-       triggerNotification('Data parameter berkas tidak valid!', false);
-       return;
-     }
-
-     const fileObj = fileInputElement.files[0];
-     const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
-     
-     const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}/${targetFolderSelection}`;
-
-     const dataPayload = new FormData();
-     dataPayload.append('path', serverStoragePath); 
-     dataPayload.append('file', fileObj);
-
-     fetch(`${API_BASE_URL}/upload`, {
-       method: 'POST',
-       body: dataPayload
-     })
-     .then(async response => {
-       if (!response.ok) {
-         const errorText = await response.text();
-         throw new Error(errorText || 'Server TrueNAS menolak unggahan berkas');
-       }
-       return response.json();
-     })
-     .then(data => {
-        triggerNotification('File sukses diunggah ke storage pool TrueNAS!');
-        
-        const pushedFileRef = push(ref(db, 'truenasFiles'));
-        set(pushedFileRef, {
-           projectId: attachedProjectId,
-           projectName: resolvedProjectObj.name,
-           folderType: targetFolderSelection,
-           fileName: fileObj.name,
-           uploadedAt: new Date().toLocaleString(),
-           fileUrl: `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(safeProjectDirName)}/${targetFolderSelection}/${encodeURIComponent(fileObj.name)}`,
-           fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
-        });
-        fileInputElement.value = '';
-     })
-     .catch(error => {
-        console.error("Upload fail:", error);
-        triggerNotification(`Gagal Upload: ${error.message || 'Koneksi Tunnel Terputus'}`, false);
-     });
-  });
-
-  window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
-    if(!confirm("Hapus file ini secara permanen dari penyimpanan TrueNAS?")) return;
-
-    fetch(`${API_BASE_URL}/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filePath: fullPath })
-    })
-    .then(async res => {
-      if(!res.ok) throw new Error("Gagal menghapus berkas fisik di TrueNAS");
-      return res.json();
-    })
-    .then(() => {
-      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-        triggerNotification("Berkas dibersihkan permanen dari penyimpanan.");
-      });
-    })
-    .catch(err => {
-      console.warn(err);
-      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-        triggerNotification("Metadata dibersihkan (File fisik sudah tidak ada).", false);
-      });
-    });
-  }
-
-  // ==================== FIX PREVIEW ENGINE DIRECTORY HIERARCHY ====================
-  function renderTreeHierarchy() {
-     const treeWrapper = document.getElementById('rootTreeContainer');
-     if (!treeWrapper) return;
-
-     if (projects.length === 0) {
-       treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> Master project kosong.</li>';
-       return;
-     }
-
-     let innerLayoutCodeHtml = `<li>
-       <span class="root-node"><i class="fas fa-server"></i> Storage Server: .../apps/rab/</span>
-       <ul class="nested-tree">`;
-
-     projects.forEach(p => {
-        const folderSanitizedName = p.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-        innerLayoutCodeHtml += `<li>
-          <span class="folder-node"><i class="fas fa-folder-open"></i> ${folderSanitizedName}</span>
-          <ul class="nested-tree">`;
-            
-            // Sub-Kategori: RAB_Awal
-            innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
-            innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
-                     .map(f => {
-                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
-                        return `<li class="file-node">
-                                  <i class="fas fa-file-pdf"></i> ${f.fileName} 
-                                  <div class="action-links">
-                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
-                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
-                                  </div>
-                                </li>`})
-                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
-            innerLayoutCodeHtml += `</ul></li>`;
-
-            // Sub-Kategori: Nota_Vendor
-            innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
-            innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
-                     .map(f => {
-                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
-                        return `<li class="file-node">
-                                  <i class="fas fa-file-invoice"></i> ${f.fileName} 
-                                  <div class="action-links">
-                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
-                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
-                                  </div>
-                                </li>`})
-                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
-            innerLayoutCodeHtml += `</ul></li>`;
-
-            // Sub-Kategori: BAP
-            innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
-            innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
-                     .map(f => {
-                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
-                        return `<li class="file-node">
-                                  <i class="fas fa-file-contract"></i> ${f.fileName} 
-                                  <div class="action-links">
-                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
-                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
-                                  </div>
-                                </li>`})
-                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
-            innerLayoutCodeHtml += `</ul></li>`;
-
-        innerLayoutCodeHtml += `</ul></li>`;
-     });
-
-     innerLayoutCodeHtml += `</ul></li>`;
-     treeWrapper.innerHTML = innerLayoutCodeHtml;
-  }
-
-  // ==================== ENGINE GRAFIK CHART.JS ====================
-  let mainBarChartInstance, systemLineReportChartInstance;
-  function refreshGraphicCharts() {
-    const barCtx = document.getElementById('budgetChart')?.getContext('2d');
-    if (barCtx) {
-       if (mainBarChartInstance) mainBarChartInstance.destroy();
-       mainBarChartInstance = new Chart(barCtx, {
-          type: 'bar',
-          data: {
-             labels: projects.map(p => p.name),
-             datasets: [
-               { label: 'Total Anggaran Pagu (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
-               { label: 'Realisasi Klaim (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
-             ]
-          },
-          options: { responsive: true }
-       });
-    }
-
-    const lineCtx = document.getElementById('laporanChart')?.getContext('2d');
-    if (lineCtx) {
-       if (systemLineReportChartInstance) systemLineReportChartInstance.destroy();
-       systemLineReportChartInstance = new Chart(lineCtx, {
-          type: 'line',
-          data: {
-             labels: projects.map(p => p.name),
-             datasets: [
-               { label: 'Kurva Pola Alokasi', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension:0.2 },
-               { label: 'Kurva Penyerapan Dana', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension:0.2 }
-             ]
-          },
-          options: { responsive: true }
-       });
-    }
-  }
-
-  const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
-  document.getElementById('openProjectModalBtn').addEventListener('click', () => projModalNode.classList.add('active'));
-  document.getElementById('openUserModalBtn').addEventListener('click', () => usrModalNode.classList.add('active'));
-  document.getElementById('closeModalBtn').addEventListener('click', () => projModalNode.classList.remove('active'));
-  document.getElementById('closeUserModalBtn').addEventListener('click', () => usrModalNode.classList.remove('active'));
-  document.getElementById('closeRabModalBtn').addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
-  document.getElementById('closeDetailModalBtn').addEventListener('click', () => detailModalNode.classList.remove('active'));
-
-  document.getElementById('roleSimulator').addEventListener('change', function(e) {
-     currentRole = e.target.value;
-     enforceRoleVisibility();
-  });
-
-  const applicationRoutingPagesMap = { 
-    dashboard: 'dashboardPage', 
-    'master-project': 'masterProjectPage', 
-    'import-rab': 'importRabPage', 
-    'approval-budget': 'approvalBudgetPage', 
-    'claim-request': 'claimRequestPage', 
-    monitoring: 'monitoringPage', 
-    reports: 'reportsPage', 
-    'upload-document': 'uploadDocumentPage',
-    'user-management': 'userManagementPage' 
-  };
-
-  document.querySelectorAll('#sidebarMenu li').forEach(li => {
-     li.addEventListener('click', () => {
-        if (li.classList.contains('restricted')) return;
-
-        document.querySelectorAll('#sidebarMenu li').forEach(l => l.classList.remove('active'));
-        li.classList.add('active');
-
-        const activePageKey = li.getAttribute('data-page');
-        Object.values(applicationRoutingPagesMap).forEach(p => document.getElementById(p)?.classList.add('hidden-section'));
-        
-        if (applicationRoutingPagesMap[activePageKey]) {
-           document.getElementById(applicationRoutingPagesMap[activePageKey]).classList.remove('hidden-section');
-        }
-        document.getElementById('pageTitle').innerHTML = `<i class="${li.querySelector('i').className}"></i> ${li.innerText.trim()}`;
-        
-        const actionButtonContext = document.getElementById('globalActionBtn');
-        if (activePageKey === 'master-project') {
-           actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
-           actionButtonContext.onclick = () => projModalNode.classList.add('active');
-        } else {
-           actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-           actionButtonContext.onclick = () => updateWholeUI();
-        }
-     });
-  });
-
-  initCloudDatabaseListeners();
-  enforceRoleVisibility();
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
