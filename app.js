@@ -750,3 +750,148 @@ function refreshGraphicCharts() {
 
 // ==================== USER MANAGEMENT ====================
 function renderUsersTable() {
+  const tbody = document.getElementById('userTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><strong>${u.email}</strong></td>
+      <td><span class="user-role" style="padding:4px 10px; background:#eef2ff; color:#2563eb; font-weight:700; border-radius:10px;">${u.role}</span></td>
+      <td>${u.createdAt || '-'}</td>
+      <td><button class="btn btn-danger btn-del-usr" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}" data-email="${u.email}">Hapus</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.btn-del-usr').forEach(btn => {
+    btn.addEventListener('click', () => {
+       const uid = btn.getAttribute('data-id');
+       const email = btn.getAttribute('data-email');
+       if (confirm(`Hapus profil hak akses pengguna ${email}?`)) {
+         remove(ref(db, `users/${uid}`));
+         const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
+         remove(ref(db, `user_emails/${sanitizedEmail}`)).then(() => {
+            triggerNotification('Profil user dicabut.');
+         });
+       }
+    });
+  });
+}
+
+document.getElementById('saveUserBtn')?.addEventListener('click', () => {
+  const email = document.getElementById('modalUserEmail').value.trim().toLowerCase();
+  const role = document.getElementById('modalRole').value;
+
+  if (!email) { 
+    triggerNotification('Email wajib diisi!', false); 
+    return; 
+  }
+
+  const sanitizedEmail = email.replace(/\./g, ',');
+  
+  set(ref(db, `user_emails/${sanitizedEmail}`), {
+     email: email,
+     role: role,
+     createdAt: new Date().toLocaleDateString('id-ID')
+  }).then(() => {
+     triggerNotification('Role berhasil didaftarkan! Selesai membuat akun dengan email ini di konsol Firebase Auth.');
+     document.getElementById('userModal').classList.remove('active');
+     document.getElementById('modalUserEmail').value = '';
+  });
+});
+
+// ==================== AUTH STATE HANDLER ====================
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = 'login.html';
+  } else {
+    ensureAdminUIDInDatabase(user);
+
+    get(ref(db, `users/${user.uid}`)).then((snapshot) => {
+      if (snapshot.exists()) {
+        const profile = snapshot.val();
+        currentRole = profile.role || "Project Manager";
+        
+        const sbUserEmail = document.getElementById('sbUserEmail');
+        const sbUserRole = document.getElementById('sbUserRole');
+        if (sbUserEmail) sbUserEmail.innerText = user.email;
+        if (sbUserRole) sbUserRole.innerText = currentRole;
+        
+        enforceRoleVisibility();
+        initCloudDatabaseListeners();
+        
+        // Hide loading screen and show app
+        hideLoadingScreen();
+      } else {
+        signOut(auth);
+      }
+    }).catch(error => {
+      console.error("Error fetching user profile:", error);
+      signOut(auth);
+    });
+  }
+});
+
+// ==================== LOGOUT ====================
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  if(confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  }
+});
+
+// ==================== MODAL CONTROLS ====================
+const projModalNode = document.getElementById('projectModal');
+const usrModalNode = document.getElementById('userModal');
+const detailModalNode = document.getElementById('detailRabModal');
+
+document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode?.classList.add('active'));
+document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode?.classList.add('active'));
+document.getElementById('closeModalBtn')?.addEventListener('click', () => projModalNode?.classList.remove('active'));
+document.getElementById('closeUserModalBtn')?.addEventListener('click', () => usrModalNode?.classList.remove('active'));
+document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal')?.classList.remove('active'));
+document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => detailModalNode?.classList.remove('active'));
+
+// ==================== SYSTEM ROUTING ====================
+const applicationRoutingPagesMap = { 
+  dashboard: 'dashboardPage', 'master-project': 'masterProjectPage', 'import-rab': 'importRabPage', 
+  'approval-budget': 'approvalBudgetPage', 'claim-request': 'claimRequestPage', monitoring: 'monitoringPage', 
+  reports: 'reportsPage', 'upload-document': 'uploadDocumentPage', 'user-management': 'userManagementPage' 
+};
+
+document.querySelectorAll('#sidebarMenu li').forEach(li => {
+   li.addEventListener('click', () => {
+      if (li.classList.contains('restricted')) return;
+
+      document.querySelectorAll('#sidebarMenu li').forEach(l => l.classList.remove('active'));
+      li.classList.add('active');
+
+      const activePageKey = li.getAttribute('data-page');
+      Object.values(applicationRoutingPagesMap).forEach(p => {
+        const element = document.getElementById(p);
+        if (element) element.classList.add('hidden-section');
+      });
+      
+      if (applicationRoutingPagesMap[activePageKey]) {
+         const targetPage = document.getElementById(applicationRoutingPagesMap[activePageKey]);
+         if (targetPage) targetPage.classList.remove('hidden-section');
+      }
+      
+      const pageTitleElement = document.getElementById('pageTitle');
+      if (pageTitleElement) {
+        const icon = li.querySelector('i');
+        pageTitleElement.innerHTML = `<i class="${icon ? icon.className : 'fas fa-chart-pie'}"></i> ${li.innerText.trim()}`;
+      }
+      
+      const actionButtonContext = document.getElementById('globalActionBtn');
+      if (activePageKey === 'master-project') {
+         if (actionButtonContext) {
+           actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
+           actionButtonContext.onclick = () => projModalNode?.classList.add('active');
+         }
+      } else {
+         if (actionButtonContext) {
+           actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+           actionButtonContext.onclick = () => updateWholeUI();
+         }
+      }
+   });
+});
