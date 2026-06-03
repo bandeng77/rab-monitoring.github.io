@@ -187,6 +187,7 @@
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
+    /* FILE MANAGER ARCHITECTURE STYLE - TREE HIERARCHY */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -202,6 +203,7 @@
     .file-node .delete-file-btn:hover { color: #dc2626; transform: scale(1.2); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
+    /* MODAL LAYOUTS */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; }
     .modal-overlay.active { visibility: visible; opacity: 1; }
     .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
@@ -213,6 +215,7 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
 
+    /* NOTIFIKASI POP-UP ANIMASI ELEGAN */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
     .notify-popup.active { transform: translateX(0); }
     .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
@@ -460,6 +463,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+  // ==================== URL DOMAIN BACKEND NODE.JS ====================
   const API_BASE_URL = "https://api.genetek.co.id"; 
 
   const firebaseConfig = {
@@ -497,6 +501,7 @@
       popup.className = "notify-popup active error";
       icon.className = "fas fa-exclamation-circle";
     }
+
     setTimeout(() => { popup.classList.remove('active'); }, 4500);
   }
 
@@ -750,14 +755,10 @@
     `).join('');
 
     container.querySelectorAll('.item-sel-node').forEach(sel => {
-      sel.addEventListener('change', (e) => {
-        claimItemsListArray[parseInt(sel.dataset.idx)].itemId = e.target.value;
-      });
+      sel.addEventListener('change', (e) => { claimItemsListArray[parseInt(sel.dataset.idx)].itemId = e.target.value; });
     });
     container.querySelectorAll('.item-nom-node').forEach(inp => {
-      inp.addEventListener('change', (e) => {
-        claimItemsListArray[parseInt(inp.dataset.idx)].nominal = parseFloat(e.target.value) || 0;
-      });
+      inp.addEventListener('change', (e) => { claimItemsListArray[parseInt(inp.dataset.idx)].nominal = parseFloat(e.target.value) || 0; });
     });
     container.querySelectorAll('.remove-item').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -826,13 +827,8 @@
     const newClaimRef = push(ref(db, 'claims'));
     
     set(newClaimRef, {
-      projectId,
-      vendor,
-      tanggal,
-      desc,
-      status: 'pending',
-      totalNominal,
-      items: validItems
+      projectId, vendor, tanggal, desc,
+      status: 'pending', totalNominal, items: validItems
     }).then(() => {
        claimItemsListArray = [];
        document.getElementById('claimVendor').value = '';
@@ -882,9 +878,7 @@
              const matchedRab = rabItems.find(r => r.id === item.itemId);
              if (matchedRab) {
                 const existingRealization = parseFloat(matchedRab.realisasi) || 0;
-                update(ref(db, `rabItems/${matchedRab.id}`), {
-                   realisasi: existingRealization + item.nominal
-                });
+                update(ref(db, `rabItems/${matchedRab.id}`), { realisasi: existingRealization + item.nominal });
              }
           });
           update(ref(db, `claims/${claimId}`), { status: 'approved' }).then(() => {
@@ -1046,10 +1040,7 @@
 
               const pushedRabRef = push(ref(db, 'rabItems'));
               set(pushedRabRef, {
-                 projectId: existProject.id,
-                 itemName: targetItemName,
-                 budget: cleanBudgetNum,
-                 realisasi: 0
+                 projectId: existProject.id, itemName: targetItemName, budget: cleanBudgetNum, realisasi: 0
               });
               importStatsCount++;
            }
@@ -1067,7 +1058,7 @@
      XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
   });
 
-  // ==================== OPERASI FILE DISK POOL STORAGE TRUENAS ====================
+  // ==================== OPERASI BACKEND DISK POOL STORAGE TRUENAS ====================
   document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
      e.preventDefault();
      const fileInputElement = document.getElementById('trueNasFile');
@@ -1082,9 +1073,8 @@
      const fileObj = fileInputElement.files[0];
      const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
      
-     // FIX: Nama folder disanitasi secara seragam
      const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-     const serverStoragePath = `${BASE_NAS_PATH}/${safeProjectDirName}/${targetFolderSelection}`;
+     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}/${targetFolderSelection}`;
 
      const dataPayload = new FormData();
      dataPayload.append('path', serverStoragePath); 
@@ -1104,12 +1094,6 @@
      .then(data => {
         triggerNotification('File sukses diunggah ke storage pool TrueNAS!');
         
-        // FIX: URL dibuat bersih memanfaatkan folder tersanitasi agar terbaca router statis
-        const safeEncodedProject = encodeURIComponent(safeProjectDirName);
-        const safeEncodedFolder = encodeURIComponent(targetFolderSelection);
-        const safeEncodedFileName = encodeURIComponent(fileObj.name);
-        const safeFileUrl = `${API_BASE_URL}/files/${safeEncodedProject}/${safeEncodedFolder}/${safeEncodedFileName}`;
-
         const pushedFileRef = push(ref(db, 'truenasFiles'));
         set(pushedFileRef, {
            projectId: attachedProjectId,
@@ -1117,7 +1101,8 @@
            folderType: targetFolderSelection,
            fileName: fileObj.name,
            uploadedAt: new Date().toLocaleString(),
-           fileUrl: safeFileUrl,
+           // Backup Metadata FileUrl (Hanya sebagai catatan cadangan)
+           fileUrl: `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(safeProjectDirName)}/${targetFolderSelection}/${encodeURIComponent(fileObj.name)}`,
            fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
         });
         fileInputElement.value = '';
@@ -1153,7 +1138,7 @@
     });
   }
 
-  // BUILDER ENGINE POHON DIREKTORI DAN PREVIEW
+  // ==================== FIX PREVIEW ENGINE DIRECTORY HIERARCHY ====================
   function renderTreeHierarchy() {
      const treeWrapper = document.getElementById('rootTreeContainer');
      if (!treeWrapper) return;
@@ -1177,7 +1162,6 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
                      .map(f => {
-                        // FIX: Memaksa pembangunan URL preview berbasis folder tersanitasi agar sinkron total dengan router backend
                         const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-pdf"></i> ${f.fileName} 
@@ -1193,7 +1177,7 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
                      .map(f => {
-                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
+                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-invoice"></i> ${f.fileName} 
                                   <div class="action-links">
@@ -1208,7 +1192,7 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
                      .map(f => {
-                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
+                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-contract"></i> ${f.fileName} 
                                   <div class="action-links">
@@ -1226,6 +1210,7 @@
      treeWrapper.innerHTML = innerLayoutCodeHtml;
   }
 
+  // ==================== ENGINE GRAFIK CHART.JS ====================
   let mainBarChartInstance, systemLineReportChartInstance;
   function refreshGraphicCharts() {
     const barCtx = document.getElementById('budgetChart')?.getContext('2d');
@@ -1312,10 +1297,8 @@
      });
   });
 
-  const BASE_NAS_PATH = '/mnt/EXTERNAL-4TB/Data/speakup/apps/rab';
   initCloudDatabaseListeners();
   enforceRoleVisibility();
 </script>
-
 </body>
 </html>
