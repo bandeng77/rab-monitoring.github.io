@@ -104,7 +104,6 @@
       box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
     }
 
-    /* Elegant Pop-up Notification */
     .toast {
       position: fixed;
       top: -100px;
@@ -129,7 +128,7 @@
 <body>
 
 <div id="toastNotification" class="toast">
-  <i class="fas fa-exclamation-circle"></i> <span id="toastMsg">Eror Terjadi</span>
+  <i class="fas fa-exclamation-circle"></i> <span id="toastMsg">Error Terjadi</span>
 </div>
 
 <div class="login-container">
@@ -160,7 +159,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, get, update, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -189,24 +188,40 @@
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const uid = userCredential.user.uid;
-        // Validasi Otoritas Role Pengguna di Realtime Database
-        return get(ref(db, `users/${uid}`));
-      })
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          // Kredensial & Profil COCOK, Alihkan langsung
-          window.location.href = 'index.html';
-        } else {
-          auth.signOut();
-          showToast("Akses Ditolak: Profil peran Anda belum terdaftar di database.");
-          btn.innerText = "Masuk Aplikasi";
-          btn.disabled = false;
-        }
+        
+        // 1. Coba cari role berdasarkan UID langsung
+        return get(ref(db, `users/${uid}`)).then((snapshot) => {
+          if (snapshot.exists()) {
+            window.location.href = 'index.html';
+          } else {
+            // 2. Jika UID belum ada, cari berdasarkan Email yang di-sanitasi (titik diubah jadi koma)
+            const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
+            return get(ref(db, `user_emails/${sanitizedEmail}`)).then((emailSnap) => {
+              if (emailSnap.exists()) {
+                const pendingProfile = emailSnap.val();
+                
+                // Pindahkan data ke node users/${uid} agar sinkron secara permanen
+                return set(ref(db, `users/${uid}`), {
+                  email: email.toLowerCase(),
+                  role: pendingProfile.role,
+                  createdAt: pendingProfile.createdAt || new Date().toLocaleDateString('id-ID')
+                }).then(() => {
+                  window.location.href = 'index.html';
+                });
+              } else {
+                auth.signOut();
+                showToast("Akses Ditolak: Akun Anda belum terdaftar di database otorisasi.");
+                btn.innerText = "Masuk Aplikasi";
+                btn.disabled = false;
+              }
+            });
+          }
+        });
       })
       .catch((error) => {
         console.error(error);
         let msg = "Gagal login! Periksa kembali email dan password.";
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
           msg = "Email atau password yang Anda masukkan salah.";
         }
         showToast(msg);
