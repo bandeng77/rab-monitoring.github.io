@@ -1,15 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>RAB Pro | Ultimate Budget Tracker Firebase</title>
-  
-  <!-- Chart.js, SheetJS, and FontAwesome Icons -->
+  <title>RAB Pro | Ultimate Budget Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
@@ -190,7 +187,7 @@
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    /* FILE TREE HIERARCHY PREVIEW */
+    /* FILE TREE HIERARCHY PREVIEW & ACTION ACTIONS */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -199,7 +196,10 @@
     .folder-node i { color: #eab308; }
     .file-node { padding-left: 24px; display: flex; align-items: center; gap: 8px; color: #475569; background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: 12px; margin: 4px 0; }
     .file-node i { color: #3b82f6; }
-    .file-node .preview-link { color: #2563eb; text-decoration: none; font-size: 0.8rem; margin-left: auto; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    .file-node .action-links { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .file-node .preview-link { color: #2563eb; text-decoration: none; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    .file-node .delete-file-btn { color: #ef4444; background: transparent; border: none; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; transition: 0.2s; }
+    .file-node .delete-file-btn:hover { color: #b91c1c; transform: scale(1.1); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
     /* MODAL SYSTEM */
@@ -214,6 +214,13 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
 
+    /* CUSTOM POPUP NOTIFICATION MODAL */
+    .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 16px 24px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 14px; transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2000; font-weight: 600; font-size: 0.9rem; }
+    .notify-popup.active { transform: translateX(0); }
+    .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
+    .notify-popup.error { border-left: 6px solid #ef4444; color: #991b1b; }
+    .notify-popup i { font-size: 1.25rem; }
+
     .hidden-section { display: none !important; }
     .page { animation: fadeUp 0.3s; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -226,12 +233,16 @@
 </head>
 <body>
 
-<!-- SIDEBAR NAVIGATION WITH HIERARCHY ACCESS SIMULATION -->
+<div id="customPopupNotice" class="notify-popup">
+  <i id="noticeIcon" class="fas"></i>
+  <span id="noticeMessage">Status Message</span>
+</div>
+
 <div class="sidebar">
   <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
   
   <div class="role-context">
-    <label><i class="fas fa-user-shield"></i> Current User Role:</label>
+    <label><i class="fas fa-user-shield"></i> Peran Pengguna:</label>
     <select id="roleSimulator">
       <option value="Administrator">Administrator</option>
       <option value="Finance">Finance</option>
@@ -244,26 +255,24 @@
     <li data-page="master-project"><i class="fas fa-folder-open"></i> Master Project</li>
     <li data-page="import-rab"><i class="fas fa-upload"></i> Import RAB</li>
     <li data-page="approval-budget"><i class="fas fa-check-double"></i> Approval Budget</li>
-    <li data-page="claim-request"><i class="fas fa-file-invoice-dollar"></i> Claim Request</li>
+    <li data-page="claim-request"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
     <li data-page="monitoring"><i class="fas fa-chart-bar"></i> Monitoring</li>
-    <li data-page="reports"><i class="fas fa-flag-checkered"></i> Reports</li>
-    <li data-page="upload-document"><i class="fas fa-cloud-upload-alt"></i> Upload Document</li>
-    <li data-page="user-management"><i class="fas fa-users"></i> User Management</li>
+    <li data-page="reports"><i class="fas fa-flag-checkered"></i> Laporan</li>
+    <li data-page="upload-document"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+    <li data-page="user-management"><i class="fas fa-users"></i> Manajemen User</li>
   </ul>
 </div>
 
-<!-- MAIN VIEW CONTENT -->
 <div class="main">
   <div class="header">
     <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard</h1>
     <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
   </div>
 
-  <!-- DASHBOARD PAGE -->
   <div id="dashboardPage" class="page">
     <div class="cards" id="cardsContainer"></div>
     <div class="section">
-      <h2><i class="fas fa-chart-line"></i> Quick Summary Monitoring</h2>
+      <h2><i class="fas fa-chart-line"></i> Monitoring Ringkas</h2>
       <div style="overflow-x:auto;">
         <table>
           <thead>
@@ -274,16 +283,15 @@
       </div>
     </div>
     <div class="section">
-      <h2><i class="fas fa-chart-column"></i> Budget Allocation vs Realization Graphic</h2>
+      <h2><i class="fas fa-chart-column"></i> Grafik Alokasi vs Realisasi Anggaran</h2>
       <canvas id="budgetChart" height="120"></canvas>
     </div>
   </div>
 
-  <!-- MASTER PROJECT PAGE -->
   <div id="masterProjectPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-database"></i> Master Data Project</h2>
-      <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Add Project</button>
+      <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Tambah Project</button>
       <div style="overflow-x:auto; margin-top:20px;">
         <table>
           <thead>
@@ -297,7 +305,7 @@
     <div class="section">
       <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
       <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
-      <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Add RAB Item Component</button>
+      <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Tambah Item RAB Component</button>
       <table>
         <thead>
           <tr><th>Item Name</th><th>Item Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
@@ -307,23 +315,21 @@
     </div>
   </div>
 
-  <!-- IMPORT RAB PAGE -->
   <div id="importRabPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-file-excel"></i> Import RAB via Excel Spreadsheet</h2>
-      <div class="info-box"><i class="fas fa-info-circle"></i> Layout Column Header: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
+      <div class="info-box"><i class="fas fa-info-circle"></i> Layout Header Kolom: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
       <div class="form-group">
-        <label>Select Spreadsheet Document</label>
+        <label>Pilih File Spreadsheet</label>
         <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
       </div>
-      <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Execute Import</button>
+      <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Eksekusi Import</button>
     </div>
     <div class="section">
-      <button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Download RAB Excel Template</button>
+      <button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Unduh Template Excel RAB</button>
     </div>
   </div>
 
-  <!-- APPROVAL BUDGET PAGE -->
   <div id="approvalBudgetPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
@@ -338,34 +344,33 @@
     </div>
   </div>
 
-  <!-- CLAIM REQUEST PAGE -->
   <div id="claimRequestPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-hand-holding-usd"></i> Submit Multi-Item Claim Request</h2>
+      <h2><i class="fas fa-hand-holding-usd"></i> Ajukan Pengajuan Multi-Item Klaim</h2>
       <div class="form-group">
-        <label><i class="fas fa-building"></i> Target Project Association</label>
+        <label><i class="fas fa-building"></i> Asosiasi Target Project</label>
         <select id="claimProjectSelect"></select>
       </div>
       <div id="multiItemContainer" class="multi-item-container">
         <div id="itemList"></div>
-        <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Add Item Row</button>
+        <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah Baris Item</button>
       </div>
       <div class="form-group" style="margin-top:20px;">
         <label><i class="fas fa-truck"></i> Vendor / Supplier</label>
-        <input type="text" id="claimVendor" placeholder="Provider name">
+        <input type="text" id="claimVendor" placeholder="Nama Penyedia / Toko">
       </div>
       <div class="form-group">
-        <label><i class="fas fa-calendar-alt"></i> Transaction Date</label>
+        <label><i class="fas fa-calendar-alt"></i> Tanggal Transaksi</label>
         <input type="date" id="claimDate">
       </div>
       <div class="form-group">
-        <label><i class="fas fa-sticky-note"></i> Remarks / Description</label>
-        <textarea id="claimDesc" rows="2" placeholder="Optional notes"></textarea>
+        <label><i class="fas fa-sticky-note"></i> Catatan Keterangan</label>
+        <textarea id="claimDesc" rows="2" placeholder="Keterangan tambahan (opsional)"></textarea>
       </div>
-      <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Submit Claim Request</button>
+      <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Kirim Pengajuan Klaim</button>
     </div>
     <div class="section">
-      <h2><i class="fas fa-history"></i> Claims History Logs</h2>
+      <h2><i class="fas fa-history"></i> Riwayat Log Klaim</h2>
       <table>
         <thead>
           <tr><th>Project Name</th><th>Items</th><th>Total Nominal</th><th>Vendor</th><th>Status</th><th>Submitted Date</th></tr>
@@ -375,10 +380,9 @@
     </div>
   </div>
 
-  <!-- MONITORING PAGE -->
   <div id="monitoringPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-chart-bar"></i> Project Financial Structure Metrics</h2>
+      <h2><i class="fas fa-chart-bar"></i> Metrik Struktur Finansial Project</h2>
       <div style="overflow-x:auto;">
         <table>
           <thead>
@@ -390,10 +394,9 @@
     </div>
   </div>
 
-  <!-- REPORTS PAGE -->
   <div id="reportsPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-flag-checkered"></i> Corporate Financial Report Analysis</h2>
+      <h2><i class="fas fa-flag-checkered"></i> Analisis Laporan Finansial Perusahaan</h2>
       <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
       <table>
         <thead>
@@ -404,17 +407,16 @@
     </div>
   </div>
 
-  <!-- UPLOAD DOCUMENT PAGE WITH TRUE-NAS ARCHITECTURE & PREVIEW -->
   <div id="uploadDocumentPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-cloud-upload-alt"></i> File Upload to TrueNAS File Storage</h2>
+      <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen Lampiran ke TrueNAS Storage</h2>
       <form id="trueNasUploadForm">
         <div class="form-group">
-          <label>Associate Project</label>
+          <label>Asosiasi Project Terkait</label>
           <select id="uploadProjectSelect" required></select>
         </div>
         <div class="form-group">
-          <label>Target Subfolder Category</label>
+          <label>Kategori Subfolder Target</label>
           <select id="uploadFolderSelect">
             <option value="RAB_Awal">RAB_Awal (Initial RAB Files)</option>
             <option value="Nota_Vendor">Nota_Vendor (Invoices & Receipts)</option>
@@ -422,31 +424,29 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Select Document File</label>
+          <label>Pilih File Dokumen</label>
           <input type="file" id="trueNasFile" required />
         </div>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload File</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah File Sekarang</button>
       </form>
     </div>
 
     <div class="section">
-      <h2><i class="fas fa-folder-tree"></i> Cloud File Directory Explorer</h2>
+      <h2><i class="fas fa-folder-tree"></i> Explorer Manajemen Berkas Cloud Directory</h2>
       <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
          <ul class="file-tree" id="rootTreeContainer">
-           <!-- Dynamic tree rendering -->
-         </ul>
+           </ul>
       </div>
     </div>
   </div>
 
-  <!-- USER MANAGEMENT PAGE -->
   <div id="userManagementPage" class="page hidden-section">
     <div class="section">
-      <h2><i class="fas fa-users"></i> System Accounts Management</h2>
-      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Add Account User</button>
+      <h2><i class="fas fa-users"></i> Akun Manajemen Sistem</h2>
+      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
       <table style="margin-top:20px;">
         <thead>
-          <tr><th>Username</th><th>System Menu Role Access</th><th>Status</th><th>Action</th></tr>
+          <tr><th>Username</th><th>Akses Peran Menu</th><th>Status</th><th>Action</th></tr>
         </thead>
         <tbody id="userTableBody"></tbody>
       </table>
@@ -454,22 +454,18 @@
   </div>
 </div>
 
-<!-- MODAL BOXES LAYER -->
-<div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Add New Project Assignment</h3><div class="form-group"><label>Project Title Name</label><input type="text" id="modalProjectName" placeholder="e.g. Fiber Optic Infrastructure"></div><div class="form-group"><label>Client Enterprise</label><input type="text" id="modalClientName" placeholder="e.g. Bank National Corp"></div><div class="form-group"><label>Initial Pagu Budget Limit (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Cancel</button><button class="btn btn-primary" id="saveProjectBtn">Submit Project</button></div></div></div>
-<div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Add Item Structure Component</h3><div class="form-group"><label>Project Target</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Item Component Designation Name</label><input type="text" id="rabItemName" placeholder="e.g. Edge Switch Layer 3"></div><div class="form-group"><label>Budget Allocated Cost (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Cancel</button><button class="btn btn-primary" id="saveRabBtn">Submit Item</button></div></div></div>
-<div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detailed Project Construction Items</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Item Budget Limit</th><th>Realisasi Expense</th><th>Remaining Balance</th><th>Status</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Close View</button></div></div></div>
-<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Create Access User Credential</h3><div class="form-group"><label>Username</label><input type="text" id="modalUsername" placeholder="e.g. johndoe"></div><div class="form-group"><label>Menu Access Clearance Authority</label><select id="modalRole"><option>Administrator</option><option>Finance</option><option>Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Cancel</button><button class="btn btn-primary" id="saveUserBtn">Submit Account</button></div></div></div>
+<div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Project Assignment Baru</h3><div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div><div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div><div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div></div></div>
+<div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Komponen Struktur RAB</h3><div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div><div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
+<div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div></div></div>
+<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Buat Akun Kredensial Pengguna Baru</h3><div class="form-group"><label>Username</label><input type="text" id="modalUsername" placeholder="Contoh: andri_pm"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses</label><select id="modalRole"><option>Administrator</option><option>Finance</option><option>Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Buat Akun</button></div></div></div>
 
-<!-- FIREBASE SDK ENGINE AS ES-MODULE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // ==================== CONFIGURATION TUNNEL CLOUDFLARE ====================
-  // URL Custom Domain Produksi HTTPS Valid melalui Cloudflare Tunnel
+  // ==================== KEY NETWORK TUNNEL PATH ====================
   const CLOUDFLARE_TUNNEL_URL = "https://api.genetek.co.id/upload"; 
 
-  // Realtime Database Configuration Instance
   const firebaseConfig = {
     databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
   };
@@ -477,7 +473,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // Volatile Runtime Cache Data Sync
   let projects = [];
   let rabItems = [];
   let claims = [];
@@ -487,14 +482,32 @@
   let currentSelectedProjectId = null;
   let currentRole = "Administrator";
 
-  // Role Access Definitions Hierarchy Matrix Mapping
   const rolePermissions = {
     "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'claim-request', 'monitoring', 'reports', 'upload-document', 'user-management'],
     "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document'],
     "Project Manager": ['dashboard', 'master-project', 'import-rab', 'claim-request', 'monitoring', 'upload-document']
   };
 
-  // ==================== FORMATTERS AND HELPER ENGINE ====================
+  // UI POP-UP NOTIFICATION HANDLER ENGINE
+  function triggerNotification(message, isSuccess = true) {
+    const popup = document.getElementById('customPopupNotice');
+    const icon = document.getElementById('noticeIcon');
+    const msgSpan = document.getElementById('noticeMessage');
+
+    msgSpan.innerText = message;
+    if(isSuccess) {
+      popup.className = "notify-popup active success";
+      icon.className = "fas fa-check-circle";
+    } else {
+      popup.className = "notify-popup active error";
+      icon.className = "fas fa-exclamation-circle";
+    }
+
+    setTimeout(() => {
+      popup.classList.remove('active');
+    }, 4500);
+  }
+
   function formatRp(val) { 
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
   }
@@ -502,10 +515,9 @@
   function getBadge(real, budget) { 
     if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
     if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
-    return '<span class="badge badge-success">Safe State</span>'; 
+    return '<span class="badge badge-success">Aman</span>'; 
   }
 
-  // ==================== ROLE PERMISSION HIERARCHY CONTROLLER ====================
   function enforceRoleVisibility() {
     const allowedPages = rolePermissions[currentRole] || [];
     document.querySelectorAll('#sidebarMenu li').forEach(li => {
@@ -523,7 +535,6 @@
     }
   }
 
-  // ==================== CLOUD DATABASE SYNC LISTENERS ====================
   function initCloudDatabaseListeners() {
     onValue(ref(db, 'projects'), (snapshot) => {
       const data = snapshot.val();
@@ -572,12 +583,11 @@
     const upSel = document.getElementById('uploadProjectSelect');
     if (upSel) {
       const valBackup = upSel.value;
-      upSel.innerHTML = '<option value="">-- Choose Project Selection --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      upSel.innerHTML = '<option value="">-- Pilih Project Target --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       if (valBackup) upSel.value = valBackup;
     }
   }
 
-  // ==================== VIEW DESIGN RENDER ENGINE ====================
   function renderDashboard() {
     const totalPaguGlobal = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
     const totalRealisasiGlobal = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
@@ -586,10 +596,10 @@
     const cardsContainer = document.getElementById('cardsContainer');
     if (cardsContainer) {
       cardsContainer.innerHTML = `
-        <div class="card"><h3>Active Projects</h3><p>${projects.length}</p></div>
-        <div class="card"><h3>Total Initial Budget</h3><p>${formatRp(totalPaguGlobal)}</p></div>
-        <div class="card"><h3>Used Realization</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
-        <div class="card"><h3>Over Budget Components</h3><p style="color:#ef4444">${overCount}</p></div>
+        <div class="card"><h3>Project Aktif</h3><p>${projects.length}</p></div>
+        <div class="card"><h3>Total Budget</h3><p>${formatRp(totalPaguGlobal)}</p></div>
+        <div class="card"><h3>Total Realisasi</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
+        <div class="card"><h3>Item Over Anggaran</h3><p style="color:#ef4444">${overCount}</p></div>
       `;
     }
 
@@ -603,7 +613,6 @@
     }
   }
 
-  // ==================== MASTER DATA AND ACCURATE ALOCATION BUDGETS ====================
   function renderMasterProject() {
     const tbody = document.getElementById('masterProjectBody');
     if (tbody) {
@@ -616,14 +625,14 @@
           <td>${p.client}</td>
           <td>${formatRp(p.totalBudget)}</td>
           <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
-          <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
+          <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
         </tr>`;
       }).join('');
 
       tbody.querySelectorAll('.btn-danger').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-id');
-          if (confirm('Delete this project alongside all inside item parameters?')) {
+          if (confirm('Hapus master project beserta struktur item di dalamnya?')) {
              remove(ref(db, `projects/${id}`));
              rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
           }
@@ -634,7 +643,7 @@
     const filter = document.getElementById('filterProjectRAB');
     if (filter) {
       const prevFilterValue = currentSelectedProjectId;
-      filter.innerHTML = '<option value="">-- Choose Master Project Filter --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      filter.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       if (prevFilterValue) filter.value = prevFilterValue;
     }
 
@@ -646,13 +655,13 @@
     if (!tbody) return;
     
     if (!currentSelectedProjectId) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a master project assignment first.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Silakan tentukan filter project terlebih dahulu.</td></tr>';
       return;
     }
 
     const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No items registered inside this project selection yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item komponen di dalam project ini.</td></tr>';
       return;
     }
 
@@ -669,7 +678,7 @@
     tbody.querySelectorAll('.btn-danger').forEach(btn => {
       btn.addEventListener('click', () => {
          const itemId = btn.getAttribute('data-id');
-         if (confirm('Delete this item configuration budget?')) {
+         if (confirm('Hapus parameter anggaran item ini?')) {
            remove(ref(db, `rabItems/${itemId}`));
          }
       });
@@ -681,13 +690,12 @@
     renderRABItemsSubTable();
   });
 
-  // ==================== PERSISTENCE INSERT OPERATIONS (FIREBASE CLOUD) ====================
   document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
     const name = document.getElementById('modalProjectName').value.trim();
     const client = document.getElementById('modalClientName').value.trim();
     const totalBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
 
-    if (!name || !client || totalBudget <= 0) { alert('Please fill project attributes fully!'); return; }
+    if (!name || !client || totalBudget <= 0) { triggerNotification('Form harus diisi lengkap & valid!', false); return; }
 
     const newProjectRef = push(ref(db, 'projects'));
     set(newProjectRef, { name, client, totalBudget }).then(() => {
@@ -695,11 +703,12 @@
       document.getElementById('modalProjectName').value = '';
       document.getElementById('modalClientName').value = '';
       document.getElementById('modalBudget').value = '';
+      triggerNotification('Master project berhasil ditambahkan!');
     });
   });
 
   document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
-    if (!currentSelectedProjectId) { alert('Select a project from the dropdown context menu first!'); return; }
+    if (!currentSelectedProjectId) { triggerNotification('Pilih filter project terlebih dahulu!', false); return; }
     const currentProj = projects.find(p => p.id === currentSelectedProjectId);
     document.getElementById('rabModalProjectName').value = currentProj ? currentProj.name : '';
     document.getElementById('rabItemName').value = '';
@@ -711,7 +720,7 @@
     const itemName = document.getElementById('rabItemName').value.trim();
     const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
 
-    if (!itemName || budget <= 0) { alert('Fill form components with numerical valid parameters!'); return; }
+    if (!itemName || budget <= 0) { triggerNotification('Isi data nominal komponen dengan valid!', false); return; }
 
     const newRabRef = push(ref(db, 'rabItems'));
     set(newRabRef, {
@@ -721,10 +730,10 @@
       realisasi: 0
     }).then(() => {
       document.getElementById('rabModal').classList.remove('active');
+      triggerNotification('Item komponen RAB berhasil disimpan!');
     });
   });
 
-  // ==================== CLAIM DATA HANDLING REQUESTS ====================
   let claimItemsListArray = [];
   function renderClaimItemsBuildLayout() {
     const container = document.getElementById('itemList');
@@ -734,17 +743,17 @@
     const availableItems = rabItems.filter(i => i.projectId === targetProjId);
 
     if (claimItemsListArray.length === 0) {
-      container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">No claim items attached. Click Add Item Row.</div>';
+      container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">Belum ada baris item klaim. Klik Tambah Baris Item.</div>';
       return;
     }
 
     container.innerHTML = claimItemsListArray.map((item, idx) => `
       <div class="item-row">
         <select data-idx="${idx}" class="item-sel-node">
-          <option value="">-- Select Resource Item --</option>
-          ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Balance: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
+          <option value="">-- Tentukan Item RAB --</option>
+          ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
         </select>
-        <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Amount Rp" value="${item.nominal || ''}" />
+        <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Nominal Rp" value="${item.nominal || ''}" />
         <button type="button" class="remove-item" data-idx="${idx}"><i class="fas fa-trash"></i></button>
       </div>
     `).join('');
@@ -771,7 +780,7 @@
     const selectPr = document.getElementById('claimProjectSelect');
     if (selectPr) {
       const backupSelectedVal = selectPr.value;
-      selectPr.innerHTML = '<option value="">-- Select Target Project Context --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      selectPr.innerHTML = '<option value="">-- Pilih Asosiasi Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       if (backupSelectedVal) selectPr.value = backupSelectedVal;
     }
 
@@ -781,7 +790,7 @@
         const p = projects.find(pr => pr.id === c.projectId);
         const summaries = c.items ? c.items.map(ci => {
           const r = rabItems.find(rab => rab.id === ci.itemId);
-          return `${r ? r.itemName : 'External Component'}: ${formatRp(ci.nominal)}`;
+          return `${r ? r.itemName : 'Eksternal Component'}: ${formatRp(ci.nominal)}`;
         }).join('<br>') : '-';
 
         let classBadge = 'badge-warning';
@@ -805,7 +814,7 @@
      renderClaimItemsBuildLayout();
   });
   document.getElementById('addItemBtn')?.addEventListener('click', () => {
-     if (!document.getElementById('claimProjectSelect').value) { alert('Select project association first!'); return; }
+     if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Pilih asosiasi project terlebih dahulu!', false); return; }
      claimItemsListArray.push({ itemId: '', nominal: 0 });
      renderClaimItemsBuildLayout();
   });
@@ -818,7 +827,7 @@
 
     const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0);
     if (!projectId || validItems.length === 0 || !vendor || !tanggal) {
-      alert('Please fill out all inputs correctly with at least 1 valid component!');
+      triggerNotification('Harap isi kelengkapan form klaim multi-item!', false);
       return;
     }
 
@@ -838,18 +847,17 @@
        document.getElementById('claimVendor').value = '';
        document.getElementById('claimDesc').value = '';
        renderClaimItemsBuildLayout();
-       alert('Claim data requested successfully!');
+       triggerNotification('Pengajuan klaim berhasil dikirim ke pipeline!');
     });
   });
 
-  // ==================== WORKFLOW FINANCE APPROVALS ====================
   function renderApprovalList() {
     const tbody = document.getElementById('approvalBody');
     if (!tbody) return;
 
     const pendingClaims = claims.filter(c => c.status === 'pending');
     if (pendingClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No pending tasks left inside pipeline queue.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Antrean persetujuan pipeline bersih.</td></tr>';
       return;
     }
 
@@ -868,8 +876,8 @@
         <td>${c.vendor}</td>
         <td><span class="badge badge-warning">PENDING</span></td>
         <td>
-          <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
-          <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
+          <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Setuju</button>
+          <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Tolak</button>
         </td>
       </tr>`;
     }).join('');
@@ -888,7 +896,9 @@
                 });
              }
           });
-          update(ref(db, `claims/${claimId}`), { status: 'approved' });
+          update(ref(db, `claims/${claimId}`), { status: 'approved' }).then(() => {
+            triggerNotification('Klaim disetujui, anggaran realisasi diperbarui.');
+          });
         }
       });
     });
@@ -896,12 +906,13 @@
     tbody.querySelectorAll('.rej-btn').forEach(btn => {
        btn.addEventListener('click', () => {
          const claimId = btn.getAttribute('data-id');
-         update(ref(db, `claims/${claimId}`), { status: 'rejected' });
+         update(ref(db, `claims/${claimId}`), { status: 'rejected' }).then(() => {
+           triggerNotification('Pengajuan klaim berhasil ditolak.', false);
+         });
        });
     });
   }
 
-  // ==================== DYNAMIC MONITORING METRICS GRAPHIC ICON POPUPS ====================
   function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringProjectBody');
     if (!tbody) return;
@@ -930,11 +941,11 @@
         const proj = projects.find(p => p.id === id);
         const elements = rabItems.filter(i => i.projectId === id);
 
-        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> Structure Items Component - ${proj ? proj.name : ''}`;
+        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> Komponen Konstruksi - ${proj ? proj.name : ''}`;
         const detailBody = document.getElementById('detailRabBody');
         
         if (elements.length === 0) {
-          detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No inside item configurations found.</td></tr>';
+          detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
         } else {
           detailBody.innerHTML = elements.map(i => `
             <tr>
@@ -951,7 +962,6 @@
     });
   }
 
-  // ==================== CORPORATE REPORTS VIEW RENDER ====================
   function renderReports() {
     const tbody = document.getElementById('laporanBody');
     if (!tbody) return;
@@ -971,7 +981,6 @@
     }).join('');
   }
 
-  // ==================== SYSTEM USER PROFILE ACCOUNTS ====================
   function renderUsersTable() {
     const tbody = document.getElementById('userTableBody');
     if (!tbody) return;
@@ -981,14 +990,14 @@
         <td>${u.username}</td>
         <td><strong>${u.role}</strong></td>
         <td><span class="badge badge-success">ACTIVE</span></td>
-        <td><button class="btn btn-danger delete-usr-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}">Delete</button></td>
+        <td><button class="btn btn-danger delete-usr-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}">Hapus</button></td>
       </tr>
     `).join('');
 
     tbody.querySelectorAll('.delete-usr-btn').forEach(btn => {
       btn.addEventListener('click', () => {
          const uid = btn.getAttribute('data-id');
-         if (confirm('Delete this user?')) remove(ref(db, `users/${uid}`));
+         if (confirm('Hapus hak akses user ini?')) remove(ref(db, `users/${uid}`));
       });
     });
   }
@@ -1002,13 +1011,13 @@
     set(newUserRef, { username, role, status: 'Active' }).then(() => {
        document.getElementById('userModal').classList.remove('active');
        document.getElementById('modalUsername').value = '';
+       triggerNotification('User baru berhasil didaftarkan.');
     });
   });
 
-  // ==================== SPREADSHEET AUTOMATION IMPORT PARSER ====================
   document.getElementById('processExcelBtn')?.addEventListener('click', () => {
      const inputElement = document.getElementById('excelFileInput').files[0];
-     if (!inputElement) { alert('Attach spreadsheet archive file first!'); return; }
+     if (!inputElement) { triggerNotification('Pilih berkas spreadsheet excel terlebih dahulu!', false); return; }
 
      const reader = new FileReader();
      reader.onload = (e) => {
@@ -1024,7 +1033,7 @@
         const targetBudgetIndex = columnHeaders.findIndex(h => h.includes('budget'));
 
         if (targetProjIndex === -1 || targetItemIndex === -1 || targetBudgetIndex === -1) {
-           alert('Invalid Structure! Header configuration must be: NAMA_PROJECT, ITEM_RAB, BUDGET');
+           triggerNotification('Struktur header salah! Wajib: NAMA_PROJECT, ITEM_RAB, BUDGET', false);
            return;
         }
 
@@ -1054,7 +1063,7 @@
               importStatsCount++;
            }
         }
-        alert(`Successfully synchronized ${importStatsCount} records into database framework pipeline!`);
+        triggerNotification(`Berhasil menyinkronkan ${importStatsCount} data dari Excel!`);
      };
      reader.readAsArrayBuffer(inputElement);
   });
@@ -1064,10 +1073,10 @@
      const worksheet = XLSX.utils.aoa_to_sheet(matricesData);
      const workbookObj = XLSX.utils.book_new();
      XLSX.utils.book_append_sheet(workbookObj, worksheet, "RAB Template");
-     XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
+     XIX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
   });
 
-  // ==================== TRUENAS BACKEND REPOSITORY MULTIPART UPLOADS ====================
+  // ==================== TRUENAS BACKEND & FILE POOL MANAGEMENT OPERATIONS ====================
   document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
      e.preventDefault();
      const fileInputElement = document.getElementById('trueNasFile');
@@ -1075,30 +1084,37 @@
      const targetFolderSelection = document.getElementById('uploadFolderSelect').value;
 
      if (!attachedProjectId || fileInputElement.files.length === 0) {
-       alert('Validation constraints failed! Select valid reference parameters.');
+       triggerNotification('Data parameter berkas tidak valid!', false);
        return;
      }
 
      const fileObj = fileInputElement.files[0];
      const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
      
-     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${resolvedProjectObj.name.replace(/\s+/g, '_')}/${targetFolderSelection}`;
+     // Sanitasi nama direktori agar tidak pecah/eror di sistem Linux TrueNAS
+     const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}/${targetFolderSelection}`;
 
+     // STRUKTUR DATA FORM DATA FIXED POSITION
      const dataPayload = new FormData();
-     dataPayload.append('file', fileObj);
      dataPayload.append('path', serverStoragePath); 
+     dataPayload.append('file', fileObj);
 
-     // MENEMBAK KE TUNNEL SECARA AMAN DENGAN CUSTOM DOMAIN HTTPS VALID
+     // PROSES EKSEKUSI AJAX & NOTIFIKASI POP-UP VALIDATION
      fetch(CLOUDFLARE_TUNNEL_URL, {
        method: 'POST',
        body: dataPayload
      })
-     .then(response => {
-       if (!response.ok) throw new Error('TrueNAS gateway interface offline');
+     .then(async response => {
+       if (!response.ok) {
+         const errorText = await response.text();
+         throw new Error(errorText || 'Server TrueNAS menolak unggahan');
+       }
        return response.json();
      })
      .then(data => {
-        alert('File binary dispatched to TrueNAS local mount disk storage pool successfully!');
+        // POP-UP BERHASIL
+        triggerNotification('File berhasil diunggah secara fisik ke disk storage pool TrueNAS!');
         
         const pushedFileRef = push(ref(db, 'truenasFiles'));
         set(pushedFileRef, {
@@ -1107,64 +1123,104 @@
            folderType: targetFolderSelection,
            fileName: fileObj.name,
            uploadedAt: new Date().toLocaleString(),
-           fileUrl: data.fileUrl || '#' 
+           // Memastikan link preview mengarah ke endpoint file server kustom Anda
+           fileUrl: data.fileUrl || `https://api.genetek.co.id/files/${safeProjectDirName}/${targetFolderSelection}/${fileObj.name}`,
+           fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
         });
         fileInputElement.value = '';
      })
      .catch(error => {
-        console.warn(error);
-        alert('Cloudflare Tunnel Error / Timeout. Executing simulated fallback metadata entry.');
-        
-        // Fallback simulation inside Firebase
-        const pushedFileRef = push(ref(db, 'truenasFiles'));
-        set(pushedFileRef, {
-           projectId: attachedProjectId,
-           projectName: resolvedProjectObj.name,
-           folderType: targetFolderSelection,
-           fileName: fileObj.name,
-           uploadedAt: new Date().toLocaleString(),
-           fileUrl: '#'
-        });
-        fileInputElement.value = '';
+        console.error("Upload fail:", error);
+        // POP-UP GAGAL
+        triggerNotification(`Gagal Upload: ${error.message || 'Koneksi Tunnel Terputus'}`, false);
      });
   });
 
-  // Dynamic tree directory rendering mechanism for preview
+  // MEKANISME DIRECTORY ENGINE DELETE FILE VIA CLOUDFLARE TUNNEL
+  window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
+    if(!confirm("Apakah Anda yakin ingin menghapus file ini dari penyimpanan lokal TrueNAS secara permanen?")) return;
+
+    // Mengirim request hapus ke API Backend Node.js Anda
+    fetch("https://api.genetek.co.id/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath: fullPath })
+    })
+    .then(async res => {
+      if(!res.ok) {
+        throw new Error("Gagal menghapus file dari drive TrueNAS");
+      }
+      return res.json();
+    })
+    .then(() => {
+      // Hapus metadata di Firebase Realtime Database secara sinkron
+      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+        triggerNotification("Berkas berhasil dibersihkan dari penyimpanan TrueNAS.");
+      });
+    })
+    .catch(err => {
+      console.warn(err);
+      // Fallback: hapus dari database jika file fisik di lokal sudah tidak ditemukan
+      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+        triggerNotification("Metadata dibersihkan (File fisik sudah tidak ada/terhapus).", false);
+      });
+    });
+  }
+
+  // RENDER POHON DIREKTORI DAN PREVIEW + ICON HAPUS (X)
   function renderTreeHierarchy() {
      const treeWrapper = document.getElementById('rootTreeContainer');
      if (!treeWrapper) return;
 
      if (projects.length === 0) {
-       treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> Master assignments are empty.</li>';
+       treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> Master project kosong.</li>';
        return;
      }
 
      let innerLayoutCodeHtml = `<li>
-       <span class="root-node"><i class="fas fa-server"></i> Secured Network Cloud Storage Engine</span>
+       <span class="root-node"><i class="fas fa-server"></i> Storage Server: /mnt/EXTERNAL-4TB/Data/rab/</span>
        <ul class="nested-tree">`;
 
      projects.forEach(p => {
-        const folderSanitizedName = p.name.replace(/\s+/g, '_');
+        const folderSanitizedName = p.name.replace(/[^a-zA-Z0-9_-]/g, '_');
         innerLayoutCodeHtml += `<li>
           <span class="folder-node"><i class="fas fa-folder-open"></i> ${folderSanitizedName}</span>
           <ul class="nested-tree">`;
             
-            // Subcategory: RAB_Awal
+            // Subdirektori: RAB_Awal
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
-                     .map(f => `<li class="file-node"><i class="fas fa-file-pdf"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Empty Directory</li>';
+                     .map(f => `<li class="file-node">
+                                  <i class="fas fa-file-pdf"></i> ${f.fileName} 
+                                  <div class="action-links">
+                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus File"><i class="fas fa-times-circle"></i></button>
+                                  </div>
+                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
-            // Subcategory: Nota_Vendor
+            // Subdirektori: Nota_Vendor
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
-                     .map(f => `<li class="file-node"><i class="fas fa-file-invoice"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Empty Directory</li>';
+                     .map(f => `<li class="file-node">
+                                  <i class="fas fa-file-invoice"></i> ${f.fileName} 
+                                  <div class="action-links">
+                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus File"><i class="fas fa-times-circle"></i></button>
+                                  </div>
+                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
-            // Subcategory: BAP
+            // Subdirektori: BAP
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
-                     .map(f => `<li class="file-node"><i class="fas fa-file-contract"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Empty Directory</li>';
+                     .map(f => `<li class="file-node">
+                                  <i class="fas fa-file-contract"></i> ${f.fileName} 
+                                  <div class="action-links">
+                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus File"><i class="fas fa-times-circle"></i></button>
+                                  </div>
+                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
         innerLayoutCodeHtml += `</ul></li>`;
@@ -1174,7 +1230,7 @@
      treeWrapper.innerHTML = innerLayoutCodeHtml;
   }
 
-  // ==================== ENGINE CHART INTERFACES GRAPHICS ====================
+  // ==================== ENGINE CHART CONTROLLERS ====================
   let mainBarChartInstance, systemLineReportChartInstance;
   function refreshGraphicCharts() {
     const barCtx = document.getElementById('budgetChart')?.getContext('2d');
@@ -1185,8 +1241,8 @@
           data: {
              labels: projects.map(p => p.name),
              datasets: [
-               { label: 'Total Allocated Budget (Millions)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
-               { label: 'Real Consumption (Millions)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
+               { label: 'Total Anggaran Pagu (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
+               { label: 'Realisasi Klaim (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
              ]
           },
           options: { responsive: true }
@@ -1201,8 +1257,8 @@
           data: {
              labels: projects.map(p => p.name),
              datasets: [
-               { label: 'Accumulated Budgets Matrix', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension:0.2 },
-               { label: 'Actual Realization Line', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension:0.2 }
+               { label: 'Kurva Pola Alokasi', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension:0.2 },
+               { label: 'Kurva Penyerapan Dana', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension:0.2 }
              ]
           },
           options: { responsive: true }
@@ -1210,7 +1266,7 @@
     }
   }
 
-  // ==================== INTERACTIVE WINDOW MODALS DOM IMPLEMENTATION ====================
+  // ==================== INTERACTIVE APP ROUTER INTERFACES ====================
   const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
   document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode.classList.add('active'));
   document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.add('active'));
@@ -1224,7 +1280,6 @@
      enforceRoleVisibility();
   });
 
-  // Client-Side Routing Configurations Layout Map
   const applicationRoutingPagesMap = { 
     dashboard: 'dashboardPage', 
     'master-project': 'masterProjectPage', 
@@ -1237,11 +1292,11 @@
     'user-management': 'userManagementPage' 
   };
 
-  document.querySelectorAll('.sidebar ul li').forEach(li => {
+  document.querySelectorAll('#sidebarMenu li').forEach(li => {
      li.addEventListener('click', () => {
         if (li.classList.contains('restricted')) return;
 
-        document.querySelectorAll('.sidebar ul li').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('#sidebarMenu li').forEach(l => l.classList.remove('active'));
         li.classList.add('active');
 
         const activePageKey = li.getAttribute('data-page');
@@ -1254,7 +1309,7 @@
         
         const actionButtonContext = document.getElementById('globalActionBtn');
         if (activePageKey === 'master-project') {
-           actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Add Project';
+           actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
            actionButtonContext.onclick = () => projModalNode.classList.add('active');
         } else {
            actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
@@ -1263,7 +1318,7 @@
      });
   });
 
-  // RUNTIME LIFECYCLE STARTUP CALLS
+  // START LIFE-CYCLE LIFTOFF CALLS
   initCloudDatabaseListeners();
   enforceRoleVisibility();
 </script>
