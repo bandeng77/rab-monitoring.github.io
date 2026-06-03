@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
@@ -25,9 +25,11 @@ let rabItems = [];
 let claims = [];
 let users = [];
 let truenasFiles = [];
+let currentUserData = null;
 
 let currentSelectedProjectId = null;
 let currentRole = ""; 
+let currentUserEmail = "";
 
 const rolePermissions = {
   "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'claim-request', 'monitoring', 'reports', 'upload-document', 'user-management'],
@@ -47,7 +49,7 @@ function hideLoadingScreen() {
   }
 }
 
-function triggerNotification(message, isSuccess = true) {
+function triggerNotification(message, isSuccess = true, type = 'success') {
   const popup = document.getElementById('customPopupNotice');
   const icon = document.getElementById('noticeIcon');
   const msgSpan = document.getElementById('noticeMessage');
@@ -55,12 +57,15 @@ function triggerNotification(message, isSuccess = true) {
   if (!popup) return;
   
   msgSpan.innerText = message;
-  if(isSuccess) {
+  if (type === 'success' || isSuccess) {
     popup.className = "notify-popup active success";
     icon.className = "fas fa-check-circle";
-  } else {
+  } else if (type === 'error') {
     popup.className = "notify-popup active error";
     icon.className = "fas fa-exclamation-circle";
+  } else {
+    popup.className = "notify-popup active info";
+    icon.className = "fas fa-info-circle";
   }
   setTimeout(() => { popup.classList.remove('active'); }, 4500);
 }
@@ -75,13 +80,115 @@ function getBadge(real, budget) {
   return '<span class="badge badge-success">Aman</span>'; 
 }
 
+// ==================== USER MANAGEMENT FUNCTIONS ====================
+async function createNewUser(email, password, role) {
+  try {
+    // Create user in Firebase Authentication
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Store user data in Realtime Database
+    await set(ref(db, `users/${user.uid}`), {
+      email: email,
+      role: role,
+      createdAt: new Date().toLocaleDateString('id-ID'),
+      createdAtTimestamp: Date.now()
+    });
+    
+    triggerNotification(`User ${email} berhasil dibuat dengan role ${role}!`, true);
+    return { success: true, uid: user.uid };
+  } catch (error) {
+    console.error("Error creating user:", error);
+    let errorMessage = "Gagal membuat user: ";
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage += "Email sudah terdaftar!";
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage += "Format email tidak valid!";
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage += "Password terlalu lemah! Minimal 6 karakter.";
+    } else {
+      errorMessage += error.message;
+    }
+    triggerNotification(errorMessage, false, 'error');
+    return { success: false, error: errorMessage };
+  }
+}
+
+async function updateUserRole(uid, newRole) {
+  try {
+    await update(ref(db, `users/${uid}`), {
+      role: newRole,
+      updatedAt: new Date().toLocaleDateString('id-ID')
+    });
+    triggerNotification(`Role user berhasil diupdate menjadi ${newRole}!`, true);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    triggerNotification("Gagal mengupdate role user!", false, 'error');
+    return { success: false };
+  }
+}
+
+async function resetUserPassword(uid, email, newPassword) {
+  try {
+    // For security, we need to re-authenticate or use admin SDK
+    // Since we're using client SDK, we'll send a password reset email instead
+    // Or if we have the current user as admin, we can't directly change other user's password
+    // So we'll use sendPasswordResetEmail as a workaround
+    
+    // Alternative: Send password reset email
+    await sendPasswordResetEmail(auth, email);
+    triggerNotification(`Email reset password telah dikirim ke ${email}. User bisa mengganti password melalui email tersebut.`, true, 'info');
+    
+    // Also log the password change in database
+    await set(ref(db, `passwordResets/${uid}/${Date.now()}`), {
+      requestedBy: currentUserEmail,
+      requestedAt: new Date().toLocaleString()
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    triggerNotification("Gagal mereset password: " + error.message, false, 'error');
+    return { success: false };
+  }
+}
+
+async function deleteUserAccount(uid, email) {
+  try {
+    // First, delete user data from Realtime Database
+    await remove(ref(db, `users/${uid}`));
+    
+    // Note: Deleting user from Firebase Authentication requires admin SDK
+    // For client-side, we'll mark user as inactive and send notification
+    // The actual deletion from Auth needs to be done via Firebase Console or Cloud Function
+    
+    await set(ref(db, `deletedUsers/${uid}`), {
+      email: email,
+      deletedAt: new Date().toLocaleString(),
+      deletedBy: currentUserEmail
+    });
+    
+    triggerNotification(`User ${email} telah dihapus dari database. Perlu dihapus manual dari Firebase Auth Console untuk penghapusan penuh.`, true, 'info');
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    triggerNotification("Gagal menghapus user!", false, 'error');
+    return { success: false };
+  }
+}
+
 // ==================== AUTH SECURITY CHECK PIPELINE ====================
 function ensureAdminUIDInDatabase(user) {
-  if (user.uid === "Wswgb5mhjRe1gnTF3X365bKXo7k1" || user.email === "admin@genetek.co.id") {
-    set(ref(db, `users/Wswgb5mhjRe1gnTF3X365bKXo7k1`), {
-      email: "admin@genetek.co.id",
+  const adminUIDs = ["Wswgb5mhjRe1gnTF3X365bKXo7k1"];
+  const adminEmails = ["admin@genetek.co.id"];
+  
+  if (adminUIDs.includes(user.uid) || adminEmails.includes(user.email)) {
+    set(ref(db, `users/${user.uid}`), {
+      email: user.email,
       role: "Administrator",
-      createdAt: new Date().toLocaleDateString('id-ID')
+      createdAt: new Date().toLocaleDateString('id-ID'),
+      isAdmin: true
     }).catch(error => console.error("Error ensuring admin:", error));
   }
 }
@@ -96,6 +203,15 @@ function enforceRoleVisibility() {
       li.classList.add('restricted');
     }
   });
+  
+  // Hide user management for non-admin
+  if (currentRole !== 'Administrator') {
+    const userManagementLi = document.querySelector('#sidebarMenu li[data-page="user-management"]');
+    if (userManagementLi) userManagementLi.style.display = 'none';
+  } else {
+    const userManagementLi = document.querySelector('#sidebarMenu li[data-page="user-management"]');
+    if (userManagementLi) userManagementLi.style.display = 'flex';
+  }
   
   const activeLi = document.querySelector('#sidebarMenu li.active');
   if (activeLi && activeLi.classList.contains('restricted')) {
@@ -252,6 +368,170 @@ function renderRABItemsSubTable() {
        }
     });
   });
+}
+
+// ==================== USER MANAGEMENT RENDERING ====================
+function renderUsersTable() {
+  const tbody = document.getElementById('userTableBody');
+  if (!tbody) return;
+
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada user terdaftar. Silakan tambah user baru.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map(u => {
+    let roleBadgeClass = '';
+    if (u.role === 'Administrator') roleBadgeClass = 'badge-danger';
+    else if (u.role === 'Finance') roleBadgeClass = 'badge-warning';
+    else roleBadgeClass = 'badge-success';
+    
+    const isCurrentUser = (currentUserEmail === u.email);
+    
+    return `<tr>
+      <td><strong>${u.email}</strong> ${isCurrentUser ? '<span class="badge badge-info">(Anda)</span>' : ''}</td>
+      <td><span class="badge ${roleBadgeClass}">${u.role}</span></td>
+      <td style="font-size:0.7rem; color:#64748b;">${u.id ? u.id.substring(0, 12) + '...' : '-'}</td>
+      <td>${u.createdAt || '-'}</td>
+      <td class="action-buttons">
+        ${currentRole === 'Administrator' && !isCurrentUser ? `
+          <button class="btn-edit btn" data-uid="${u.id}" data-email="${u.email}" data-role="${u.role}"><i class="fas fa-edit"></i> Edit Role</button>
+          <button class="btn-reset btn" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-key"></i> Reset Pass</button>
+          <button class="btn-delete btn" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Hapus</button>
+        ` : isCurrentUser ? `
+          <span class="badge badge-info">User Aktif</span>
+        ` : `
+          <span class="badge badge-info">Hanya Admin</span>
+        `}
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Add event listeners for user action buttons
+  if (currentRole === 'Administrator') {
+    tbody.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.getAttribute('data-uid');
+        const email = btn.getAttribute('data-email');
+        const currentRoleUser = btn.getAttribute('data-role');
+        openEditUserModal(uid, email, currentRoleUser);
+      });
+    });
+    
+    tbody.querySelectorAll('.btn-reset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.getAttribute('data-uid');
+        const email = btn.getAttribute('data-email');
+        openResetPasswordModal(uid, email);
+      });
+    });
+    
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.getAttribute('data-uid');
+        const email = btn.getAttribute('data-email');
+        if (confirm(`Apakah Anda yakin ingin menghapus user ${email}?`)) {
+          await deleteUserAccount(uid, email);
+        }
+      });
+    });
+  }
+}
+
+function openEditUserModal(uid, email, currentRoleUser) {
+  const modal = document.getElementById('userModal');
+  const title = document.getElementById('userModalTitle');
+  const emailInput = document.getElementById('modalUserEmail');
+  const passwordInput = document.getElementById('modalUserPassword');
+  const roleSelect = document.getElementById('modalRole');
+  const saveBtn = document.getElementById('saveUserBtn');
+  const editUserId = document.getElementById('editUserId');
+  
+  title.innerText = 'Edit Role User';
+  emailInput.value = email;
+  emailInput.disabled = true;
+  passwordInput.value = '';
+  passwordInput.placeholder = 'Kosongkan untuk tidak mengubah password';
+  roleSelect.value = currentRoleUser;
+  editUserId.value = uid;
+  
+  // Change save button behavior
+  saveBtn.onclick = async () => {
+    const newRole = roleSelect.value;
+    if (newRole !== currentRoleUser) {
+      await updateUserRole(uid, newRole);
+    }
+    modal.classList.remove('active');
+    // Reset form
+    emailInput.disabled = false;
+    emailInput.value = '';
+    editUserId.value = '';
+    title.innerText = 'Tambah User Baru';
+    saveBtn.onclick = saveNewUser;
+  };
+  
+  modal.classList.add('active');
+}
+
+function openResetPasswordModal(uid, email) {
+  const modal = document.getElementById('resetPasswordModal');
+  const emailInput = document.getElementById('resetUserEmail');
+  const newPassInput = document.getElementById('newPassword');
+  const confirmPassInput = document.getElementById('confirmPassword');
+  
+  emailInput.value = email;
+  newPassInput.value = '';
+  confirmPassInput.value = '';
+  
+  const confirmBtn = document.getElementById('confirmResetPasswordBtn');
+  confirmBtn.onclick = async () => {
+    const newPassword = newPassInput.value;
+    const confirmPassword = confirmPassInput.value;
+    
+    if (newPassword && newPassword !== confirmPassword) {
+      triggerNotification('Password dan konfirmasi password tidak cocok!', false, 'error');
+      return;
+    }
+    
+    if (newPassword && newPassword.length < 6) {
+      triggerNotification('Password minimal 6 karakter!', false, 'error');
+      return;
+    }
+    
+    await resetUserPassword(uid, email, newPassword);
+    modal.classList.remove('active');
+  };
+  
+  modal.classList.add('active');
+}
+
+async function saveNewUser() {
+  const email = document.getElementById('modalUserEmail').value.trim().toLowerCase();
+  let password = document.getElementById('modalUserPassword').value;
+  const role = document.getElementById('modalRole').value;
+  
+  if (!email) {
+    triggerNotification('Email wajib diisi!', false, 'error');
+    return;
+  }
+  
+  // Set default password if empty
+  if (!password) {
+    password = 'password123';
+  }
+  
+  if (password.length < 6) {
+    triggerNotification('Password minimal 6 karakter!', false, 'error');
+    return;
+  }
+  
+  const result = await createNewUser(email, password, role);
+  
+  if (result.success) {
+    document.getElementById('userModal').classList.remove('active');
+    document.getElementById('modalUserEmail').value = '';
+    document.getElementById('modalUserPassword').value = '';
+  }
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -570,7 +850,7 @@ function renderMonitoringTable() {
       const detailBody = document.getElementById('detailRabBody');
       
       if (elements.length === 0) {
-        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
+        detailBody.innerHTML = '<td><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
       } else {
         detailBody.innerHTML = elements.map(i => `
           <tr>
@@ -748,68 +1028,19 @@ function refreshGraphicCharts() {
   }
 }
 
-// ==================== USER MANAGEMENT ====================
-function renderUsersTable() {
-  const tbody = document.getElementById('userTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = users.map(u => `
-    <tr>
-      <td><strong>${u.email}</strong></td>
-      <td><span class="user-role" style="padding:4px 10px; background:#eef2ff; color:#2563eb; font-weight:700; border-radius:10px;">${u.role}</span></td>
-      <td>${u.createdAt || '-'}</td>
-      <td><button class="btn btn-danger btn-del-usr" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}" data-email="${u.email}">Hapus</button></td>
-    </tr>
-  `).join('');
-
-  tbody.querySelectorAll('.btn-del-usr').forEach(btn => {
-    btn.addEventListener('click', () => {
-       const uid = btn.getAttribute('data-id');
-       const email = btn.getAttribute('data-email');
-       if (confirm(`Hapus profil hak akses pengguna ${email}?`)) {
-         remove(ref(db, `users/${uid}`));
-         const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
-         remove(ref(db, `user_emails/${sanitizedEmail}`)).then(() => {
-            triggerNotification('Profil user dicabut.');
-         });
-       }
-    });
-  });
-}
-
-document.getElementById('saveUserBtn')?.addEventListener('click', () => {
-  const email = document.getElementById('modalUserEmail').value.trim().toLowerCase();
-  const role = document.getElementById('modalRole').value;
-
-  if (!email) { 
-    triggerNotification('Email wajib diisi!', false); 
-    return; 
-  }
-
-  const sanitizedEmail = email.replace(/\./g, ',');
-  
-  set(ref(db, `user_emails/${sanitizedEmail}`), {
-     email: email,
-     role: role,
-     createdAt: new Date().toLocaleDateString('id-ID')
-  }).then(() => {
-     triggerNotification('Role berhasil didaftarkan! Selesai membuat akun dengan email ini di konsol Firebase Auth.');
-     document.getElementById('userModal').classList.remove('active');
-     document.getElementById('modalUserEmail').value = '';
-  });
-});
-
 // ==================== AUTH STATE HANDLER ====================
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = 'login.html';
   } else {
+    currentUserEmail = user.email;
     ensureAdminUIDInDatabase(user);
 
     get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const profile = snapshot.val();
         currentRole = profile.role || "Project Manager";
+        currentUserData = profile;
         
         const sbUserEmail = document.getElementById('sbUserEmail');
         const sbUserRole = document.getElementById('sbUserRole');
@@ -819,7 +1050,6 @@ onAuthStateChanged(auth, (user) => {
         enforceRoleVisibility();
         initCloudDatabaseListeners();
         
-        // Hide loading screen and show app
         hideLoadingScreen();
       } else {
         signOut(auth);
@@ -842,11 +1072,32 @@ document.getElementById('logoutBtn')?.addEventListener('click', () => {
 const projModalNode = document.getElementById('projectModal');
 const usrModalNode = document.getElementById('userModal');
 const detailModalNode = document.getElementById('detailRabModal');
+const resetModalNode = document.getElementById('resetPasswordModal');
 
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode?.classList.add('active'));
-document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode?.classList.add('active'));
+document.getElementById('openUserModalBtn')?.addEventListener('click', () => {
+  // Reset form for new user
+  const title = document.getElementById('userModalTitle');
+  const emailInput = document.getElementById('modalUserEmail');
+  const passwordInput = document.getElementById('modalUserPassword');
+  const roleSelect = document.getElementById('modalRole');
+  const editUserId = document.getElementById('editUserId');
+  const saveBtn = document.getElementById('saveUserBtn');
+  
+  title.innerText = 'Tambah User Baru';
+  emailInput.value = '';
+  emailInput.disabled = false;
+  passwordInput.value = '';
+  passwordInput.placeholder = 'Minimal 6 karakter';
+  roleSelect.value = 'Project Manager';
+  editUserId.value = '';
+  saveBtn.onclick = saveNewUser;
+  
+  usrModalNode?.classList.add('active');
+});
 document.getElementById('closeModalBtn')?.addEventListener('click', () => projModalNode?.classList.remove('active'));
 document.getElementById('closeUserModalBtn')?.addEventListener('click', () => usrModalNode?.classList.remove('active'));
+document.getElementById('closeResetModalBtn')?.addEventListener('click', () => resetModalNode?.classList.remove('active'));
 document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal')?.classList.remove('active'));
 document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => detailModalNode?.classList.remove('active'));
 
@@ -886,6 +1137,22 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
          if (actionButtonContext) {
            actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
            actionButtonContext.onclick = () => projModalNode?.classList.add('active');
+         }
+      } else if (activePageKey === 'user-management' && currentRole === 'Administrator') {
+         if (actionButtonContext) {
+           actionButtonContext.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User';
+           actionButtonContext.onclick = () => {
+             // Reset form and open modal
+             document.getElementById('userModalTitle').innerText = 'Tambah User Baru';
+             document.getElementById('modalUserEmail').value = '';
+             document.getElementById('modalUserEmail').disabled = false;
+             document.getElementById('modalUserPassword').value = '';
+             document.getElementById('modalUserPassword').placeholder = 'Minimal 6 karakter';
+             document.getElementById('modalRole').value = 'Project Manager';
+             document.getElementById('editUserId').value = '';
+             document.getElementById('saveUserBtn').onclick = saveNewUser;
+             usrModalNode?.classList.add('active');
+           };
          }
       } else {
          if (actionButtonContext) {
