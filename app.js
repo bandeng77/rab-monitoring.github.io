@@ -5,7 +5,13 @@ import { getDatabase, ref, set, onValue, push, remove, update, get } from "https
 // ==================== CONFIGURATIONS ====================
 const API_BASE_URL = "https://api.genetek.co.id"; 
 const firebaseConfig = {
-  databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
+  apiKey: "AIzaSyAQWeEYQNtocfIuKvKk8tbpKuIeW4CmZOI",
+  authDomain: "rab-monitoring.firebaseapp.com",
+  databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "rab-monitoring",
+  storageBucket: "rab-monitoring.firebasestorage.app",
+  messagingSenderId: "712435056277",
+  appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
 };
 
 const app = initializeApp(firebaseConfig);
