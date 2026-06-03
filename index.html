@@ -176,6 +176,7 @@
     .badge-danger { background: #fee2e2; color: #991b1b; }
     .badge-warning { background: #fed7aa; color: #9a3412; }
     .badge-info { background: #dbeafe; color: #1e40af; }
+    .badge-secondary { background: #e2e8f0; color: #475569; }
 
     /* Project Row */
     .project-row { cursor: pointer; transition: all 0.2s; }
@@ -210,7 +211,7 @@
     .modal-overlay.active { visibility: visible; opacity: 1; }
     .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
     .modal-overlay.active .modal-container { transform: scale(1); }
-    .modal-container h3 { font-size: 1.6rem; font-weight: 800; margin-bottom: 24px; color: #0f172a; }
+    .modal-container h3 { font-size: 1.6rem; font-weight: 800; margin-bottom: 24px; color: #0f172a; display: flex; align-items: center; gap: 12px; }
     .form-group { margin-bottom: 20px; }
     .form-group label { font-weight: 600; display: block; margin-bottom: 8px; color: #334155; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 18px; border-radius: 28px; border: 1.5px solid #e2e8f0; outline: none; }
@@ -220,10 +221,13 @@
 
     /* Action Buttons in User Table */
     .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .action-buttons button { padding: 6px 12px; font-size: 0.7rem; border-radius: 8px; }
+    .action-buttons button { padding: 6px 12px; font-size: 0.7rem; border-radius: 8px; cursor: pointer; border: none; font-weight: 600; }
     .btn-edit { background: #3b82f6; color: white; }
+    .btn-edit:hover { background: #2563eb; }
     .btn-reset { background: #f59e0b; color: white; }
+    .btn-reset:hover { background: #d97706; }
     .btn-delete { background: #ef4444; color: white; }
+    .btn-delete:hover { background: #dc2626; }
 
     /* Notification */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
@@ -358,7 +362,7 @@
         <div class="section">
           <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
           <div style="overflow-x:auto;">
-            <table>
+            <tr>
               <thead>
                 <tr><th>No</th><th>Project Target</th><th>Item Lists</th><th>Total Amount</th><th>Vendor Name</th><th>Status</th><th>Action</th></tr>
               </thead>
@@ -412,7 +416,7 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></tr>
+                <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></td>
               </thead>
               <tbody id="monitoringProjectBody"></tbody>
             </table>
@@ -471,27 +475,34 @@
       <div id="userManagementPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
-          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
-          <div class="info-box" style="margin-top: 16px;">
+          <div class="info-box" style="margin-bottom: 20px;">
             <i class="fas fa-info-circle"></i> 
-            <strong>Informasi:</strong> User akan otomatis terdaftar di Firebase Authentication. Password default: <strong>password123</strong> (user bisa mengganti nanti)
+            <strong>Informasi:</strong> Kelola semua pengguna sistem. Admin dapat mengedit role, reset password, dan menghapus user.
           </div>
-          <div style="overflow-x:auto; margin-top:20px;">
+          <div style="overflow-x:auto;">
             <table style="width:100%;">
               <thead>
-                <tr><th>Email Pengguna</th><th>Role Akses</th><th>UID</th><th>Tanggal Dibuat</th><th>Aksi</th></tr>
+                <tr>
+                  <th>Email Pengguna</th>
+                  <th>Role Akses</th>
+                  <th>UID</th>
+                  <th>Tanggal Dibuat</th>
+                  <th>Aksi</th>
+                </tr>
               </thead>
-              <tbody id="userTableBody"></tbody>
+              <tbody id="userTableBody">
+                <tr><td colspan="5" style="text-align:center;">Memuat data user...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Modals -->
+    <!-- Project Modal -->
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
-        <h3>Tambah Project Assignment Baru</h3>
+        <h3><i class="fas fa-folder-plus"></i> Tambah Project Baru</h3>
         <div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div>
         <div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div>
         <div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div>
@@ -499,38 +510,40 @@
       </div>
     </div>
 
+    <!-- RAB Modal -->
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
-        <h3>Tambah Komponen Struktur RAB</h3>
+        <h3><i class="fas fa-plus-circle"></i> Tambah Komponen RAB</h3>
         <div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div>
-        <div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div>
-        <div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div>
+        <div class="form-group"><label>Nama Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div>
+        <div class="form-group"><label>Nominal Budget (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div>
         <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div>
       </div>
     </div>
 
+    <!-- Detail RAB Modal -->
     <div id="detailRabModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 700px;">
-        <h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3>
+        <h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detail Komponen RAB</h3>
         <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead>
+            <thead><tr><th>Item RAB</th><th>Budget</th><th>Realisasi</th><th>Sisa Dana</th><th>Status</th></tr></thead>
             <tbody id="detailRabBody"></tbody>
           </table>
         </div>
-        <div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup</button></div>
       </div>
     </div>
 
-    <!-- User Management Modal -->
+    <!-- User Management Modal (Add/Edit User) -->
     <div id="userModal" class="modal-overlay">
       <div class="modal-container">
-        <h3 id="userModalTitle">Tambah User Baru</h3>
+        <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Tambah User Baru</h3>
         <div class="form-group">
           <label>Alamat Email</label>
           <input type="email" id="modalUserEmail" placeholder="user@company.com" required>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="passwordFieldGroup">
           <label>Password</label>
           <input type="password" id="modalUserPassword" placeholder="Minimal 6 karakter">
           <div class="password-hint">* Kosongkan untuk menggunakan password default: "password123"</div>
@@ -554,19 +567,20 @@
     <!-- Reset Password Modal -->
     <div id="resetPasswordModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 450px;">
-        <h3><i class="fas fa-key"></i> Reset Password</h3>
+        <h3><i class="fas fa-key"></i> Reset Password User</h3>
         <div class="form-group">
-          <label>User Email</label>
+          <label>Email User</label>
           <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
         </div>
         <div class="form-group">
           <label>Password Baru</label>
-          <input type="password" id="newPassword" placeholder="Masukkan password baru">
+          <input type="password" id="newPassword" placeholder="Masukkan password baru (minimal 6 karakter)">
         </div>
         <div class="form-group">
           <label>Konfirmasi Password</label>
           <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
         </div>
+        <div class="password-hint" style="margin-bottom: 16px;">* Kosongkan untuk mengirim email reset password</div>
         <div class="modal-buttons">
           <button class="btn btn-danger" id="closeResetModalBtn">Batal</button>
           <button class="btn btn-warning" id="confirmResetPasswordBtn">Reset Password</button>
