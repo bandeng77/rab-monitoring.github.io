@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAB Pro | Secure Gateway Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      width: 100%;
+      max-width: 450px;
+      padding: 40px;
+      border-radius: 36px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+
+    .login-container h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .login-container p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+      text-align: left;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #334155;
+      font-size: 0.85rem;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 18px 14px 48px;
+      border-radius: 24px;
+      border: 1.5px solid #e2e8f0;
+      outline: none;
+      font-size: 0.95rem;
+      transition: 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      border-radius: 24px;
+      border: none;
+      background: linear-gradient(95deg, #3b82f6, #8b5cf6);
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.25s;
+      margin-top: 10px;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Elegant Pop-up Notification */
+    .toast {
+      position: fixed;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+      transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.active { top: 24px; }
+  </style>
+</head>
+<body>
+
+<div id="toastNotification" class="toast">
+  <i class="fas fa-exclamation-circle"></i> <span id="toastMsg">Eror Terjadi</span>
+</div>
+
+<div class="login-container">
+  <h2>RAB Tracker Pro</h2>
+  <p>Silakan masuk menggunakan akun kredensial Anda</p>
+  
+  <form id="loginForm">
+    <div class="form-group">
+      <label>Alamat Email</label>
+      <div class="input-wrapper">
+        <i class="fas fa-envelope"></i>
+        <input type="email" id="loginEmail" placeholder="nama@genetek.co.id" required>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Kata Sandi</label>
+      <div class="input-wrapper">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="loginPassword" placeholder="••••••••" required>
+      </div>
+    </div>
+    
+    <button type="submit" class="btn-login" id="submitBtn">Masuk Aplikasi</button>
+  </form>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  function showToast(msg) {
+    const t = document.getElementById('toastNotification');
+    document.getElementById('toastMsg').innerText = msg;
+    t.classList.add('active');
+    setTimeout(() => t.classList.remove('active'), 4000);
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('submitBtn');
+
+    btn.innerText = "Memproses...";
+    btn.disabled = true;
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const uid = userCredential.user.uid;
+        // Validasi Otoritas Role Pengguna di Realtime Database
+        return get(ref(db, `users/${uid}`));
+      })
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          // Kredensial & Profil COCOK, Alihkan langsung
+          window.location.href = 'index.html';
+        } else {
+          auth.signOut();
+          showToast("Akses Ditolak: Profil peran Anda belum terdaftar di database.");
+          btn.innerText = "Masuk Aplikasi";
+          btn.disabled = false;
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        let msg = "Gagal login! Periksa kembali email dan password.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          msg = "Email atau password yang Anda masukkan salah.";
+        }
+        showToast(msg);
+        btn.innerText = "Masuk Aplikasi";
+        btn.disabled = false;
+      });
+  });
+</script>
+</body>
+</html>
