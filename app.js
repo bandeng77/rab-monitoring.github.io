@@ -14,6 +14,7 @@ const firebaseConfig = {
   appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
 };
 
+// Initialize Firebase - ONLY ONCE
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
@@ -34,50 +35,56 @@ const rolePermissions = {
   "Project Manager": ['dashboard', 'master-project', 'import-rab', 'claim-request', 'monitoring', 'upload-document']
 };
 
-// ==================== AUTH SECURITY CHECK PIPELINE ====================
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = 'login.html';
-  } else {
-    // Jalankan skrip proteksi untuk memastikan UID Admin Anda terdaftar permanen
-    ensureAdminUIDInDatabase(user);
-
-    // Ambil profile role dari Realtime Database berdasarkan UID user
-    get(ref(db, `users/${user.uid}`)).then((snapshot) => {
-      if (snapshot.exists()) {
-        const profile = snapshot.val();
-        currentRole = profile.role || "Project Manager";
-        
-        // Update representasi user di Sidebar UI
-        document.getElementById('sbUserEmail').innerText = user.email;
-        document.getElementById('sbUserRole').innerText = currentRole;
-        
-        // Atur visibilitas modul halaman
-        enforceRoleVisibility();
-        initCloudDatabaseListeners();
-      } else {
-        signOut(auth);
-      }
-    });
+// ==================== HELPER FUNCTIONS ====================
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  const mainAppBody = document.getElementById('mainAppBody');
+  if (loadingScreen) {
+    loadingScreen.style.display = 'none';
   }
-});
+  if (mainAppBody) {
+    mainAppBody.style.display = 'block';
+  }
+}
 
-// Fungsi Pengunci untuk Force-Inject UID Admin Anda jika terhapus
+function triggerNotification(message, isSuccess = true) {
+  const popup = document.getElementById('customPopupNotice');
+  const icon = document.getElementById('noticeIcon');
+  const msgSpan = document.getElementById('noticeMessage');
+
+  if (!popup) return;
+  
+  msgSpan.innerText = message;
+  if(isSuccess) {
+    popup.className = "notify-popup active success";
+    icon.className = "fas fa-check-circle";
+  } else {
+    popup.className = "notify-popup active error";
+    icon.className = "fas fa-exclamation-circle";
+  }
+  setTimeout(() => { popup.classList.remove('active'); }, 4500);
+}
+
+function formatRp(val) { 
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
+}
+
+function getBadge(real, budget) { 
+  if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
+  if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
+  return '<span class="badge badge-success">Aman</span>'; 
+}
+
+// ==================== AUTH SECURITY CHECK PIPELINE ====================
 function ensureAdminUIDInDatabase(user) {
   if (user.uid === "Wswgb5mhjRe1gnTF3X365bKXo7k1" || user.email === "admin@genetek.co.id") {
     set(ref(db, `users/Wswgb5mhjRe1gnTF3X365bKXo7k1`), {
       email: "admin@genetek.co.id",
       role: "Administrator",
-      createdAt: "03/06/2026"
-    });
+      createdAt: new Date().toLocaleDateString('id-ID')
+    }).catch(error => console.error("Error ensuring admin:", error));
   }
 }
-
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  if(confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
-    signOut(auth).then(() => { window.location.href = 'login.html'; });
-  }
-});
 
 function enforceRoleVisibility() {
   const allowedPages = rolePermissions[currentRole] || [];
@@ -127,32 +134,6 @@ function initCloudDatabaseListeners() {
     users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     renderUsersTable();
   });
-}
-
-function triggerNotification(message, isSuccess = true) {
-  const popup = document.getElementById('customPopupNotice');
-  const icon = document.getElementById('noticeIcon');
-  const msgSpan = document.getElementById('noticeMessage');
-
-  msgSpan.innerText = message;
-  if(isSuccess) {
-    popup.className = "notify-popup active success";
-    icon.className = "fas fa-check-circle";
-  } else {
-    popup.className = "notify-popup active error";
-    icon.className = "fas fa-exclamation-circle";
-  }
-  setTimeout(() => { popup.classList.remove('active'); }, 4500);
-}
-
-function formatRp(val) { 
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
-}
-
-function getBadge(real, budget) { 
-  if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
-  if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
-  return '<span class="badge badge-success">Aman</span>'; 
 }
 
 function updateWholeUI() {
@@ -215,7 +196,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
-      </tr>`;
+       </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -273,6 +254,7 @@ function renderRABItemsSubTable() {
   });
 }
 
+// ==================== EVENT LISTENERS ====================
 document.getElementById('filterProjectRAB')?.addEventListener('change', (e) => {
   currentSelectedProjectId = e.target.value;
   renderRABItemsSubTable();
@@ -383,6 +365,7 @@ document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => 
 
 // ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
+
 function renderClaimItemsBuildLayout() {
   const container = document.getElementById('itemList');
   if (!container) return;
@@ -448,7 +431,7 @@ function renderClaimView() {
         <td>${c.vendor}</td>
         <td><span class="badge ${classBadge}">${c.status}</span></td>
         <td>${c.tanggal}</td>
-      </tr>`;
+       </tr>`;
     }).join('');
   }
 }
@@ -457,6 +440,7 @@ document.getElementById('claimProjectSelect')?.addEventListener('change', () => 
    claimItemsListArray = [];
    renderClaimItemsBuildLayout();
 });
+
 document.getElementById('addItemBtn')?.addEventListener('click', () => {
    if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Pilih asosiasi project terlebih dahulu!', false); return; }
    claimItemsListArray.push({ itemId: '', nominal: 0 });
@@ -485,6 +469,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
      claimItemsListArray = [];
      document.getElementById('claimVendor').value = '';
      document.getElementById('claimDesc').value = '';
+     document.getElementById('claimDate').value = '';
      renderClaimItemsBuildLayout();
      triggerNotification('Pengajuan klaim berhasil dikirim ke pipeline!');
   });
@@ -517,9 +502,9 @@ function renderApprovalList() {
       <td><span class="badge badge-warning">PENDING</span></td>
       <td>
         <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Setuju</button>
-        <button class="btn btn-danger  rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Tolak</button>
-      </td>
-    </tr>`;
+        <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Tolak</button>
+       </td>
+     </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.app-btn').forEach(btn => {
@@ -571,12 +556,12 @@ function renderMonitoringTable() {
       <td>${formatRp(computedRealizations)}</td>
       <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#475569'}">${formatRp(balance)}</td>
       <td><strong>${percentage}%</strong></td>
-    </tr>`;
+     </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
     row.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return; // Lewati jika menekan aksi internal
+      if (e.target.closest('button')) return;
       const id = row.getAttribute('data-id');
       const proj = projects.find(p => p.id === id);
       const elements = rabItems.filter(i => i.projectId === id);
@@ -617,7 +602,7 @@ function renderReports() {
        <td>${formatRp(subReal)}</td>
        <td>${formatRp(diff)}</td>
        <td><span class="badge ${diff < 0 ? 'badge-danger':'badge-success'}">${diff < 0 ? 'Over Budget':'On Track'}</span></td>
-     </tr>`;
+      </tr>`;
   }).join('');
 }
 
@@ -715,7 +700,8 @@ function renderTreeHierarchy() {
                                     <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
                                     <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn"><i class="fas fa-times-circle"></i></button>
                                   </div>
-                                </li>`})
+                                </li>`;
+                     })
                      .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
          });
@@ -727,6 +713,7 @@ function renderTreeHierarchy() {
 
 // ==================== GRAPHIC ENGINE ====================
 let mainBarChartInstance, systemLineReportChartInstance;
+
 function refreshGraphicCharts() {
   const barCtx = document.getElementById('budgetChart')?.getContext('2d');
   if (barCtx) {
@@ -761,96 +748,5 @@ function refreshGraphicCharts() {
   }
 }
 
-// ==================== IMPROVED USER MANAGEMENT LAYOUTS ====================
+// ==================== USER MANAGEMENT ====================
 function renderUsersTable() {
-  const tbody = document.getElementById('userTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = users.map(u => `
-    <tr>
-      <td><strong>${u.email}</strong></td>
-      <td><span class="user-role" style="padding:4px 10px; background:#eef2ff; color:#2563eb; font-weight:700; border-radius:10px;">${u.role}</span></td>
-      <td>${u.createdAt || '-'}</td>
-      <td><button class="btn btn-danger btn-del-usr" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}" data-email="${u.email}">Hapus</button></td>
-    </tr>
-  `).join('');
-
-  tbody.querySelectorAll('.btn-del-usr').forEach(btn => {
-    btn.addEventListener('click', () => {
-       const uid = btn.getAttribute('data-id');
-       const email = btn.getAttribute('data-email');
-       if (confirm(`Hapus profil hak akses pengguna ${email}?`)) {
-         remove(ref(db, `users/${uid}`));
-         const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
-         remove(ref(db, `user_emails/${sanitizedEmail}`)).then(() => {
-            triggerNotification('Profil user dicabut.');
-         });
-       }
-    });
-  });
-}
-
-document.getElementById('saveUserBtn')?.addEventListener('click', () => {
-  const email = document.getElementById('modalUserEmail').value.trim().toLowerCase();
-  const role = document.getElementById('modalRole').value;
-
-  if (!email) { 
-    triggerNotification('Email wajib diisi!', false); 
-    return; 
-  }
-
-  // Sanitasi email untuk digunakan sebagai Key di Firebase (mengubah titik menjadi koma)
-  const sanitizedEmail = email.replace(/\./g, ',');
-  
-  // Daftarkan ke node antrean email tunggu
-  set(ref(db, `user_emails/${sanitizedEmail}`), {
-     email: email,
-     role: role,
-     createdAt: new Date().toLocaleDateString('id-ID')
-  }).then(() => {
-     triggerNotification('Role berhasil didaftarkan! Selesai membuat akun dengan email ini di konsol Firebase Auth.');
-     document.getElementById('userModal').classList.remove('active');
-     document.getElementById('modalUserEmail').value = '';
-  });
-});
-
-// ==================== SYSTEM ROUTING ====================
-const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
-document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode.classList.add('active'));
-document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.add('active'));
-document.getElementById('closeModalBtn')?.addEventListener('click', () => projModalNode.classList.remove('active'));
-document.getElementById('closeUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.remove('active'));
-document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
-document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => detailModalNode.classList.remove('active'));
-
-const applicationRoutingPagesMap = { 
-  dashboard: 'dashboardPage', 'master-project': 'masterProjectPage', 'import-rab': 'importRabPage', 
-  'approval-budget': 'approvalBudgetPage', 'claim-request': 'claimRequestPage', monitoring: 'monitoringPage', 
-  reports: 'reportsPage', 'upload-document': 'uploadDocumentPage', 'user-management': 'userManagementPage' 
-};
-
-document.querySelectorAll('#sidebarMenu li').forEach(li => {
-   li.addEventListener('click', () => {
-      if (li.classList.contains('restricted')) return;
-
-      document.querySelectorAll('#sidebarMenu li').forEach(l => l.classList.remove('active'));
-      li.classList.add('active');
-
-      const activePageKey = li.getAttribute('data-page');
-      Object.values(applicationRoutingPagesMap).forEach(p => document.getElementById(p)?.classList.add('hidden-section'));
-      
-      if (applicationRoutingPagesMap[activePageKey]) {
-         document.getElementById(applicationRoutingPagesMap[activePageKey]).classList.remove('hidden-section');
-      }
-      document.getElementById('pageTitle').innerHTML = `<i class="${li.querySelector('i').className}"></i> ${li.innerText.trim()}`;
-      
-      const actionButtonContext = document.getElementById('globalActionBtn');
-      if (activePageKey === 'master-project') {
-         actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
-         actionButtonContext.onclick = () => projModalNode.classList.add('active');
-      } else {
-         actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-         actionButtonContext.onclick = () => updateWholeUI();
-      }
-   });
-});
