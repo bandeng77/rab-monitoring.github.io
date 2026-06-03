@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
@@ -30,6 +30,7 @@ let currentUserData = null;
 let currentSelectedProjectId = null;
 let currentRole = ""; 
 let currentUserEmail = "";
+let currentUserUid = "";
 
 const rolePermissions = {
   "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'claim-request', 'monitoring', 'reports', 'upload-document', 'user-management'],
@@ -118,7 +119,8 @@ async function updateUserRole(uid, newRole) {
   try {
     await update(ref(db, `users/${uid}`), {
       role: newRole,
-      updatedAt: new Date().toLocaleDateString('id-ID')
+      updatedAt: new Date().toLocaleDateString('id-ID'),
+      updatedBy: currentUserEmail
     });
     triggerNotification(`Role user berhasil diupdate menjadi ${newRole}!`, true);
     return { success: true };
@@ -129,23 +131,16 @@ async function updateUserRole(uid, newRole) {
   }
 }
 
-async function resetUserPassword(uid, email, newPassword) {
+async function resetUserPassword(email, newPassword = null) {
   try {
-    // For security, we need to re-authenticate or use admin SDK
-    // Since we're using client SDK, we'll send a password reset email instead
-    // Or if we have the current user as admin, we can't directly change other user's password
-    // So we'll use sendPasswordResetEmail as a workaround
-    
-    // Alternative: Send password reset email
-    await sendPasswordResetEmail(auth, email);
-    triggerNotification(`Email reset password telah dikirim ke ${email}. User bisa mengganti password melalui email tersebut.`, true, 'info');
-    
-    // Also log the password change in database
-    await set(ref(db, `passwordResets/${uid}/${Date.now()}`), {
-      requestedBy: currentUserEmail,
-      requestedAt: new Date().toLocaleString()
-    });
-    
+    if (newPassword && newPassword.length >= 6) {
+      // Untuk reset password via email (lebih aman di client-side)
+      await sendPasswordResetEmail(auth, email);
+      triggerNotification(`Email reset password telah dikirim ke ${email}. User bisa mengganti password melalui link di email tersebut.`, true, 'info');
+    } else {
+      await sendPasswordResetEmail(auth, email);
+      triggerNotification(`Email reset password telah dikirim ke ${email}.`, true, 'info');
+    }
     return { success: true };
   } catch (error) {
     console.error("Error resetting password:", error);
@@ -156,20 +151,17 @@ async function resetUserPassword(uid, email, newPassword) {
 
 async function deleteUserAccount(uid, email) {
   try {
-    // First, delete user data from Realtime Database
+    // Delete user data from Realtime Database
     await remove(ref(db, `users/${uid}`));
     
-    // Note: Deleting user from Firebase Authentication requires admin SDK
-    // For client-side, we'll mark user as inactive and send notification
-    // The actual deletion from Auth needs to be done via Firebase Console or Cloud Function
-    
+    // Log deletion
     await set(ref(db, `deletedUsers/${uid}`), {
       email: email,
       deletedAt: new Date().toLocaleString(),
       deletedBy: currentUserEmail
     });
     
-    triggerNotification(`User ${email} telah dihapus dari database. Perlu dihapus manual dari Firebase Auth Console untuk penghapusan penuh.`, true, 'info');
+    triggerNotification(`User ${email} telah dihapus dari database.`, true, 'info');
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);
@@ -184,11 +176,16 @@ function ensureAdminUIDInDatabase(user) {
   const adminEmails = ["admin@genetek.co.id"];
   
   if (adminUIDs.includes(user.uid) || adminEmails.includes(user.email)) {
-    set(ref(db, `users/${user.uid}`), {
-      email: user.email,
-      role: "Administrator",
-      createdAt: new Date().toLocaleDateString('id-ID'),
-      isAdmin: true
+    const adminRef = ref(db, `users/${user.uid}`);
+    get(adminRef).then((snapshot) => {
+      if (!snapshot.exists()) {
+        set(adminRef, {
+          email: user.email,
+          role: "Administrator",
+          createdAt: new Date().toLocaleDateString('id-ID'),
+          isAdmin: true
+        });
+      }
     }).catch(error => console.error("Error ensuring admin:", error));
   }
 }
@@ -199,19 +196,12 @@ function enforceRoleVisibility() {
     const pageKey = li.getAttribute('data-page');
     if (allowedPages.includes(pageKey)) {
       li.classList.remove('restricted');
+      li.style.display = 'flex';
     } else {
       li.classList.add('restricted');
+      li.style.display = 'none';
     }
   });
-  
-  // Hide user management for non-admin
-  if (currentRole !== 'Administrator') {
-    const userManagementLi = document.querySelector('#sidebarMenu li[data-page="user-management"]');
-    if (userManagementLi) userManagementLi.style.display = 'none';
-  } else {
-    const userManagementLi = document.querySelector('#sidebarMenu li[data-page="user-management"]');
-    if (userManagementLi) userManagementLi.style.display = 'flex';
-  }
   
   const activeLi = document.querySelector('#sidebarMenu li.active');
   if (activeLi && activeLi.classList.contains('restricted')) {
@@ -245,9 +235,15 @@ function initCloudDatabaseListeners() {
     renderTreeHierarchy();
   });
 
+  // IMPORTANT: Fixed user listener
   onValue(ref(db, 'users'), (snapshot) => {
     const data = snapshot.val();
-    users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+    if (data) {
+      users = Object.keys(data).map(k => ({id: k, ...data[k]}));
+      console.log("Users loaded:", users.length); // Debug log
+    } else {
+      users = [];
+    }
     renderUsersTable();
   });
 }
@@ -312,7 +308,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
-       </tr>`;
+      </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -375,7 +371,7 @@ function renderUsersTable() {
   const tbody = document.getElementById('userTableBody');
   if (!tbody) return;
 
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada user terdaftar. Silakan tambah user baru.</td></tr>';
     return;
   }
@@ -391,24 +387,27 @@ function renderUsersTable() {
     return `<tr>
       <td><strong>${u.email}</strong> ${isCurrentUser ? '<span class="badge badge-info">(Anda)</span>' : ''}</td>
       <td><span class="badge ${roleBadgeClass}">${u.role}</span></td>
-      <td style="font-size:0.7rem; color:#64748b;">${u.id ? u.id.substring(0, 12) + '...' : '-'}</td>
+      <td style="font-size:0.7rem; color:#64748b; font-family: monospace;">${u.id ? u.id.substring(0, 12) + '...' : '-'}</td>
       <td>${u.createdAt || '-'}</td>
       <td class="action-buttons">
-        ${currentRole === 'Administrator' && !isCurrentUser ? `
-          <button class="btn-edit btn" data-uid="${u.id}" data-email="${u.email}" data-role="${u.role}"><i class="fas fa-edit"></i> Edit Role</button>
-          <button class="btn-reset btn" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-key"></i> Reset Pass</button>
-          <button class="btn-delete btn" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Hapus</button>
-        ` : isCurrentUser ? `
-          <span class="badge badge-info">User Aktif</span>
+        ${currentRole === 'Administrator' ? `
+          ${!isCurrentUser ? `
+            <button class="btn-edit" data-uid="${u.id}" data-email="${u.email}" data-role="${u.role}"><i class="fas fa-edit"></i> Edit Role</button>
+            <button class="btn-reset" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-key"></i> Reset Pass</button>
+            <button class="btn-delete" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Hapus</button>
+          ` : `
+            <span class="badge badge-secondary"><i class="fas fa-user-shield"></i> Akun Anda</span>
+          `}
         ` : `
-          <span class="badge badge-info">Hanya Admin</span>
+          <span class="badge badge-secondary">Hanya Admin</span>
         `}
       </td>
     </tr>`;
   }).join('');
 
-  // Add event listeners for user action buttons
+  // Add event listeners for user action buttons (only if admin)
   if (currentRole === 'Administrator') {
+    // Edit role buttons
     tbody.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
         const uid = btn.getAttribute('data-uid');
@@ -418,6 +417,7 @@ function renderUsersTable() {
       });
     });
     
+    // Reset password buttons
     tbody.querySelectorAll('.btn-reset').forEach(btn => {
       btn.addEventListener('click', () => {
         const uid = btn.getAttribute('data-uid');
@@ -426,6 +426,7 @@ function renderUsersTable() {
       });
     });
     
+    // Delete user buttons
     tbody.querySelectorAll('.btn-delete').forEach(btn => {
       btn.addEventListener('click', async () => {
         const uid = btn.getAttribute('data-uid');
@@ -442,21 +443,20 @@ function openEditUserModal(uid, email, currentRoleUser) {
   const modal = document.getElementById('userModal');
   const title = document.getElementById('userModalTitle');
   const emailInput = document.getElementById('modalUserEmail');
-  const passwordInput = document.getElementById('modalUserPassword');
+  const passwordFieldGroup = document.getElementById('passwordFieldGroup');
   const roleSelect = document.getElementById('modalRole');
   const saveBtn = document.getElementById('saveUserBtn');
   const editUserId = document.getElementById('editUserId');
   
-  title.innerText = 'Edit Role User';
+  title.innerHTML = '<i class="fas fa-user-edit"></i> Edit Role User';
   emailInput.value = email;
   emailInput.disabled = true;
-  passwordInput.value = '';
-  passwordInput.placeholder = 'Kosongkan untuk tidak mengubah password';
+  if (passwordFieldGroup) passwordFieldGroup.style.display = 'none';
   roleSelect.value = currentRoleUser;
   editUserId.value = uid;
   
   // Change save button behavior
-  saveBtn.onclick = async () => {
+  const newSaveHandler = async () => {
     const newRole = roleSelect.value;
     if (newRole !== currentRoleUser) {
       await updateUserRole(uid, newRole);
@@ -465,11 +465,13 @@ function openEditUserModal(uid, email, currentRoleUser) {
     // Reset form
     emailInput.disabled = false;
     emailInput.value = '';
+    if (passwordFieldGroup) passwordFieldGroup.style.display = 'block';
     editUserId.value = '';
-    title.innerText = 'Tambah User Baru';
+    title.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User Baru';
     saveBtn.onclick = saveNewUser;
   };
   
+  saveBtn.onclick = newSaveHandler;
   modal.classList.add('active');
 }
 
@@ -498,7 +500,7 @@ function openResetPasswordModal(uid, email) {
       return;
     }
     
-    await resetUserPassword(uid, email, newPassword);
+    await resetUserPassword(email, newPassword || null);
     modal.classList.remove('active');
   };
   
@@ -515,6 +517,13 @@ async function saveNewUser() {
     return;
   }
   
+  // Check if email already exists in users list
+  const existingUser = users.find(u => u.email === email);
+  if (existingUser) {
+    triggerNotification('Email sudah terdaftar!', false, 'error');
+    return;
+  }
+  
   // Set default password if empty
   if (!password) {
     password = 'password123';
@@ -528,7 +537,8 @@ async function saveNewUser() {
   const result = await createNewUser(email, password, role);
   
   if (result.success) {
-    document.getElementById('userModal').classList.remove('active');
+    const modal = document.getElementById('userModal');
+    modal.classList.remove('active');
     document.getElementById('modalUserEmail').value = '';
     document.getElementById('modalUserPassword').value = '';
   }
@@ -711,7 +721,7 @@ function renderClaimView() {
         <td>${c.vendor}</td>
         <td><span class="badge ${classBadge}">${c.status}</span></td>
         <td>${c.tanggal}</td>
-       </tr>`;
+      </tr>`;
     }).join('');
   }
 }
@@ -836,7 +846,7 @@ function renderMonitoringTable() {
       <td>${formatRp(computedRealizations)}</td>
       <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#475569'}">${formatRp(balance)}</td>
       <td><strong>${percentage}%</strong></td>
-     </tr>`;
+     </td>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
@@ -850,7 +860,7 @@ function renderMonitoringTable() {
       const detailBody = document.getElementById('detailRabBody');
       
       if (elements.length === 0) {
-        detailBody.innerHTML = '<td><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
+        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
       } else {
         detailBody.innerHTML = elements.map(i => `
           <tr>
@@ -1034,6 +1044,7 @@ onAuthStateChanged(auth, (user) => {
     window.location.href = 'login.html';
   } else {
     currentUserEmail = user.email;
+    currentUserUid = user.uid;
     ensureAdminUIDInDatabase(user);
 
     get(ref(db, `users/${user.uid}`)).then((snapshot) => {
@@ -1052,7 +1063,17 @@ onAuthStateChanged(auth, (user) => {
         
         hideLoadingScreen();
       } else {
-        signOut(auth);
+        // Create user profile if not exists
+        set(ref(db, `users/${user.uid}`), {
+          email: user.email,
+          role: "Project Manager",
+          createdAt: new Date().toLocaleDateString('id-ID')
+        }).then(() => {
+          currentRole = "Project Manager";
+          enforceRoleVisibility();
+          initCloudDatabaseListeners();
+          hideLoadingScreen();
+        });
       }
     }).catch(error => {
       console.error("Error fetching user profile:", error);
@@ -1080,15 +1101,16 @@ document.getElementById('openUserModalBtn')?.addEventListener('click', () => {
   const title = document.getElementById('userModalTitle');
   const emailInput = document.getElementById('modalUserEmail');
   const passwordInput = document.getElementById('modalUserPassword');
+  const passwordFieldGroup = document.getElementById('passwordFieldGroup');
   const roleSelect = document.getElementById('modalRole');
   const editUserId = document.getElementById('editUserId');
   const saveBtn = document.getElementById('saveUserBtn');
   
-  title.innerText = 'Tambah User Baru';
+  title.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User Baru';
   emailInput.value = '';
   emailInput.disabled = false;
   passwordInput.value = '';
-  passwordInput.placeholder = 'Minimal 6 karakter';
+  if (passwordFieldGroup) passwordFieldGroup.style.display = 'block';
   roleSelect.value = 'Project Manager';
   editUserId.value = '';
   saveBtn.onclick = saveNewUser;
@@ -1133,32 +1155,10 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
       }
       
       const actionButtonContext = document.getElementById('globalActionBtn');
-      if (activePageKey === 'master-project') {
-         if (actionButtonContext) {
-           actionButtonContext.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
-           actionButtonContext.onclick = () => projModalNode?.classList.add('active');
-         }
-      } else if (activePageKey === 'user-management' && currentRole === 'Administrator') {
-         if (actionButtonContext) {
-           actionButtonContext.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User';
-           actionButtonContext.onclick = () => {
-             // Reset form and open modal
-             document.getElementById('userModalTitle').innerText = 'Tambah User Baru';
-             document.getElementById('modalUserEmail').value = '';
-             document.getElementById('modalUserEmail').disabled = false;
-             document.getElementById('modalUserPassword').value = '';
-             document.getElementById('modalUserPassword').placeholder = 'Minimal 6 karakter';
-             document.getElementById('modalRole').value = 'Project Manager';
-             document.getElementById('editUserId').value = '';
-             document.getElementById('saveUserBtn').onclick = saveNewUser;
-             usrModalNode?.classList.add('active');
-           };
-         }
-      } else {
-         if (actionButtonContext) {
-           actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-           actionButtonContext.onclick = () => updateWholeUI();
-         }
+      // Button hanya untuk refresh, tidak untuk tambah user
+      if (actionButtonContext) {
+        actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        actionButtonContext.onclick = () => updateWholeUI();
       }
    });
 });
