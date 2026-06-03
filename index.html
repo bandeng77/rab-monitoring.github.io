@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>RAB Pro | Ultimate Budget Tracker Firebase</title>
   
+  <!-- Chart.js, SheetJS, and FontAwesome Icons -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -192,6 +193,8 @@
     /* FILE TREE HIERARCHY PREVIEW */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
+    .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
+    .root-node i { color: #6366f1; }
     .folder-node { font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; padding: 4px 0; }
     .folder-node i { color: #eab308; }
     .file-node { padding-left: 24px; display: flex; align-items: center; gap: 8px; color: #475569; background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: 12px; margin: 4px 0; }
@@ -223,6 +226,7 @@
 </head>
 <body>
 
+<!-- SIDEBAR NAVIGATION WITH HIERARCHY ACCESS SIMULATION -->
 <div class="sidebar">
   <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
   
@@ -248,12 +252,14 @@
   </ul>
 </div>
 
+<!-- MAIN VIEW CONTENT -->
 <div class="main">
   <div class="header">
     <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard</h1>
     <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
   </div>
 
+  <!-- DASHBOARD PAGE -->
   <div id="dashboardPage" class="page">
     <div class="cards" id="cardsContainer"></div>
     <div class="section">
@@ -273,6 +279,7 @@
     </div>
   </div>
 
+  <!-- MASTER PROJECT PAGE -->
   <div id="masterProjectPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-database"></i> Master Data Project</h2>
@@ -300,6 +307,7 @@
     </div>
   </div>
 
+  <!-- IMPORT RAB PAGE -->
   <div id="importRabPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-file-excel"></i> Import RAB via Excel Spreadsheet</h2>
@@ -315,6 +323,7 @@
     </div>
   </div>
 
+  <!-- APPROVAL BUDGET PAGE -->
   <div id="approvalBudgetPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
@@ -329,6 +338,7 @@
     </div>
   </div>
 
+  <!-- CLAIM REQUEST PAGE -->
   <div id="claimRequestPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-hand-holding-usd"></i> Submit Multi-Item Claim Request</h2>
@@ -365,6 +375,7 @@
     </div>
   </div>
 
+  <!-- MONITORING PAGE -->
   <div id="monitoringPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-chart-bar"></i> Project Financial Structure Metrics</h2>
@@ -379,6 +390,7 @@
     </div>
   </div>
 
+  <!-- REPORTS PAGE -->
   <div id="reportsPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-flag-checkered"></i> Corporate Financial Report Analysis</h2>
@@ -392,6 +404,7 @@
     </div>
   </div>
 
+  <!-- UPLOAD DOCUMENT PAGE WITH TRUE-NAS ARCHITECTURE & PREVIEW -->
   <div id="uploadDocumentPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-cloud-upload-alt"></i> File Upload to TrueNAS File Storage</h2>
@@ -417,14 +430,16 @@
     </div>
 
     <div class="section">
-      <h2><i class="fas fa-folder-tree"></i> Directory Hierarchy Tree Preview (/mnt/EXTERNAL-4TB/Data/rab)</h2>
+      <h2><i class="fas fa-folder-tree"></i> Cloud File Directory Explorer</h2>
       <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
          <ul class="file-tree" id="rootTreeContainer">
-           </ul>
+           <!-- Dynamic tree rendering -->
+         </ul>
       </div>
     </div>
   </div>
 
+  <!-- USER MANAGEMENT PAGE -->
   <div id="userManagementPage" class="page hidden-section">
     <div class="section">
       <h2><i class="fas fa-users"></i> System Accounts Management</h2>
@@ -439,14 +454,20 @@
   </div>
 </div>
 
+<!-- MODAL BOXES LAYER -->
 <div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Add New Project Assignment</h3><div class="form-group"><label>Project Title Name</label><input type="text" id="modalProjectName" placeholder="e.g. Fiber Optic Infrastructure"></div><div class="form-group"><label>Client Enterprise</label><input type="text" id="modalClientName" placeholder="e.g. Bank National Corp"></div><div class="form-group"><label>Initial Pagu Budget Limit (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Cancel</button><button class="btn btn-primary" id="saveProjectBtn">Submit Project</button></div></div></div>
 <div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Add Item Structure Component</h3><div class="form-group"><label>Project Target</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Item Component Designation Name</label><input type="text" id="rabItemName" placeholder="e.g. Edge Switch Layer 3"></div><div class="form-group"><label>Budget Allocated Cost (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Cancel</button><button class="btn btn-primary" id="saveRabBtn">Submit Item</button></div></div></div>
 <div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detailed Project Construction Items</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Item Budget Limit</th><th>Realisasi Expense</th><th>Remaining Balance</th><th>Status</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Close View</button></div></div></div>
 <div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Create Access User Credential</h3><div class="form-group"><label>Username</label><input type="text" id="modalUsername" placeholder="e.g. johndoe"></div><div class="form-group"><label>Menu Access Clearance Authority</label><select id="modalRole"><option>Administrator</option><option>Finance</option><option>Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Cancel</button><button class="btn btn-primary" id="saveUserBtn">Submit Account</button></div></div></div>
 
+<!-- FIREBASE SDK ENGINE AS ES-MODULE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // ==================== CONFIGURATION TUNNEL CLOUDFLARE ====================
+  // URL Custom Domain Produksi HTTPS Valid melalui Cloudflare Tunnel
+  const CLOUDFLARE_TUNNEL_URL = "https://api.genetek.co.id/upload"; 
 
   // Realtime Database Configuration Instance
   const firebaseConfig = {
@@ -587,9 +608,7 @@
     const tbody = document.getElementById('masterProjectBody');
     if (tbody) {
       tbody.innerHTML = projects.map(p => {
-        // Calculate the sum of budget allocated to sub-items
         const totalAllocatedToSubItems = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
-        // Sisa Alokasi Pagu = Pagu Awal - Total Budget allocated to items
         const remainingPagu = p.totalBudget - totalAllocatedToSubItems;
 
         return `<tr>
@@ -1063,15 +1082,14 @@
      const fileObj = fileInputElement.files[0];
      const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
      
-     // Construct the storage folder layout scheme path for TrueNAS
      const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${resolvedProjectObj.name.replace(/\s+/g, '_')}/${targetFolderSelection}`;
 
      const dataPayload = new FormData();
      dataPayload.append('file', fileObj);
      dataPayload.append('path', serverStoragePath); 
 
-     // Dispatch standard multipart request to endpoint API
-     fetch('http://192.168.104.45:3000/upload', {
+     // MENEMBAK KE TUNNEL SECARA AMAN DENGAN CUSTOM DOMAIN HTTPS VALID
+     fetch(CLOUDFLARE_TUNNEL_URL, {
        method: 'POST',
        body: dataPayload
      })
@@ -1082,7 +1100,6 @@
      .then(data => {
         alert('File binary dispatched to TrueNAS local mount disk storage pool successfully!');
         
-        // Log metadata tracking information to Firebase database references
         const pushedFileRef = push(ref(db, 'truenasFiles'));
         set(pushedFileRef, {
            projectId: attachedProjectId,
@@ -1096,7 +1113,7 @@
      })
      .catch(error => {
         console.warn(error);
-        alert('TrueNAS Target API at 192.168.104.20:3000 is unreachable. Executing simulated fallback metadata entry for structure evaluation.');
+        alert('Cloudflare Tunnel Error / Timeout. Executing simulated fallback metadata entry.');
         
         // Fallback simulation inside Firebase
         const pushedFileRef = push(ref(db, 'truenasFiles'));
@@ -1122,7 +1139,10 @@
        return;
      }
 
-     let innerLayoutCodeHtml = '';
+     let innerLayoutCodeHtml = `<li>
+       <span class="root-node"><i class="fas fa-server"></i> Secured Network Cloud Storage Engine</span>
+       <ul class="nested-tree">`;
+
      projects.forEach(p => {
         const folderSanitizedName = p.name.replace(/\s+/g, '_');
         innerLayoutCodeHtml += `<li>
@@ -1150,6 +1170,7 @@
         innerLayoutCodeHtml += `</ul></li>`;
      });
 
+     innerLayoutCodeHtml += `</ul></li>`;
      treeWrapper.innerHTML = innerLayoutCodeHtml;
   }
 
