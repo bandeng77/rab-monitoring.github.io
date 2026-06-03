@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
@@ -33,9 +33,9 @@ let currentUserEmail = "";
 let currentUserUid = "";
 
 const rolePermissions = {
-  "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'claim-request', 'monitoring', 'reports', 'upload-document', 'user-management'],
-  "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document'],
-  "Project Manager": ['dashboard', 'master-project', 'import-rab', 'claim-request', 'monitoring', 'upload-document']
+  "Administrator": ['dashboard', 'master-project', 'claim-request', 'approval-budget', 'monitoring', 'reports', 'upload-document', 'files', 'user-management'],
+  "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document', 'files'],
+  "Project Manager": ['dashboard', 'master-project', 'claim-request', 'monitoring', 'upload-document', 'files']
 };
 
 // ==================== HELPER FUNCTIONS ====================
@@ -84,11 +84,9 @@ function getBadge(real, budget) {
 // ==================== USER MANAGEMENT FUNCTIONS ====================
 async function createNewUser(email, password, role) {
   try {
-    // Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Store user data in Realtime Database
     await set(ref(db, `users/${user.uid}`), {
       email: email,
       role: role,
@@ -131,16 +129,10 @@ async function updateUserRole(uid, newRole) {
   }
 }
 
-async function resetUserPassword(email, newPassword = null) {
+async function resetUserPassword(email) {
   try {
-    if (newPassword && newPassword.length >= 6) {
-      // Untuk reset password via email (lebih aman di client-side)
-      await sendPasswordResetEmail(auth, email);
-      triggerNotification(`Email reset password telah dikirim ke ${email}. User bisa mengganti password melalui link di email tersebut.`, true, 'info');
-    } else {
-      await sendPasswordResetEmail(auth, email);
-      triggerNotification(`Email reset password telah dikirim ke ${email}.`, true, 'info');
-    }
+    await sendPasswordResetEmail(auth, email);
+    triggerNotification(`Email reset password telah dikirim ke ${email}.`, true, 'info');
     return { success: true };
   } catch (error) {
     console.error("Error resetting password:", error);
@@ -151,10 +143,8 @@ async function resetUserPassword(email, newPassword = null) {
 
 async function deleteUserAccount(uid, email) {
   try {
-    // Delete user data from Realtime Database
     await remove(ref(db, `users/${uid}`));
     
-    // Log deletion
     await set(ref(db, `deletedUsers/${uid}`), {
       email: email,
       deletedAt: new Date().toLocaleString(),
@@ -235,12 +225,10 @@ function initCloudDatabaseListeners() {
     renderTreeHierarchy();
   });
 
-  // IMPORTANT: Fixed user listener
   onValue(ref(db, 'users'), (snapshot) => {
     const data = snapshot.val();
     if (data) {
       users = Object.keys(data).map(k => ({id: k, ...data[k]}));
-      console.log("Users loaded:", users.length); // Debug log
     } else {
       users = [];
     }
@@ -308,7 +296,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
-      </tr>`;
+       </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -342,7 +330,7 @@ function renderRABItemsSubTable() {
 
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item komponen di dalam project ini.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item komponen di dalam project ini.</tr></tr>';
     return;
   }
 
@@ -372,7 +360,7 @@ function renderUsersTable() {
   if (!tbody) return;
 
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada user terdaftar. Silakan tambah user baru.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada user terdaftar. Silakan tambah user baru.</td><tr>';
     return;
   }
 
@@ -405,9 +393,7 @@ function renderUsersTable() {
     </tr>`;
   }).join('');
 
-  // Add event listeners for user action buttons (only if admin)
   if (currentRole === 'Administrator') {
-    // Edit role buttons
     tbody.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
         const uid = btn.getAttribute('data-uid');
@@ -417,7 +403,6 @@ function renderUsersTable() {
       });
     });
     
-    // Reset password buttons
     tbody.querySelectorAll('.btn-reset').forEach(btn => {
       btn.addEventListener('click', () => {
         const uid = btn.getAttribute('data-uid');
@@ -426,7 +411,6 @@ function renderUsersTable() {
       });
     });
     
-    // Delete user buttons
     tbody.querySelectorAll('.btn-delete').forEach(btn => {
       btn.addEventListener('click', async () => {
         const uid = btn.getAttribute('data-uid');
@@ -455,14 +439,12 @@ function openEditUserModal(uid, email, currentRoleUser) {
   roleSelect.value = currentRoleUser;
   editUserId.value = uid;
   
-  // Change save button behavior
   const newSaveHandler = async () => {
     const newRole = roleSelect.value;
     if (newRole !== currentRoleUser) {
       await updateUserRole(uid, newRole);
     }
     modal.classList.remove('active');
-    // Reset form
     emailInput.disabled = false;
     emailInput.value = '';
     if (passwordFieldGroup) passwordFieldGroup.style.display = 'block';
@@ -478,29 +460,12 @@ function openEditUserModal(uid, email, currentRoleUser) {
 function openResetPasswordModal(uid, email) {
   const modal = document.getElementById('resetPasswordModal');
   const emailInput = document.getElementById('resetUserEmail');
-  const newPassInput = document.getElementById('newPassword');
-  const confirmPassInput = document.getElementById('confirmPassword');
   
   emailInput.value = email;
-  newPassInput.value = '';
-  confirmPassInput.value = '';
   
   const confirmBtn = document.getElementById('confirmResetPasswordBtn');
   confirmBtn.onclick = async () => {
-    const newPassword = newPassInput.value;
-    const confirmPassword = confirmPassInput.value;
-    
-    if (newPassword && newPassword !== confirmPassword) {
-      triggerNotification('Password dan konfirmasi password tidak cocok!', false, 'error');
-      return;
-    }
-    
-    if (newPassword && newPassword.length < 6) {
-      triggerNotification('Password minimal 6 karakter!', false, 'error');
-      return;
-    }
-    
-    await resetUserPassword(email, newPassword || null);
+    await resetUserPassword(email);
     modal.classList.remove('active');
   };
   
@@ -517,14 +482,12 @@ async function saveNewUser() {
     return;
   }
   
-  // Check if email already exists in users list
   const existingUser = users.find(u => u.email === email);
   if (existingUser) {
     triggerNotification('Email sudah terdaftar!', false, 'error');
     return;
   }
   
-  // Set default password if empty
   if (!password) {
     password = 'password123';
   }
@@ -592,65 +555,6 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
     document.getElementById('rabModal').classList.remove('active');
     triggerNotification('Item komponen RAB berhasil disimpan!');
   });
-});
-
-// ==================== INTERFACE EXCEL IMPORT MANAGEMENT ====================
-document.getElementById('processExcelBtn')?.addEventListener('click', () => {
-  const inputElement = document.getElementById('excelFileInput').files[0];
-  if (!inputElement) { triggerNotification('Pilih berkas spreadsheet excel terlebih dahulu!', false); return; }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-     const rawBytes = new Uint8Array(e.target.result);
-     const workbook = XLSX.read(rawBytes, {type: 'array'});
-     const targetSheet = workbook.Sheets[workbook.SheetNames[0]];
-     const matrices = XLSX.utils.sheet_to_json(targetSheet, {header:1});
-
-     if (matrices.length < 2) return;
-     const columnHeaders = matrices[0].map(c => String(c||"").toLowerCase().trim());
-     const targetProjIndex = columnHeaders.findIndex(h => h.includes('project'));
-     const targetItemIndex = columnHeaders.findIndex(h => h.includes('item'));
-     const targetBudgetIndex = columnHeaders.findIndex(h => h.includes('budget'));
-
-     if (targetProjIndex === -1 || targetItemIndex === -1 || targetBudgetIndex === -1) {
-        triggerNotification('Struktur header salah! Wajib: NAMA_PROJECT, ITEM_RAB, BUDGET', false);
-        return;
-     }
-
-     let importStatsCount = 0;
-     for (let i = 1; i < matrices.length; i++) {
-        let targetProjName = String(matrices[i][targetProjIndex] || "").trim();
-        let targetItemName = String(matrices[i][targetItemIndex] || "").trim();
-        let cleanBudgetNum = parseFloat(String(matrices[i][targetBudgetIndex] || 0).replace(/[^0-9.-]/g, ''));
-
-        if (targetProjName && targetItemName && cleanBudgetNum > 0) {
-           let existProject = projects.find(p => p.name.toLowerCase() === targetProjName.toLowerCase());
-           
-           if (!existProject) {
-              const generatedProjRef = push(ref(db, 'projects'));
-              const keyGenerated = generatedProjRef.key;
-              set(generatedProjRef, { name: targetProjName, client: 'Spreadsheet Auto Import', totalBudget: cleanBudgetNum * 2 });
-              existProject = { id: keyGenerated };
-           }
-
-           const pushedRabRef = push(ref(db, 'rabItems'));
-           set(pushedRabRef, {
-              projectId: existProject.id, itemName: targetItemName, budget: cleanBudgetNum, realisasi: 0
-           });
-           importStatsCount++;
-        }
-     }
-     triggerNotification(`Berhasil menyinkronkan ${importStatsCount} data dari Excel!`);
-  };
-  reader.readAsArrayBuffer(inputElement);
-});
-
-document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => {
-  const matricesData = [["NAMA_PROJECT", "ITEM_RAB", "BUDGET"], ["Smart Office Setup", "Cat6 Network Cabling", 7500000]];
-  const worksheet = XLSX.utils.aoa_to_sheet(matricesData);
-  const workbookObj = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbookObj, worksheet, "RAB Template");
-  XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
 });
 
 // ==================== MULTI-ITEM CLAIM LOGIC ====================
@@ -721,7 +625,7 @@ function renderClaimView() {
         <td>${c.vendor}</td>
         <td><span class="badge ${classBadge}">${c.status}</span></td>
         <td>${c.tanggal}</td>
-      </tr>`;
+       </tr>`;
     }).join('');
   }
 }
@@ -877,6 +781,7 @@ function renderMonitoringTable() {
   });
 }
 
+// ==================== REPORTS WITH PDF DOWNLOAD ====================
 function renderReports() {
   const tbody = document.getElementById('laporanBody');
   if (!tbody) return;
@@ -896,12 +801,186 @@ function renderReports() {
   }).join('');
 }
 
-// ==================== TRUENAS STORAGE Pool ====================
+function downloadPDF() {
+  const reportContent = document.getElementById('reportContent');
+  if (!reportContent) return;
+
+  // Create a temporary container for PDF
+  const originalContent = reportContent.innerHTML;
+  
+  // Get current date for report header
+  const currentDate = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  // Create full report HTML
+  const reportHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Laporan RAB - ${currentDate}</title>
+      <style>
+        body {
+          font-family: 'Inter', Arial, sans-serif;
+          padding: 40px;
+          margin: 0;
+          color: #1e293b;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #3b82f6;
+          padding-bottom: 20px;
+        }
+        .header h1 {
+          color: #1e293b;
+          margin: 0;
+          font-size: 24px;
+        }
+        .header h2 {
+          color: #3b82f6;
+          margin: 10px 0 0;
+          font-size: 18px;
+        }
+        .header p {
+          color: #64748b;
+          margin: 10px 0 0;
+          font-size: 12px;
+        }
+        .summary {
+          display: flex;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+        }
+        .summary-card {
+          flex: 1;
+          background: #f1f5f9;
+          padding: 15px;
+          border-radius: 12px;
+          text-align: center;
+        }
+        .summary-card h3 {
+          margin: 0 0 10px;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .summary-card p {
+          margin: 0;
+          font-size: 20px;
+          font-weight: bold;
+          color: #1e293b;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th, td {
+          border: 1px solid #e2e8f0;
+          padding: 12px;
+          text-align: left;
+          font-size: 12px;
+        }
+        th {
+          background: #f1f5f9;
+          font-weight: 600;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 10px;
+          color: #94a3b8;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 20px;
+        }
+        .badge-success {
+          background: #d1fae5;
+          color: #065f46;
+          padding: 4px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+        }
+        .badge-danger {
+          background: #fee2e2;
+          color: #991b1b;
+          padding: 4px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+        }
+        .badge-warning {
+          background: #fed7aa;
+          color: #9a3412;
+          padding: 4px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>LAPORAN RAB MONITORING</h1>
+        <h2>PT Genetek Indonesia</h2>
+        <p>Dicetak pada: ${currentDate}</p>
+      </div>
+      
+      <div class="summary">
+        <div class="summary-card">
+          <h3>Total Project</h3>
+          <p>${projects.length}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Budget</h3>
+          <p>${formatRp(projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0))}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Realisasi</h3>
+          <p>${formatRp(rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0))}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Item Over Budget</h3>
+          <p>${rabItems.filter(i => i.realisasi > i.budget).length}</p>
+        </div>
+      </div>
+      
+      <h3 style="margin-top: 30px;">Detail Laporan per Project</h3>
+      ${reportContent.innerHTML}
+      
+      <div class="footer">
+        <p>Laporan ini dibuat secara otomatis oleh sistem RAB Monitoring</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Configure pdf options
+  const element = document.createElement('div');
+  element.innerHTML = reportHTML;
+  
+  const opt = {
+    margin: [0.5, 0.5, 0.5, 0.5],
+    filename: `Laporan_RAB_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, letterRendering: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+  };
+  
+  html2pdf().set(opt).from(element).save();
+  triggerNotification('Laporan PDF sedang diproses...', true);
+}
+
+document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
+
+// ==================== TRUENAS STORAGE Pool (Simplified - No subfolders) ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const fileInputElement = document.getElementById('trueNasFile');
   const attachedProjectId = document.getElementById('uploadProjectSelect').value;
-  const targetFolderSelection = document.getElementById('uploadFolderSelect').value;
 
   if (!attachedProjectId || fileInputElement.files.length === 0) {
     triggerNotification('Data parameter berkas tidak valid!', false);
@@ -912,7 +991,7 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
   const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
   
   const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}/${targetFolderSelection}`;
+  const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}`;
 
   const dataPayload = new FormData();
   dataPayload.append('path', serverStoragePath); 
@@ -924,12 +1003,11 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
     return response.json();
   })
   .then(data => {
-     triggerNotification('File sukses diunggah ke storage pool TrueNAS!');
+     triggerNotification('File sukses diunggah ke storage!');
      const pushedFileRef = push(ref(db, 'truenasFiles'));
      set(pushedFileRef, {
         projectId: attachedProjectId,
         projectName: resolvedProjectObj.name,
-        folderType: targetFolderSelection,
         fileName: fileObj.name,
         uploadedAt: new Date().toLocaleString(),
         fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
@@ -942,7 +1020,7 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
 });
 
 window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
-  if(!confirm("Hapus file ini secara permanen dari penyimpanan TrueNAS?")) return;
+  if(!confirm("Hapus file ini secara permanen dari penyimpanan?")) return;
 
   fetch(`${API_BASE_URL}/delete`, {
     method: "POST",
@@ -950,7 +1028,7 @@ window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
     body: JSON.stringify({ filePath: fullPath })
   })
   .then(async res => {
-    if(!res.ok) throw new Error("Gagal menghapus berkas fisik di TrueNAS");
+    if(!res.ok) throw new Error("Gagal menghapus berkas fisik");
     return res.json();
   })
   .then(() => {
@@ -960,7 +1038,7 @@ window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
   })
   .catch(err => {
     remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-      triggerNotification("Metadata dibersihkan dari cloud tracker database.", false);
+      triggerNotification("Metadata dibersihkan dari database.", false);
     });
   });
 }
@@ -977,25 +1055,24 @@ function renderTreeHierarchy() {
   let innerLayoutCodeHtml = `<li><span class="root-node"><i class="fas fa-server"></i> Storage Server: .../apps/rab/</span><ul class="nested-tree">`;
   projects.forEach(p => {
      const folderSanitizedName = p.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-     innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder-open"></i> ${folderSanitizedName}</span><ul class="nested-tree">`;
-         
-         ['RAB_Awal', 'Nota_Vendor', 'BAP'].forEach(fType => {
-            innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> ${fType}</span><ul class="nested-tree">`;
-            innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === fType)
-                     .map(f => {
-                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/${fType}/${encodeURIComponent(f.fileName)}`;
-                        return `<li class="file-node">
-                                  <i class="fas fa-file"></i> ${f.fileName} 
-                                  <div class="action-links">
-                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
-                                    <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn"><i class="fas fa-times-circle"></i></button>
-                                  </div>
-                                </li>`;
-                     })
-                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
-            innerLayoutCodeHtml += `</ul></li>`;
-         });
-
+     innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder-open"></i> ${p.name}</span><ul class="nested-tree">`;
+     
+     const projectFiles = truenasFiles.filter(f => f.projectId === p.id);
+     if (projectFiles.length === 0) {
+       innerLayoutCodeHtml += '<li class="file-node" style="color:#94a3b8; font-style:italic;">Tidak ada file</li>';
+     } else {
+       projectFiles.forEach(f => {
+         const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/${encodeURIComponent(f.fileName)}`;
+         innerLayoutCodeHtml += `<li class="file-node">
+                                    <i class="fas fa-file"></i> ${f.fileName} 
+                                    <div class="action-links">
+                                      <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                      <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn"><i class="fas fa-times-circle"></i></button>
+                                    </div>
+                                  </li>`;
+       });
+     }
+     
      innerLayoutCodeHtml += `</ul></li>`;
   });
   treeWrapper.innerHTML = innerLayoutCodeHtml + `</ul></li>`;
@@ -1063,7 +1140,6 @@ onAuthStateChanged(auth, (user) => {
         
         hideLoadingScreen();
       } else {
-        // Create user profile if not exists
         set(ref(db, `users/${user.uid}`), {
           email: user.email,
           role: "Project Manager",
@@ -1097,7 +1173,6 @@ const resetModalNode = document.getElementById('resetPasswordModal');
 
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode?.classList.add('active'));
 document.getElementById('openUserModalBtn')?.addEventListener('click', () => {
-  // Reset form for new user
   const title = document.getElementById('userModalTitle');
   const emailInput = document.getElementById('modalUserEmail');
   const passwordInput = document.getElementById('modalUserPassword');
@@ -1125,9 +1200,15 @@ document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => 
 
 // ==================== SYSTEM ROUTING ====================
 const applicationRoutingPagesMap = { 
-  dashboard: 'dashboardPage', 'master-project': 'masterProjectPage', 'import-rab': 'importRabPage', 
-  'approval-budget': 'approvalBudgetPage', 'claim-request': 'claimRequestPage', monitoring: 'monitoringPage', 
-  reports: 'reportsPage', 'upload-document': 'uploadDocumentPage', 'user-management': 'userManagementPage' 
+  dashboard: 'dashboardPage', 
+  'master-project': 'masterProjectPage', 
+  'claim-request': 'claimRequestPage',
+  'approval-budget': 'approvalBudgetPage', 
+  monitoring: 'monitoringPage', 
+  reports: 'reportsPage', 
+  'upload-document': 'uploadDocumentPage',
+  'files': 'filesPage',
+  'user-management': 'userManagementPage' 
 };
 
 document.querySelectorAll('#sidebarMenu li').forEach(li => {
@@ -1155,7 +1236,6 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
       }
       
       const actionButtonContext = document.getElementById('globalActionBtn');
-      // Button hanya untuk refresh, tidak untuk tambah user
       if (actionButtonContext) {
         actionButtonContext.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
         actionButtonContext.onclick = () => updateWholeUI();
