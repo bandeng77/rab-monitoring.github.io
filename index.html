@@ -148,6 +148,8 @@
     .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
     .btn-danger { background: linear-gradient(95deg, #ef4444, #f87171); color: white; }
     .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+    .btn-warning { background: linear-gradient(95deg, #f59e0b, #fbbf24); color: white; }
+    .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
 
@@ -173,6 +175,7 @@
     .badge-success { background: #d1fae5; color: #065f46; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
     .badge-warning { background: #fed7aa; color: #9a3412; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
 
     /* Project Row */
     .project-row { cursor: pointer; transition: all 0.2s; }
@@ -213,12 +216,21 @@
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 18px; border-radius: 28px; border: 1.5px solid #e2e8f0; outline: none; }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+    .password-hint { font-size: 0.75rem; color: #64748b; margin-top: 5px; }
+
+    /* Action Buttons in User Table */
+    .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .action-buttons button { padding: 6px 12px; font-size: 0.7rem; border-radius: 8px; }
+    .btn-edit { background: #3b82f6; color: white; }
+    .btn-reset { background: #f59e0b; color: white; }
+    .btn-delete { background: #ef4444; color: white; }
 
     /* Notification */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
     .notify-popup.active { transform: translateX(0); }
     .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
     .notify-popup.error { border-left: 6px solid #ef4444; color: #991b1b; }
+    .notify-popup.info { border-left: 6px solid #3b82f6; color: #1e40af; }
     .notify-popup i { font-size: 1.4rem; }
 
     /* Utility */
@@ -459,13 +471,19 @@
       <div id="userManagementPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
-          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Daftarkan User Baru</button>
-          <table style="margin-top:20px;">
-            <thead>
-              <tr><th>Email Pengguna</th><th>Akses Peran Menu</th><th>Tanggal Dibuat</th><th>Action</th></tr>
-            </thead>
-            <tbody id="userTableBody"></tbody>
-          </table>
+          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
+          <div class="info-box" style="margin-top: 16px;">
+            <i class="fas fa-info-circle"></i> 
+            <strong>Informasi:</strong> User akan otomatis terdaftar di Firebase Authentication. Password default: <strong>password123</strong> (user bisa mengganti nanti)
+          </div>
+          <div style="overflow-x:auto; margin-top:20px;">
+            <table style="width:100%;">
+              <thead>
+                <tr><th>Email Pengguna</th><th>Role Akses</th><th>UID</th><th>Tanggal Dibuat</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="userTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -504,12 +522,55 @@
       </div>
     </div>
 
+    <!-- User Management Modal -->
     <div id="userModal" class="modal-overlay">
       <div class="modal-container">
-        <h3>Daftarkan Pengguna Sistem Baru</h3>
-        <div class="form-group"><label>Alamat Email Pengguna</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div>
-        <div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div>
-        <div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div>
+        <h3 id="userModalTitle">Tambah User Baru</h3>
+        <div class="form-group">
+          <label>Alamat Email</label>
+          <input type="email" id="modalUserEmail" placeholder="user@company.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="modalUserPassword" placeholder="Minimal 6 karakter">
+          <div class="password-hint">* Kosongkan untuk menggunakan password default: "password123"</div>
+        </div>
+        <div class="form-group">
+          <label>Role Akses</label>
+          <select id="modalRole">
+            <option value="Administrator">Administrator (Akses Penuh)</option>
+            <option value="Finance">Finance (Keuangan & Approval)</option>
+            <option value="Project Manager">Project Manager (Manajemen Proyek)</option>
+          </select>
+        </div>
+        <input type="hidden" id="editUserId" value="">
+        <div class="modal-buttons">
+          <button class="btn btn-danger" id="closeUserModalBtn">Batal</button>
+          <button class="btn btn-primary" id="saveUserBtn">Simpan User</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal-overlay">
+      <div class="modal-container" style="max-width: 450px;">
+        <h3><i class="fas fa-key"></i> Reset Password</h3>
+        <div class="form-group">
+          <label>User Email</label>
+          <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
+        </div>
+        <div class="form-group">
+          <label>Password Baru</label>
+          <input type="password" id="newPassword" placeholder="Masukkan password baru">
+        </div>
+        <div class="form-group">
+          <label>Konfirmasi Password</label>
+          <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
+        </div>
+        <div class="modal-buttons">
+          <button class="btn btn-danger" id="closeResetModalBtn">Batal</button>
+          <button class="btn btn-warning" id="confirmResetPasswordBtn">Reset Password</button>
+        </div>
       </div>
     </div>
   </div>
