@@ -1118,6 +1118,12 @@
         // TRIGGER POP-UP BERHASIL
         triggerNotification('File sukses diunggah ke storage pool TrueNAS!');
         
+        // Memformat URL preview secara aman menggunakan encodeURIComponent per segmen path
+        const safeEncodedProject = encodeURIComponent(safeProjectDirName);
+        const safeEncodedFolder = encodeURIComponent(targetFolderSelection);
+        const safeEncodedFileName = encodeURIComponent(fileObj.name);
+        const safeFileUrl = `${API_BASE_URL}/files/${safeEncodedProject}/${safeEncodedFolder}/${safeEncodedFileName}`;
+
         const pushedFileRef = push(ref(db, 'truenasFiles'));
         set(pushedFileRef, {
            projectId: attachedProjectId,
@@ -1125,7 +1131,7 @@
            folderType: targetFolderSelection,
            fileName: fileObj.name,
            uploadedAt: new Date().toLocaleString(),
-           fileUrl: `${API_BASE_URL}/files/${safeProjectDirName}/${targetFolderSelection}/${fileObj.name}`,
+           fileUrl: safeFileUrl,
            fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
         });
         fileInputElement.value = '';
@@ -1187,37 +1193,47 @@
             // Sub-Kategori: RAB_Awal
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
-                     .map(f => `<li class="file-node">
+                     .map(f => {
+                        // Memastikan tautan URL di-encode secara real-time saat render jika data lama belum terencode
+                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
+                        return `<li class="file-node">
                                   <i class="fas fa-file-pdf"></i> ${f.fileName} 
                                   <div class="action-links">
-                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
                                     <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
                                   </div>
-                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
+                                </li>`})
+                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
             // Sub-Kategori: Nota_Vendor
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
-                     .map(f => `<li class="file-node">
+                     .map(f => {
+                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
+                        return `<li class="file-node">
                                   <i class="fas fa-file-invoice"></i> ${f.fileName} 
                                   <div class="action-links">
-                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
                                     <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
                                   </div>
-                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
+                                </li>`})
+                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
             // Sub-Kategori: BAP
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
-                     .map(f => `<li class="file-node">
+                     .map(f => {
+                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
+                        return `<li class="file-node">
                                   <i class="fas fa-file-contract"></i> ${f.fileName} 
                                   <div class="action-links">
-                                    <a href="${f.fileUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
+                                    <a href="${safeUrl}" target="_blank" class="preview-link"><i class="fas fa-eye"></i> Preview</a>
                                     <button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath}')" class="delete-file-btn" title="Hapus Berkas"><i class="fas fa-times-circle"></i></button>
                                   </div>
-                                </li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
+                                </li>`})
+                     .join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Folder Kosong</li>';
             innerLayoutCodeHtml += `</ul></li>`;
 
         innerLayoutCodeHtml += `</ul></li>`;
