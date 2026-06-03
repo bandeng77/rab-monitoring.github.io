@@ -301,7 +301,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
-       </table>`;
+       </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -329,13 +329,13 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.穷</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.</td></tr>';
     return;
   }
 
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.穷</td><tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.</td></tr>';
     return;
   }
 
@@ -365,7 +365,7 @@ function renderUsersTable() {
   if (!tbody) return;
 
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered. Please add a new user.穷</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered. Please add a new user.</td></tr>';
     return;
   }
 
@@ -394,7 +394,7 @@ function renderUsersTable() {
         ` : `
           <span class="badge badge-secondary">Admin Only</span>
         `}
-      </td>
+       </td>
     </tr>`;
   }).join('');
 
@@ -635,7 +635,7 @@ function renderClaimView() {
         <td>${c.vendor}</td>
         <td><span class="badge ${classBadge}">${c.status}</span></td>
         <td>${c.tanggal}</td>
-       </tr>`;
+      </tr>`;
     }).join('');
   }
 }
@@ -686,7 +686,7 @@ function renderApprovalList() {
 
   const pendingClaims = claims.filter(c => c.status === 'pending');
   if (pendingClaims.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No pending claims in pipeline.穷</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No pending claims in pipeline.</td></tr>';
     return;
   }
 
@@ -708,7 +708,7 @@ function renderApprovalList() {
         <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
         <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
        </td>
-     </tr>`;
+    </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.app-btn').forEach(btn => {
@@ -760,7 +760,7 @@ function renderMonitoringTable() {
       <td>${formatRp(computedRealizations)}</td>
       <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#475569'}">${formatRp(balance)}</td>
       <td><strong>${percentage}%</strong></td>
-     </table>`;
+    </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
@@ -774,7 +774,7 @@ function renderMonitoringTable() {
       const detailBody = document.getElementById('detailRabBody');
       
       if (elements.length === 0) {
-        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No RAB items in this project.穷</td></tr>';
+        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No RAB items in this project.</td></tr>';
       } else {
         detailBody.innerHTML = elements.map(i => `
           <tr>
@@ -791,7 +791,7 @@ function renderMonitoringTable() {
   });
 }
 
-// ==================== REPORTS WITH COMPREHENSIVE PDF DOWNLOAD ====================
+// ==================== REPORTS WITH PDF DOWNLOAD ====================
 function renderReports() {
   const tbody = document.getElementById('laporanBody');
   if (!tbody) return;
@@ -912,7 +912,7 @@ async function downloadPDF() {
     `;
   });
   
-  // Report HTML WITHOUT highlight color on title
+  // PDF Report HTML - Judul hitam polos tanpa highlight/background
   const reportHTML = `
     <!DOCTYPE html>
     <html>
@@ -929,29 +929,33 @@ async function downloadPDF() {
           font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
           padding: 40px;
           margin: 0;
-          color: #1e293b;
+          color: #000000;
           background: white;
         }
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 2px solid #cbd5e1;
+          border-bottom: 1px solid #cccccc;
           padding-bottom: 20px;
         }
         .header h1 {
-          color: #1e293b;
+          color: #000000;
           margin: 0;
           font-size: 28px;
           font-weight: 700;
+          background: none;
+          -webkit-background-clip: unset;
+          background-clip: unset;
         }
         .header h2 {
-          color: #475569;
+          color: #333333;
           margin: 10px 0 0;
           font-size: 16px;
           font-weight: 500;
+          background: none;
         }
         .header p {
-          color: #64748b;
+          color: #666666;
           margin: 10px 0 0;
           font-size: 12px;
         }
@@ -973,22 +977,19 @@ async function downloadPDF() {
         .summary-card h3 {
           margin: 0 0 10px;
           font-size: 11px;
-          color: #64748b;
+          color: #666666;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           font-weight: 600;
+          background: none;
         }
         .summary-card .value {
           margin: 0;
           font-size: 22px;
           font-weight: bold;
-          color: #1e293b;
+          color: #000000;
+          background: none;
         }
-        .summary-card .value.primary { color: #2563eb; }
-        .summary-card .value.success { color: #059669; }
-        .summary-card .value.danger { color: #dc2626; }
-        .summary-card .value.warning { color: #d97706; }
-        
         .section {
           margin-bottom: 30px;
           page-break-inside: avoid;
@@ -998,14 +999,15 @@ async function downloadPDF() {
           font-weight: 700;
           margin-bottom: 15px;
           padding-bottom: 10px;
-          border-bottom: 2px solid #cbd5e1;
-          color: #1e293b;
+          border-bottom: 1px solid #cccccc;
+          color: #000000;
+          background: none;
         }
         .chart-container {
           text-align: center;
           margin: 20px 0;
           padding: 20px;
-          background: #f8fafc;
+          background: #fafafa;
           border-radius: 12px;
         }
         .chart-container img {
@@ -1019,14 +1021,14 @@ async function downloadPDF() {
           font-size: 11px;
         }
         th, td {
-          border: 1px solid #e2e8f0;
+          border: 1px solid #cccccc;
           padding: 10px;
           text-align: left;
         }
         th {
-          background: #f1f5f9;
+          background: #f5f5f5;
           font-weight: 700;
-          color: #334155;
+          color: #000000;
         }
         .text-right {
           text-align: right;
@@ -1038,8 +1040,8 @@ async function downloadPDF() {
           margin-top: 40px;
           text-align: center;
           font-size: 10px;
-          color: #94a3b8;
-          border-top: 1px solid #e2e8f0;
+          color: #999999;
+          border-top: 1px solid #cccccc;
           padding-top: 20px;
         }
       </style>
@@ -1054,7 +1056,7 @@ async function downloadPDF() {
       <div class="summary-cards">
         <div class="summary-card">
           <h3>Total Projects</h3>
-          <div class="value primary">${totalProjects}</div>
+          <div class="value">${totalProjects}</div>
         </div>
         <div class="summary-card">
           <h3>Total Budget</h3>
@@ -1066,30 +1068,30 @@ async function downloadPDF() {
         </div>
         <div class="summary-card">
           <h3>Remaining Budget</h3>
-          <div class="value success">${formatRp(totalBudget - totalRealization)}</div>
+          <div class="value">${formatRp(totalBudget - totalRealization)}</div>
         </div>
         <div class="summary-card">
           <h3>Over Budget Items</h3>
-          <div class="value danger">${overBudgetItems}</div>
+          <div class="value">${overBudgetItems}</div>
         </div>
       </div>
       
       <div class="summary-cards">
         <div class="summary-card">
           <h3>Pending Claims</h3>
-          <div class="value warning">${pendingClaims}</div>
+          <div class="value">${pendingClaims}</div>
         </div>
         <div class="summary-card">
           <h3>Approved Claims</h3>
-          <div class="value success">${approvedClaims}</div>
+          <div class="value">${approvedClaims}</div>
         </div>
         <div class="summary-card">
           <h3>Rejected Claims</h3>
-          <div class="value danger">${rejectedClaims}</div>
+          <div class="value">${rejectedClaims}</div>
         </div>
         <div class="summary-card">
           <h3>Total RAB Items</h3>
-          <div class="value primary">${rabItems.length}</div>
+          <div class="value">${rabItems.length}</div>
         </div>
       </div>
       
@@ -1147,7 +1149,7 @@ async function downloadPDF() {
             ${claimsHtml}
           </tbody>
         </table>
-        ` : '<p style="text-align: center; padding: 20px;">No claims data available.</p>'}
+        ` : '<p style="text-align: center; padding: 20px; color: #666666;">No claims data available.</p>'}
       </div>
       
       <div class="footer">
@@ -1335,7 +1337,6 @@ onAuthStateChanged(auth, (user) => {
         currentRole = profile.role || "Project Manager";
         currentUserData = profile;
         
-        // Update user profile box
         const sbUserEmail = document.getElementById('sbUserEmail');
         const sbUserRole = document.getElementById('sbUserRole');
         if (sbUserEmail) sbUserEmail.innerText = user.email;
@@ -1353,7 +1354,6 @@ onAuthStateChanged(auth, (user) => {
         }).then(() => {
           currentRole = "Project Manager";
           
-          // Update user profile box
           const sbUserEmail = document.getElementById('sbUserEmail');
           const sbUserRole = document.getElementById('sbUserRole');
           if (sbUserEmail) sbUserEmail.innerText = user.email;
