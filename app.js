@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
@@ -89,11 +89,9 @@ function getBadge(real, budget) {
 // ==================== USER MANAGEMENT FUNCTIONS ====================
 async function createNewUser(email, password, role) {
   try {
-    // Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Store user data in Realtime Database
     await set(ref(db, `users/${user.uid}`), {
       email: email,
       role: role,
@@ -150,15 +148,8 @@ async function resetUserPassword(email) {
 
 async function deleteUserAccount(uid, email) {
   try {
-    // First, get the user object from Firebase Auth
-    // Note: To delete a user from Auth, we need to re-authenticate as admin
-    // Since we can't directly delete other users from client SDK,
-    // we'll delete from database and mark as inactive
-    
-    // Delete user data from Realtime Database
     await remove(ref(db, `users/${uid}`));
     
-    // Log deletion
     await set(ref(db, `deletedUsers/${uid}`), {
       email: email,
       deletedAt: new Date().toLocaleString(),
@@ -310,7 +301,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
-       </td>`;
+       </table>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -344,7 +335,7 @@ function renderRABItemsSubTable() {
 
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.穷</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.穷</td><tr>';
     return;
   }
 
@@ -511,17 +502,12 @@ async function saveNewUser() {
     return;
   }
   
-  // Store current user before creating new user to prevent auto-switch
   const currentUserBackup = currentAuthUser;
   
   const result = await createNewUser(email, password, role);
   
   if (result.success) {
-    // Sign back in as the original admin user
     if (currentUserBackup && currentUserBackup.email !== email) {
-      // Don't sign out, just stay as current admin
-      // The createUserWithEmailAndPassword automatically signs in as the new user
-      // We need to sign back in as admin
       triggerNotification(`User ${email} created successfully! You are still logged in as admin.`, true);
     }
     const modal = document.getElementById('userModal');
@@ -774,7 +760,7 @@ function renderMonitoringTable() {
       <td>${formatRp(computedRealizations)}</td>
       <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#475569'}">${formatRp(balance)}</td>
       <td><strong>${percentage}%</strong></td>
-     </td>`;
+     </table>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
@@ -828,7 +814,6 @@ function renderReports() {
 async function downloadPDF() {
   triggerNotification('Generating PDF report...', true, 'info');
   
-  // Get current date for report
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -836,7 +821,6 @@ async function downloadPDF() {
     day: 'numeric'
   });
   
-  // Calculate totals
   const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
   const totalRealization = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
   const totalProjects = projects.length;
@@ -845,7 +829,6 @@ async function downloadPDF() {
   const approvedClaims = claims.filter(c => c.status === 'approved').length;
   const rejectedClaims = claims.filter(c => c.status === 'rejected').length;
   
-  // Get chart as image
   const chartCanvas = document.getElementById('laporanChart');
   let chartImage = '';
   if (chartCanvas) {
@@ -858,7 +841,6 @@ async function downloadPDF() {
     barChartImage = barChartCanvas.toDataURL('image/png');
   }
   
-  // Build project details table
   let projectDetailsHtml = '';
   projects.forEach(p => {
     const projectItems = rabItems.filter(i => i.projectId === p.id);
@@ -868,8 +850,8 @@ async function downloadPDF() {
     const percentage = projectBudget > 0 ? ((projectRealization / projectBudget) * 100).toFixed(1) : 0;
     
     projectDetailsHtml += `
-      <tr style="background-color: #f8fafc;">
-        <td colspan="6" style="padding: 12px; font-weight: bold; background-color: #e2e8f0;">${p.name} (${p.client})</td>
+      <tr style="background-color: #f1f5f9;">
+        <td colspan="6" style="padding: 10px; font-weight: bold;">${p.name} (${p.client})</td>
       </tr>
     `;
     
@@ -891,7 +873,7 @@ async function downloadPDF() {
             <td style="padding: 8px; text-align: right;">${formatRp(itemBalance)}</td>
             <td style="padding: 8px; text-align: center;">${itemPercentage}%</td>
             <td style="padding: 8px; text-align: center;">
-              <span class="${item.realisasi > item.budget ? 'badge-danger' : (itemPercentage >= 90 ? 'badge-warning' : 'badge-success')}" style="padding: 2px 8px; border-radius: 12px;">
+              <span style="padding: 2px 8px; border-radius: 12px; ${item.realisasi > item.budget ? 'background: #fee2e2; color: #991b1b;' : (itemPercentage >= 90 ? 'background: #fed7aa; color: #9a3412;' : 'background: #d1fae5; color: #065f46;')}">
                 ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
               </span>
             </td>
@@ -901,7 +883,7 @@ async function downloadPDF() {
     }
     
     projectDetailsHtml += `
-      <tr style="background-color: #f1f5f9; font-weight: bold;">
+      <tr style="background-color: #f8fafc; font-weight: bold;">
         <td style="padding: 8px;">TOTAL for ${p.name}</td>
         <td style="padding: 8px; text-align: right;">${formatRp(projectBudget)}</td>
         <td style="padding: 8px; text-align: right;">${formatRp(projectRealization)}</td>
@@ -912,7 +894,6 @@ async function downloadPDF() {
     `;
   });
   
-  // Build claims table
   let claimsHtml = '';
   claims.forEach(c => {
     const p = projects.find(pr => pr.id === c.projectId);
@@ -922,7 +903,7 @@ async function downloadPDF() {
         <td style="padding: 8px;">${c.vendor}</td>
         <td style="padding: 8px; text-align: right;">${formatRp(c.totalNominal)}</td>
         <td style="padding: 8px; text-align: center;">
-          <span class="${c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning')}" style="padding: 2px 8px; border-radius: 12px;">
+          <span style="padding: 2px 8px; border-radius: 12px; ${c.status === 'approved' ? 'background: #d1fae5; color: #065f46;' : (c.status === 'rejected' ? 'background: #fee2e2; color: #991b1b;' : 'background: #fed7aa; color: #9a3412;')}">
             ${c.status.toUpperCase()}
           </span>
         </td>
@@ -931,7 +912,7 @@ async function downloadPDF() {
     `;
   });
   
-  // Create full report HTML
+  // Report HTML WITHOUT highlight color on title
   const reportHTML = `
     <!DOCTYPE html>
     <html>
@@ -954,18 +935,20 @@ async function downloadPDF() {
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 3px solid #3b82f6;
+          border-bottom: 2px solid #cbd5e1;
           padding-bottom: 20px;
         }
         .header h1 {
           color: #1e293b;
           margin: 0;
           font-size: 28px;
+          font-weight: 700;
         }
         .header h2 {
-          color: #3b82f6;
+          color: #475569;
           margin: 10px 0 0;
-          font-size: 18px;
+          font-size: 16px;
+          font-weight: 500;
         }
         .header p {
           color: #64748b;
@@ -981,29 +964,30 @@ async function downloadPDF() {
         }
         .summary-card {
           flex: 1;
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          background: #f8fafc;
           padding: 20px;
-          border-radius: 16px;
+          border-radius: 12px;
           text-align: center;
           border: 1px solid #e2e8f0;
         }
         .summary-card h3 {
           margin: 0 0 10px;
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
           text-transform: uppercase;
-          letter-spacing: 1px;
+          letter-spacing: 0.5px;
+          font-weight: 600;
         }
         .summary-card .value {
           margin: 0;
-          font-size: 24px;
+          font-size: 22px;
           font-weight: bold;
           color: #1e293b;
         }
-        .summary-card .value.primary { color: #3b82f6; }
-        .summary-card .value.success { color: #10b981; }
-        .summary-card .value.danger { color: #ef4444; }
-        .summary-card .value.warning { color: #f59e0b; }
+        .summary-card .value.primary { color: #2563eb; }
+        .summary-card .value.success { color: #059669; }
+        .summary-card .value.danger { color: #dc2626; }
+        .summary-card .value.warning { color: #d97706; }
         
         .section {
           margin-bottom: 30px;
@@ -1014,7 +998,7 @@ async function downloadPDF() {
           font-weight: 700;
           margin-bottom: 15px;
           padding-bottom: 10px;
-          border-bottom: 2px solid #3b82f6;
+          border-bottom: 2px solid #cbd5e1;
           color: #1e293b;
         }
         .chart-container {
@@ -1049,30 +1033,6 @@ async function downloadPDF() {
         }
         .text-center {
           text-align: center;
-        }
-        .badge-success {
-          background: #d1fae5;
-          color: #065f46;
-          padding: 2px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-          display: inline-block;
-        }
-        .badge-danger {
-          background: #fee2e2;
-          color: #991b1b;
-          padding: 2px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-          display: inline-block;
-        }
-        .badge-warning {
-          background: #fed7aa;
-          color: #9a3412;
-          padding: 2px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-          display: inline-block;
         }
         .footer {
           margin-top: 40px;
@@ -1162,7 +1122,7 @@ async function downloadPDF() {
               <th class="text-right">Balance (IDR)</th>
               <th class="text-center">Usage %</th>
               <th class="text-center">Status</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             ${projectDetailsHtml}
@@ -1181,7 +1141,7 @@ async function downloadPDF() {
               <th class="text-right">Amount</th>
               <th class="text-center">Status</th>
               <th>Date</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             ${claimsHtml}
@@ -1221,7 +1181,7 @@ async function downloadPDF() {
 
 document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
-// ==================== TRUENAS STORAGE Pool (Simplified) ====================
+// ==================== TRUENAS STORAGE Pool ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const fileInputElement = document.getElementById('trueNasFile');
@@ -1375,6 +1335,7 @@ onAuthStateChanged(auth, (user) => {
         currentRole = profile.role || "Project Manager";
         currentUserData = profile;
         
+        // Update user profile box
         const sbUserEmail = document.getElementById('sbUserEmail');
         const sbUserRole = document.getElementById('sbUserRole');
         if (sbUserEmail) sbUserEmail.innerText = user.email;
@@ -1391,6 +1352,13 @@ onAuthStateChanged(auth, (user) => {
           createdAt: new Date().toLocaleDateString('id-ID')
         }).then(() => {
           currentRole = "Project Manager";
+          
+          // Update user profile box
+          const sbUserEmail = document.getElementById('sbUserEmail');
+          const sbUserRole = document.getElementById('sbUserRole');
+          if (sbUserEmail) sbUserEmail.innerText = user.email;
+          if (sbUserRole) sbUserRole.innerText = currentRole;
+          
           enforceRoleVisibility();
           initCloudDatabaseListeners();
           hideLoadingScreen();
