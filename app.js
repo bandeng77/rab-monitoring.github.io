@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
@@ -26,6 +26,7 @@ let claims = [];
 let users = [];
 let truenasFiles = [];
 let currentUserData = null;
+let currentAuthUser = null;
 
 let currentSelectedProjectId = null;
 let currentRole = ""; 
@@ -75,18 +76,24 @@ function formatRp(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
 }
 
+function formatNumber(val) {
+  return new Intl.NumberFormat('id-ID').format(val || 0);
+}
+
 function getBadge(real, budget) { 
   if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
   if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
-  return '<span class="badge badge-success">Aman</span>'; 
+  return '<span class="badge badge-success">Safe</span>'; 
 }
 
 // ==================== USER MANAGEMENT FUNCTIONS ====================
 async function createNewUser(email, password, role) {
   try {
+    // Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
+    // Store user data in Realtime Database
     await set(ref(db, `users/${user.uid}`), {
       email: email,
       role: role,
@@ -94,17 +101,17 @@ async function createNewUser(email, password, role) {
       createdAtTimestamp: Date.now()
     });
     
-    triggerNotification(`User ${email} berhasil dibuat dengan role ${role}!`, true);
+    triggerNotification(`User ${email} successfully created with role ${role}!`, true);
     return { success: true, uid: user.uid };
   } catch (error) {
     console.error("Error creating user:", error);
-    let errorMessage = "Gagal membuat user: ";
+    let errorMessage = "Failed to create user: ";
     if (error.code === 'auth/email-already-in-use') {
-      errorMessage += "Email sudah terdaftar!";
+      errorMessage += "Email already registered!";
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage += "Format email tidak valid!";
+      errorMessage += "Invalid email format!";
     } else if (error.code === 'auth/weak-password') {
-      errorMessage += "Password terlalu lemah! Minimal 6 karakter.";
+      errorMessage += "Password too weak! Minimum 6 characters.";
     } else {
       errorMessage += error.message;
     }
@@ -120,11 +127,11 @@ async function updateUserRole(uid, newRole) {
       updatedAt: new Date().toLocaleDateString('id-ID'),
       updatedBy: currentUserEmail
     });
-    triggerNotification(`Role user berhasil diupdate menjadi ${newRole}!`, true);
+    triggerNotification(`User role updated to ${newRole}!`, true);
     return { success: true };
   } catch (error) {
     console.error("Error updating user role:", error);
-    triggerNotification("Gagal mengupdate role user!", false, 'error');
+    triggerNotification("Failed to update user role!", false, 'error');
     return { success: false };
   }
 }
@@ -132,30 +139,37 @@ async function updateUserRole(uid, newRole) {
 async function resetUserPassword(email) {
   try {
     await sendPasswordResetEmail(auth, email);
-    triggerNotification(`Email reset password telah dikirim ke ${email}.`, true, 'info');
+    triggerNotification(`Password reset email sent to ${email}.`, true, 'info');
     return { success: true };
   } catch (error) {
     console.error("Error resetting password:", error);
-    triggerNotification("Gagal mereset password: " + error.message, false, 'error');
+    triggerNotification("Failed to reset password: " + error.message, false, 'error');
     return { success: false };
   }
 }
 
 async function deleteUserAccount(uid, email) {
   try {
+    // First, get the user object from Firebase Auth
+    // Note: To delete a user from Auth, we need to re-authenticate as admin
+    // Since we can't directly delete other users from client SDK,
+    // we'll delete from database and mark as inactive
+    
+    // Delete user data from Realtime Database
     await remove(ref(db, `users/${uid}`));
     
+    // Log deletion
     await set(ref(db, `deletedUsers/${uid}`), {
       email: email,
       deletedAt: new Date().toLocaleString(),
       deletedBy: currentUserEmail
     });
     
-    triggerNotification(`User ${email} telah dihapus dari database.`, true, 'info');
+    triggerNotification(`User ${email} has been removed from database. Note: To fully delete from Firebase Auth, please use Firebase Console.`, true, 'info');
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);
-    triggerNotification("Gagal menghapus user!", false, 'error');
+    triggerNotification("Failed to delete user!", false, 'error');
     return { success: false };
   }
 }
@@ -251,7 +265,7 @@ function populateDropdownMenus() {
   const upSel = document.getElementById('uploadProjectSelect');
   if (upSel) {
     const valBackup = upSel.value;
-    upSel.innerHTML = '<option value="">-- Pilih Project Target --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    upSel.innerHTML = '<option value="">-- Select Target Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (valBackup) upSel.value = valBackup;
   }
 }
@@ -265,10 +279,10 @@ function renderDashboard() {
   const cardsContainer = document.getElementById('cardsContainer');
   if (cardsContainer) {
     cardsContainer.innerHTML = `
-      <div class="card"><h3>Project Aktif</h3><p>${projects.length}</p></div>
+      <div class="card"><h3>Active Projects</h3><p>${projects.length}</p></div>
       <div class="card"><h3>Total Budget</h3><p>${formatRp(totalPaguGlobal)}</p></div>
-      <div class="card"><h3>Total Realisasi</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
-      <div class="card"><h3>Item Over Anggaran</h3><p style="color:#ef4444">${overCount}</p></div>
+      <div class="card"><h3>Total Realization</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
+      <div class="card"><h3>Over Budget Items</h3><p style="color:#ef4444">${overCount}</p></div>
     `;
   }
 
@@ -295,14 +309,14 @@ function renderMasterProject() {
         <td>${p.client}</td>
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
-        <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Hapus</button></td>
-       </tr>`;
+        <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
+       </td>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
-        if (confirm('Hapus master project beserta struktur item di dalamnya?')) {
+        if (confirm('Delete master project and all its RAB items?')) {
            remove(ref(db, `projects/${id}`));
            rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
         }
@@ -324,13 +338,13 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Silakan tentukan filter project terlebih dahulu.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.穷</td></tr>';
     return;
   }
 
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item komponen di dalam project ini.</tr></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.穷</td></tr>';
     return;
   }
 
@@ -347,7 +361,7 @@ function renderRABItemsSubTable() {
   tbody.querySelectorAll('.btn-del-rab-sub').forEach(btn => {
     btn.addEventListener('click', () => {
        const itemId = btn.getAttribute('data-id');
-       if (confirm('Hapus parameter anggaran item ini?')) {
+       if (confirm('Delete this RAB budget item?')) {
          remove(ref(db, `rabItems/${itemId}`));
        }
     });
@@ -360,7 +374,7 @@ function renderUsersTable() {
   if (!tbody) return;
 
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada user terdaftar. Silakan tambah user baru.</td><tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered. Please add a new user.穷</td></tr>';
     return;
   }
 
@@ -373,7 +387,7 @@ function renderUsersTable() {
     const isCurrentUser = (currentUserEmail === u.email);
     
     return `<tr>
-      <td><strong>${u.email}</strong> ${isCurrentUser ? '<span class="badge badge-info">(Anda)</span>' : ''}</td>
+      <td><strong>${u.email}</strong> ${isCurrentUser ? '<span class="badge badge-info">(You)</span>' : ''}</td>
       <td><span class="badge ${roleBadgeClass}">${u.role}</span></td>
       <td style="font-size:0.7rem; color:#64748b; font-family: monospace;">${u.id ? u.id.substring(0, 12) + '...' : '-'}</td>
       <td>${u.createdAt || '-'}</td>
@@ -382,12 +396,12 @@ function renderUsersTable() {
           ${!isCurrentUser ? `
             <button class="btn-edit" data-uid="${u.id}" data-email="${u.email}" data-role="${u.role}"><i class="fas fa-edit"></i> Edit Role</button>
             <button class="btn-reset" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-key"></i> Reset Pass</button>
-            <button class="btn-delete" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Hapus</button>
+            <button class="btn-delete" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Delete</button>
           ` : `
-            <span class="badge badge-secondary"><i class="fas fa-user-shield"></i> Akun Anda</span>
+            <span class="badge badge-secondary"><i class="fas fa-user-shield"></i> Your Account</span>
           `}
         ` : `
-          <span class="badge badge-secondary">Hanya Admin</span>
+          <span class="badge badge-secondary">Admin Only</span>
         `}
       </td>
     </tr>`;
@@ -415,7 +429,7 @@ function renderUsersTable() {
       btn.addEventListener('click', async () => {
         const uid = btn.getAttribute('data-uid');
         const email = btn.getAttribute('data-email');
-        if (confirm(`Apakah Anda yakin ingin menghapus user ${email}?`)) {
+        if (confirm(`Are you sure you want to delete user ${email}?`)) {
           await deleteUserAccount(uid, email);
         }
       });
@@ -432,7 +446,7 @@ function openEditUserModal(uid, email, currentRoleUser) {
   const saveBtn = document.getElementById('saveUserBtn');
   const editUserId = document.getElementById('editUserId');
   
-  title.innerHTML = '<i class="fas fa-user-edit"></i> Edit Role User';
+  title.innerHTML = '<i class="fas fa-user-edit"></i> Edit User Role';
   emailInput.value = email;
   emailInput.disabled = true;
   if (passwordFieldGroup) passwordFieldGroup.style.display = 'none';
@@ -449,7 +463,7 @@ function openEditUserModal(uid, email, currentRoleUser) {
     emailInput.value = '';
     if (passwordFieldGroup) passwordFieldGroup.style.display = 'block';
     editUserId.value = '';
-    title.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User Baru';
+    title.innerHTML = '<i class="fas fa-user-plus"></i> Add New User';
     saveBtn.onclick = saveNewUser;
   };
   
@@ -478,13 +492,13 @@ async function saveNewUser() {
   const role = document.getElementById('modalRole').value;
   
   if (!email) {
-    triggerNotification('Email wajib diisi!', false, 'error');
+    triggerNotification('Email is required!', false, 'error');
     return;
   }
   
   const existingUser = users.find(u => u.email === email);
   if (existingUser) {
-    triggerNotification('Email sudah terdaftar!', false, 'error');
+    triggerNotification('Email already registered!', false, 'error');
     return;
   }
   
@@ -493,13 +507,23 @@ async function saveNewUser() {
   }
   
   if (password.length < 6) {
-    triggerNotification('Password minimal 6 karakter!', false, 'error');
+    triggerNotification('Password must be at least 6 characters!', false, 'error');
     return;
   }
+  
+  // Store current user before creating new user to prevent auto-switch
+  const currentUserBackup = currentAuthUser;
   
   const result = await createNewUser(email, password, role);
   
   if (result.success) {
+    // Sign back in as the original admin user
+    if (currentUserBackup && currentUserBackup.email !== email) {
+      // Don't sign out, just stay as current admin
+      // The createUserWithEmailAndPassword automatically signs in as the new user
+      // We need to sign back in as admin
+      triggerNotification(`User ${email} created successfully! You are still logged in as admin.`, true);
+    }
     const modal = document.getElementById('userModal');
     modal.classList.remove('active');
     document.getElementById('modalUserEmail').value = '';
@@ -518,7 +542,7 @@ document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
   const client = document.getElementById('modalClientName').value.trim();
   const totalBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
 
-  if (!name || !client || totalBudget <= 0) { triggerNotification('Form harus diisi lengkap & valid!', false); return; }
+  if (!name || !client || totalBudget <= 0) { triggerNotification('Please fill all form fields correctly!', false); return; }
 
   const newProjectRef = push(ref(db, 'projects'));
   set(newProjectRef, { name, client, totalBudget }).then(() => {
@@ -526,12 +550,12 @@ document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
     document.getElementById('modalProjectName').value = '';
     document.getElementById('modalClientName').value = '';
     document.getElementById('modalBudget').value = '';
-    triggerNotification('Master project berhasil ditambahkan!');
+    triggerNotification('Master project added successfully!');
   });
 });
 
 document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
-  if (!currentSelectedProjectId) { triggerNotification('Pilih filter project terlebih dahulu!', false); return; }
+  if (!currentSelectedProjectId) { triggerNotification('Please select a project filter first!', false); return; }
   const currentProj = projects.find(p => p.id === currentSelectedProjectId);
   document.getElementById('rabModalProjectName').value = currentProj ? currentProj.name : '';
   document.getElementById('rabItemName').value = '';
@@ -543,7 +567,7 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
   const itemName = document.getElementById('rabItemName').value.trim();
   const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
 
-  if (!itemName || budget <= 0) { triggerNotification('Isi data nominal komponen dengan valid!', false); return; }
+  if (!itemName || budget <= 0) { triggerNotification('Please fill item name and budget correctly!', false); return; }
 
   const newRabRef = push(ref(db, 'rabItems'));
   set(newRabRef, {
@@ -553,7 +577,7 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
     realisasi: 0
   }).then(() => {
     document.getElementById('rabModal').classList.remove('active');
-    triggerNotification('Item komponen RAB berhasil disimpan!');
+    triggerNotification('RAB component item saved successfully!');
   });
 });
 
@@ -568,17 +592,17 @@ function renderClaimItemsBuildLayout() {
   const availableItems = rabItems.filter(i => i.projectId === targetProjId);
 
   if (claimItemsListArray.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">Belum ada baris item klaim. Klik Tambah Baris Item.</div>';
+    container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">No claim items added. Click Add Item Row.</div>';
     return;
   }
 
   container.innerHTML = claimItemsListArray.map((item, idx) => `
     <div class="item-row">
       <select data-idx="${idx}" class="item-sel-node">
-        <option value="">-- Tentukan Item RAB --</option>
-        ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
+        <option value="">-- Select RAB Item --</option>
+        ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Remaining: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
       </select>
-      <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Nominal Rp" value="${item.nominal || ''}" />
+      <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Amount (IDR)" value="${item.nominal || ''}" />
       <button type="button" class="remove-item" data-idx="${idx}"><i class="fas fa-trash"></i></button>
     </div>
   `).join('');
@@ -601,7 +625,7 @@ function renderClaimView() {
   const selectPr = document.getElementById('claimProjectSelect');
   if (selectPr) {
     const backupSelectedVal = selectPr.value;
-    selectPr.innerHTML = '<option value="">-- Pilih Asosiasi Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    selectPr.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (backupSelectedVal) selectPr.value = backupSelectedVal;
   }
 
@@ -611,7 +635,7 @@ function renderClaimView() {
       const p = projects.find(pr => pr.id === c.projectId);
       const summaries = c.items ? c.items.map(ci => {
         const r = rabItems.find(rab => rab.id === ci.itemId);
-        return `${r ? r.itemName : 'Eksternal Component'}: ${formatRp(ci.nominal)}`;
+        return `${r ? r.itemName : 'External Component'}: ${formatRp(ci.nominal)}`;
       }).join('<br>') : '-';
 
       let classBadge = 'badge-warning';
@@ -636,7 +660,7 @@ document.getElementById('claimProjectSelect')?.addEventListener('change', () => 
 });
 
 document.getElementById('addItemBtn')?.addEventListener('click', () => {
-   if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Pilih asosiasi project terlebih dahulu!', false); return; }
+   if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Please select a project first!', false); return; }
    claimItemsListArray.push({ itemId: '', nominal: 0 });
    renderClaimItemsBuildLayout();
 });
@@ -649,7 +673,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
 
   const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0);
   if (!projectId || validItems.length === 0 || !vendor || !tanggal) {
-    triggerNotification('Harap isi kelengkapan form klaim multi-item!', false);
+    triggerNotification('Please complete all claim form fields!', false);
     return;
   }
 
@@ -665,7 +689,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
      document.getElementById('claimDesc').value = '';
      document.getElementById('claimDate').value = '';
      renderClaimItemsBuildLayout();
-     triggerNotification('Pengajuan klaim berhasil dikirim ke pipeline!');
+     triggerNotification('Claim submitted successfully to approval pipeline!');
   });
 });
 
@@ -676,7 +700,7 @@ function renderApprovalList() {
 
   const pendingClaims = claims.filter(c => c.status === 'pending');
   if (pendingClaims.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Antrean persetujuan pipeline bersih.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No pending claims in pipeline.穷</td></tr>';
     return;
   }
 
@@ -695,8 +719,8 @@ function renderApprovalList() {
       <td>${c.vendor}</td>
       <td><span class="badge badge-warning">PENDING</span></td>
       <td>
-        <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Setuju</button>
-        <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Tolak</button>
+        <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
+        <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
        </td>
      </tr>`;
   }).join('');
@@ -714,7 +738,7 @@ function renderApprovalList() {
            }
         });
         update(ref(db, `claims/${claimId}`), { status: 'approved' }).then(() => {
-          triggerNotification('Klaim disetujui, anggaran realisasi diperbarui.');
+          triggerNotification('Claim approved, budget realization updated.');
         });
       }
     });
@@ -724,7 +748,7 @@ function renderApprovalList() {
      btn.addEventListener('click', () => {
        const claimId = btn.getAttribute('data-id');
        update(ref(db, `claims/${claimId}`), { status: 'rejected' }).then(() => {
-         triggerNotification('Pengajuan klaim berhasil ditolak.', false);
+         triggerNotification('Claim rejected.', false);
        });
      });
   });
@@ -760,11 +784,11 @@ function renderMonitoringTable() {
       const proj = projects.find(p => p.id === id);
       const elements = rabItems.filter(i => i.projectId === id);
 
-      document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> Komponen Konstruksi - ${proj ? proj.name : ''}`;
+      document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> RAB Components - ${proj ? proj.name : ''}`;
       const detailBody = document.getElementById('detailRabBody');
       
       if (elements.length === 0) {
-        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada item alokasi di dalam project ini.</td></tr>';
+        detailBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No RAB items in this project.穷</td></tr>';
       } else {
         detailBody.innerHTML = elements.map(i => `
           <tr>
@@ -781,7 +805,7 @@ function renderMonitoringTable() {
   });
 }
 
-// ==================== REPORTS WITH PDF DOWNLOAD ====================
+// ==================== REPORTS WITH COMPREHENSIVE PDF DOWNLOAD ====================
 function renderReports() {
   const tbody = document.getElementById('laporanBody');
   if (!tbody) return;
@@ -801,19 +825,110 @@ function renderReports() {
   }).join('');
 }
 
-function downloadPDF() {
-  const reportContent = document.getElementById('reportContent');
-  if (!reportContent) return;
-
-  // Create a temporary container for PDF
-  const originalContent = reportContent.innerHTML;
+async function downloadPDF() {
+  triggerNotification('Generating PDF report...', true, 'info');
   
-  // Get current date for report header
-  const currentDate = new Date().toLocaleDateString('id-ID', {
+  // Get current date for report
+  const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric'
+  });
+  
+  // Calculate totals
+  const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+  const totalRealization = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
+  const totalProjects = projects.length;
+  const overBudgetItems = rabItems.filter(i => i.realisasi > i.budget).length;
+  const pendingClaims = claims.filter(c => c.status === 'pending').length;
+  const approvedClaims = claims.filter(c => c.status === 'approved').length;
+  const rejectedClaims = claims.filter(c => c.status === 'rejected').length;
+  
+  // Get chart as image
+  const chartCanvas = document.getElementById('laporanChart');
+  let chartImage = '';
+  if (chartCanvas) {
+    chartImage = chartCanvas.toDataURL('image/png');
+  }
+  
+  const barChartCanvas = document.getElementById('budgetChart');
+  let barChartImage = '';
+  if (barChartCanvas) {
+    barChartImage = barChartCanvas.toDataURL('image/png');
+  }
+  
+  // Build project details table
+  let projectDetailsHtml = '';
+  projects.forEach(p => {
+    const projectItems = rabItems.filter(i => i.projectId === p.id);
+    const projectBudget = projectItems.reduce((sum, i) => sum + i.budget, 0);
+    const projectRealization = projectItems.reduce((sum, i) => sum + i.realisasi, 0);
+    const projectBalance = projectBudget - projectRealization;
+    const percentage = projectBudget > 0 ? ((projectRealization / projectBudget) * 100).toFixed(1) : 0;
+    
+    projectDetailsHtml += `
+      <tr style="background-color: #f8fafc;">
+        <td colspan="6" style="padding: 12px; font-weight: bold; background-color: #e2e8f0;">${p.name} (${p.client})</td>
+      </tr>
+    `;
+    
+    if (projectItems.length === 0) {
+      projectDetailsHtml += `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
+        </tr>
+      `;
+    } else {
+      projectItems.forEach(item => {
+        const itemBalance = item.budget - item.realisasi;
+        const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
+        projectDetailsHtml += `
+          <tr>
+            <td style="padding: 8px;">${item.itemName}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(item.budget)}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(item.realisasi)}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(itemBalance)}</td>
+            <td style="padding: 8px; text-align: center;">${itemPercentage}%</td>
+            <td style="padding: 8px; text-align: center;">
+              <span class="${item.realisasi > item.budget ? 'badge-danger' : (itemPercentage >= 90 ? 'badge-warning' : 'badge-success')}" style="padding: 2px 8px; border-radius: 12px;">
+                ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+    }
+    
+    projectDetailsHtml += `
+      <tr style="background-color: #f1f5f9; font-weight: bold;">
+        <td style="padding: 8px;">TOTAL for ${p.name}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectBudget)}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectRealization)}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
+        <td style="padding: 8px; text-align: center;">${percentage}%</td>
+        <td style="padding: 8px; text-align: center;"></td>
+      </tr>
+    `;
+  });
+  
+  // Build claims table
+  let claimsHtml = '';
+  claims.forEach(c => {
+    const p = projects.find(pr => pr.id === c.projectId);
+    claimsHtml += `
+      <tr>
+        <td style="padding: 8px;">${p ? p.name : 'Unknown'}</td>
+        <td style="padding: 8px;">${c.vendor}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(c.totalNominal)}</td>
+        <td style="padding: 8px; text-align: center;">
+          <span class="${c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning')}" style="padding: 2px 8px; border-radius: 12px;">
+            ${c.status.toUpperCase()}
+          </span>
+        </td>
+        <td style="padding: 8px;">${c.tanggal || '-'}</td>
+      </tr>
+    `;
   });
   
   // Create full report HTML
@@ -822,24 +937,30 @@ function downloadPDF() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Laporan RAB - ${currentDate}</title>
+      <title>RAB Financial Report - ${currentDate}</title>
       <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
         body {
-          font-family: 'Inter', Arial, sans-serif;
+          font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
           padding: 40px;
           margin: 0;
           color: #1e293b;
+          background: white;
         }
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 2px solid #3b82f6;
+          border-bottom: 3px solid #3b82f6;
           padding-bottom: 20px;
         }
         .header h1 {
           color: #1e293b;
           margin: 0;
-          font-size: 24px;
+          font-size: 28px;
         }
         .header h2 {
           color: #3b82f6;
@@ -851,45 +972,107 @@ function downloadPDF() {
           margin: 10px 0 0;
           font-size: 12px;
         }
-        .summary {
+        .summary-cards {
           display: flex;
           justify-content: space-between;
-          gap: 20px;
+          gap: 15px;
           margin-bottom: 30px;
           flex-wrap: wrap;
         }
         .summary-card {
           flex: 1;
-          background: #f1f5f9;
-          padding: 15px;
-          border-radius: 12px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          padding: 20px;
+          border-radius: 16px;
           text-align: center;
+          border: 1px solid #e2e8f0;
         }
         .summary-card h3 {
           margin: 0 0 10px;
           font-size: 12px;
           color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
-        .summary-card p {
+        .summary-card .value {
           margin: 0;
-          font-size: 20px;
+          font-size: 24px;
           font-weight: bold;
           color: #1e293b;
+        }
+        .summary-card .value.primary { color: #3b82f6; }
+        .summary-card .value.success { color: #10b981; }
+        .summary-card .value.danger { color: #ef4444; }
+        .summary-card .value.warning { color: #f59e0b; }
+        
+        .section {
+          margin-bottom: 30px;
+          page-break-inside: avoid;
+        }
+        .section-title {
+          font-size: 18px;
+          font-weight: 700;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #3b82f6;
+          color: #1e293b;
+        }
+        .chart-container {
+          text-align: center;
+          margin: 20px 0;
+          padding: 20px;
+          background: #f8fafc;
+          border-radius: 12px;
+        }
+        .chart-container img {
+          max-width: 100%;
+          height: auto;
         }
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 20px;
+          margin-top: 15px;
+          font-size: 11px;
         }
         th, td {
           border: 1px solid #e2e8f0;
-          padding: 12px;
+          padding: 10px;
           text-align: left;
-          font-size: 12px;
         }
         th {
           background: #f1f5f9;
-          font-weight: 600;
+          font-weight: 700;
+          color: #334155;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .text-center {
+          text-align: center;
+        }
+        .badge-success {
+          background: #d1fae5;
+          color: #065f46;
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+          display: inline-block;
+        }
+        .badge-danger {
+          background: #fee2e2;
+          color: #991b1b;
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+          display: inline-block;
+        }
+        .badge-warning {
+          background: #fed7aa;
+          color: #9a3412;
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-size: 10px;
+          display: inline-block;
         }
         .footer {
           margin-top: 40px;
@@ -899,91 +1082,153 @@ function downloadPDF() {
           border-top: 1px solid #e2e8f0;
           padding-top: 20px;
         }
-        .badge-success {
-          background: #d1fae5;
-          color: #065f46;
-          padding: 4px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-        }
-        .badge-danger {
-          background: #fee2e2;
-          color: #991b1b;
-          padding: 4px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-        }
-        .badge-warning {
-          background: #fed7aa;
-          color: #9a3412;
-          padding: 4px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-        }
       </style>
     </head>
     <body>
       <div class="header">
-        <h1>LAPORAN RAB MONITORING</h1>
-        <h2>PT Genetek Indonesia</h2>
-        <p>Dicetak pada: ${currentDate}</p>
+        <h1>RAB MONITORING REPORT</h1>
+        <h2>Financial Report & Budget Tracking</h2>
+        <p>Generated on: ${currentDate}</p>
       </div>
       
-      <div class="summary">
+      <div class="summary-cards">
         <div class="summary-card">
-          <h3>Total Project</h3>
-          <p>${projects.length}</p>
+          <h3>Total Projects</h3>
+          <div class="value primary">${totalProjects}</div>
         </div>
         <div class="summary-card">
           <h3>Total Budget</h3>
-          <p>${formatRp(projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0))}</p>
+          <div class="value">${formatRp(totalBudget)}</div>
         </div>
         <div class="summary-card">
-          <h3>Total Realisasi</h3>
-          <p>${formatRp(rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0))}</p>
+          <h3>Total Realization</h3>
+          <div class="value">${formatRp(totalRealization)}</div>
         </div>
         <div class="summary-card">
-          <h3>Item Over Budget</h3>
-          <p>${rabItems.filter(i => i.realisasi > i.budget).length}</p>
+          <h3>Remaining Budget</h3>
+          <div class="value success">${formatRp(totalBudget - totalRealization)}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Over Budget Items</h3>
+          <div class="value danger">${overBudgetItems}</div>
         </div>
       </div>
       
-      <h3 style="margin-top: 30px;">Detail Laporan per Project</h3>
-      ${reportContent.innerHTML}
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Pending Claims</h3>
+          <div class="value warning">${pendingClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Approved Claims</h3>
+          <div class="value success">${approvedClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Rejected Claims</h3>
+          <div class="value danger">${rejectedClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total RAB Items</h3>
+          <div class="value primary">${rabItems.length}</div>
+        </div>
+      </div>
+      
+      ${barChartImage ? `
+      <div class="section">
+        <div class="section-title">Budget vs Realization Chart</div>
+        <div class="chart-container">
+          <img src="${barChartImage}" alt="Budget Chart" style="max-width: 100%;">
+        </div>
+      </div>
+      ` : ''}
+      
+      ${chartImage ? `
+      <div class="section">
+        <div class="section-title">Trend Analysis Chart</div>
+        <div class="chart-container">
+          <img src="${chartImage}" alt="Trend Chart" style="max-width: 100%;">
+        </div>
+      </div>
+      ` : ''}
+      
+      <div class="section">
+        <div class="section-title">Detailed Project Breakdown</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th class="text-right">Budget (IDR)</th>
+              <th class="text-right">Realization (IDR)</th>
+              <th class="text-right">Balance (IDR)</th>
+              <th class="text-center">Usage %</th>
+              <th class="text-center">Status</th>
+             </tr>
+          </thead>
+          <tbody>
+            ${projectDetailsHtml}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Claim History</div>
+        ${claims.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Vendor</th>
+              <th class="text-right">Amount</th>
+              <th class="text-center">Status</th>
+              <th>Date</th>
+             </tr>
+          </thead>
+          <tbody>
+            ${claimsHtml}
+          </tbody>
+        </table>
+        ` : '<p style="text-align: center; padding: 20px;">No claims data available.</p>'}
+      </div>
       
       <div class="footer">
-        <p>Laporan ini dibuat secara otomatis oleh sistem RAB Monitoring</p>
+        <p>Report generated by RAB Monitoring System</p>
+        <p>This is an automated system-generated report</p>
       </div>
     </body>
     </html>
   `;
   
-  // Configure pdf options
-  const element = document.createElement('div');
-  element.innerHTML = reportHTML;
-  
   const opt = {
     margin: [0.5, 0.5, 0.5, 0.5],
-    filename: `Laporan_RAB_${new Date().toISOString().split('T')[0]}.pdf`,
+    filename: `RAB_Report_${new Date().toISOString().split('T')[0]}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, letterRendering: true },
+    html2canvas: { scale: 2, letterRendering: true, useCORS: true },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
   };
   
-  html2pdf().set(opt).from(element).save();
-  triggerNotification('Laporan PDF sedang diproses...', true);
+  const element = document.createElement('div');
+  element.innerHTML = reportHTML;
+  document.body.appendChild(element);
+  
+  html2pdf().set(opt).from(element).save().then(() => {
+    document.body.removeChild(element);
+    triggerNotification('PDF report generated successfully!', true);
+  }).catch(err => {
+    document.body.removeChild(element);
+    triggerNotification('Error generating PDF: ' + err.message, false, 'error');
+  });
 }
 
 document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
-// ==================== TRUENAS STORAGE Pool (Simplified - No subfolders) ====================
+// ==================== TRUENAS STORAGE Pool (Simplified) ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const fileInputElement = document.getElementById('trueNasFile');
   const attachedProjectId = document.getElementById('uploadProjectSelect').value;
 
   if (!attachedProjectId || fileInputElement.files.length === 0) {
-    triggerNotification('Data parameter berkas tidak valid!', false);
+    triggerNotification('Invalid file or project data!', false);
     return;
   }
 
@@ -999,11 +1244,11 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
 
   fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: dataPayload })
   .then(async response => {
-    if (!response.ok) throw new Error('Server TrueNAS menolak unggahan berkas');
+    if (!response.ok) throw new Error('Server rejected file upload');
     return response.json();
   })
   .then(data => {
-     triggerNotification('File sukses diunggah ke storage!');
+     triggerNotification('File uploaded successfully to storage!');
      const pushedFileRef = push(ref(db, 'truenasFiles'));
      set(pushedFileRef, {
         projectId: attachedProjectId,
@@ -1015,12 +1260,12 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
      fileInputElement.value = '';
   })
   .catch(error => {
-     triggerNotification(`Gagal Upload: ${error.message}`, false);
+     triggerNotification(`Upload failed: ${error.message}`, false);
   });
 });
 
 window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
-  if(!confirm("Hapus file ini secara permanen dari penyimpanan?")) return;
+  if(!confirm("Delete this file permanently from storage?")) return;
 
   fetch(`${API_BASE_URL}/delete`, {
     method: "POST",
@@ -1028,17 +1273,17 @@ window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
     body: JSON.stringify({ filePath: fullPath })
   })
   .then(async res => {
-    if(!res.ok) throw new Error("Gagal menghapus berkas fisik");
+    if(!res.ok) throw new Error("Failed to delete physical file");
     return res.json();
   })
   .then(() => {
     remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-      triggerNotification("Berkas dibersihkan permanen dari penyimpanan.");
+      triggerNotification("File permanently deleted from storage.");
     });
   })
   .catch(err => {
     remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-      triggerNotification("Metadata dibersihkan dari database.", false);
+      triggerNotification("Metadata removed from database.", false);
     });
   });
 }
@@ -1048,21 +1293,20 @@ function renderTreeHierarchy() {
   if (!treeWrapper) return;
 
   if (projects.length === 0) {
-    treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> Master project kosong.</li>';
+    treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> No projects available.</li>';
     return;
   }
 
-  let innerLayoutCodeHtml = `<li><span class="root-node"><i class="fas fa-server"></i> Storage Server: .../apps/rab/</span><ul class="nested-tree">`;
+  let innerLayoutCodeHtml = `<li><span class="root-node"><i class="fas fa-database"></i> Document Storage</span><ul class="nested-tree">`;
   projects.forEach(p => {
-     const folderSanitizedName = p.name.replace(/[^a-zA-Z0-9_-]/g, '_');
      innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder-open"></i> ${p.name}</span><ul class="nested-tree">`;
      
      const projectFiles = truenasFiles.filter(f => f.projectId === p.id);
      if (projectFiles.length === 0) {
-       innerLayoutCodeHtml += '<li class="file-node" style="color:#94a3b8; font-style:italic;">Tidak ada file</li>';
+       innerLayoutCodeHtml += '<li class="file-node" style="color:#94a3b8; font-style:italic;">No files</li>';
      } else {
        projectFiles.forEach(f => {
-         const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/${encodeURIComponent(f.fileName)}`;
+         const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(p.name.replace(/[^a-zA-Z0-9_-]/g, '_'))}/${encodeURIComponent(f.fileName)}`;
          innerLayoutCodeHtml += `<li class="file-node">
                                     <i class="fas fa-file"></i> ${f.fileName} 
                                     <div class="action-links">
@@ -1090,11 +1334,11 @@ function refreshGraphicCharts() {
         data: {
            labels: projects.map(p => p.name),
            datasets: [
-             { label: 'Total Anggaran Pagu (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
-             { label: 'Realisasi Klaim (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
+             { label: 'Total Budget (Millions)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
+             { label: 'Claim Realization (Millions)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
            ]
         },
-        options: { responsive: true }
+        options: { responsive: true, maintainAspectRatio: true }
      });
   }
 
@@ -1106,11 +1350,11 @@ function refreshGraphicCharts() {
         data: {
            labels: projects.map(p => p.name),
            datasets: [
-             { label: 'Kurva Pola Alokasi', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension:0.2 },
-             { label: 'Kurva Penyerapan Dana', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension:0.2 }
+             { label: 'Allocation Curve', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension: 0.2 },
+             { label: 'Absorption Curve', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension: 0.2 }
            ]
         },
-        options: { responsive: true }
+        options: { responsive: true, maintainAspectRatio: true }
      });
   }
 }
@@ -1120,6 +1364,7 @@ onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = 'login.html';
   } else {
+    currentAuthUser = user;
     currentUserEmail = user.email;
     currentUserUid = user.uid;
     ensureAdminUIDInDatabase(user);
@@ -1160,7 +1405,7 @@ onAuthStateChanged(auth, (user) => {
 
 // ==================== LOGOUT ====================
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
-  if(confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
+  if(confirm("Are you sure you want to logout?")) {
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   }
 });
@@ -1181,7 +1426,7 @@ document.getElementById('openUserModalBtn')?.addEventListener('click', () => {
   const editUserId = document.getElementById('editUserId');
   const saveBtn = document.getElementById('saveUserBtn');
   
-  title.innerHTML = '<i class="fas fa-user-plus"></i> Tambah User Baru';
+  title.innerHTML = '<i class="fas fa-user-plus"></i> Add New User';
   emailInput.value = '';
   emailInput.disabled = false;
   passwordInput.value = '';
