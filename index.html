@@ -198,14 +198,14 @@
 
   <ul id="sidebarMenu">
     <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
-    <li data-page="master-project"><i class="fas fa-folder-open"></i> Master Project</li>
-    <li data-page="import-rab"><i class="fas fa-upload"></i> Import RAB</li>
-    <li data-page="approval-budget"><i class="fas fa-check-double"></i> Approval Budget</li>
-    <li data-page="claim-request"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
-    <li data-page="monitoring"><i class="fas fa-chart-bar"></i> Monitoring</li>
-    <li data-page="reports"><i class="fas fa-flag-checkered"></i> Laporan</li>
-    <li data-page="upload-document"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
-    <li data-page="user-management"><i class="fas fa-users"></i> Manajemen User</li>
+    <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
+    <li data-page="import-rab" class="restricted"><i class="fas fa-upload"></i> Import RAB</li>
+    <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
+    <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
+    <li data-page="monitoring" class="restricted"><i class="fas fa-chart-bar"></i> Monitoring</li>
+    <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Laporan</li>
+    <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+    <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> Manajemen User</li>
   </ul>
 
   <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
@@ -405,8 +405,7 @@
 <div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Komponen Struktur RAB</h3><div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div><div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
 <div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div></div></div>
 
-<!-- MODAL MANAJEMEN USER REALTIME DATABASE + FIREBASE CREATION -->
-<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Daftarkan Pengguna Sistem Baru</h3><div class="form-group"><label>Alamat Email</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div><div class="form-group"><label>Kata Sandi Awal</label><input type="password" id="modalUserPassword" placeholder="Minimal 6 karakter"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div></div></div>
+<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Daftarkan Pengguna Sistem Baru</h3><div class="form-group"><label>Alamat Email Pengguna</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div></div></div>
 
 <script type="module" src="app.js"></script>
 </body>
