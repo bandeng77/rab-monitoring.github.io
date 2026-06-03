@@ -8,6 +8,7 @@
   <!-- CSS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   
   <style>
@@ -247,6 +248,25 @@
       .sidebar { width: 100%; position: relative; height: auto; }
       .main { margin-left: 0; width: 100%; }
     }
+
+    /* Report Print Styles */
+    @media print {
+      .sidebar, .header button, .btn, .action-buttons, .modal-overlay {
+        display: none !important;
+      }
+      .main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 20px !important;
+      }
+      .section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      table {
+        break-inside: avoid;
+      }
+    }
   </style>
 </head>
 
@@ -275,12 +295,12 @@
       <ul id="sidebarMenu">
         <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
         <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
-        <li data-page="import-rab" class="restricted"><i class="fas fa-upload"></i> Import RAB</li>
-        <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
         <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
+        <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
         <li data-page="monitoring" class="restricted"><i class="fas fa-chart-bar"></i> Monitoring</li>
         <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Laporan</li>
         <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+        <li data-page="files" class="restricted"><i class="fas fa-folder-tree"></i> Files</li>
         <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> Manajemen User</li>
       </ul>
 
@@ -341,37 +361,6 @@
         </div>
       </div>
 
-      <!-- Import RAB Page -->
-      <div id="importRabPage" class="page hidden-section">
-        <div class="section">
-          <h2><i class="fas fa-file-excel"></i> Import RAB via Excel Spreadsheet</h2>
-          <div class="info-box"><i class="fas fa-info-circle"></i> Layout Header Kolom: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
-          <div class="form-group">
-            <label>Pilih File Spreadsheet</label>
-            <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
-          </div>
-          <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Eksekusi Import</button>
-        </div>
-        <div class="section">
-          <button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Unduh Template Excel RAB</button>
-        </div>
-      </div>
-
-      <!-- Approval Budget Page -->
-      <div id="approvalBudgetPage" class="page hidden-section">
-        <div class="section">
-          <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
-          <div style="overflow-x:auto;">
-            <tr>
-              <thead>
-                <tr><th>No</th><th>Project Target</th><th>Item Lists</th><th>Total Amount</th><th>Vendor Name</th><th>Status</th><th>Action</th></tr>
-              </thead>
-              <tbody id="approvalBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
       <!-- Claim Request Page -->
       <div id="claimRequestPage" class="page hidden-section">
         <div class="section">
@@ -409,6 +398,21 @@
         </div>
       </div>
 
+      <!-- Approval Budget Page -->
+      <div id="approvalBudgetPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>No</th><th>Project Target</th><th>Item Lists</th><th>Total Amount</th><th>Vendor Name</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody id="approvalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Monitoring Page -->
       <div id="monitoringPage" class="page hidden-section">
         <div class="section">
@@ -416,7 +420,7 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></td>
+                <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></tr>
               </thead>
               <tbody id="monitoringProjectBody"></tbody>
             </table>
@@ -428,32 +432,27 @@
       <div id="reportsPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-flag-checkered"></i> Analisis Laporan Finansial Perusahaan</h2>
+          <button class="btn btn-primary" id="downloadPDFBtn" style="margin-bottom: 20px;"><i class="fas fa-file-pdf"></i> Download Laporan PDF</button>
           <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
-          <table>
-            <thead>
-              <tr><th>Project Context</th><th>Total Budget Item</th><th>Actual Consumption</th><th>Net Margin Balance</th><th>Condition Status</th></tr>
-            </thead>
-            <tbody id="laporanBody"></tbody>
-          </table>
+          <div id="reportContent">
+            <table style="width:100%;">
+              <thead>
+                <tr><th>Project Context</th><th>Total Budget Item</th><th>Actual Consumption</th><th>Net Margin Balance</th><th>Condition Status</th></tr>
+              </thead>
+              <tbody id="laporanBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- Upload Document Page -->
       <div id="uploadDocumentPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen Lampiran ke TrueNAS Storage</h2>
+          <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen ke Storage</h2>
           <form id="trueNasUploadForm">
             <div class="form-group">
               <label>Asosiasi Project Terkait</label>
               <select id="uploadProjectSelect" required></select>
-            </div>
-            <div class="form-group">
-              <label>Kategori Subfolder Target</label>
-              <select id="uploadFolderSelect">
-                <option value="RAB_Awal">RAB_Awal (Initial RAB Files)</option>
-                <option value="Nota_Vendor">Nota_Vendor (Invoices & Receipts)</option>
-                <option value="BAP">BAP (Handover Records)</option>
-              </select>
             </div>
             <div class="form-group">
               <label>Pilih File Dokumen</label>
@@ -462,9 +461,12 @@
             <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah File Sekarang</button>
           </form>
         </div>
+      </div>
 
+      <!-- Files Page (Explorer) -->
+      <div id="filesPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-folder-tree"></i> Explorer Manajemen Berkas Cloud Directory</h2>
+          <h2><i class="fas fa-folder-tree"></i> File Explorer - Manajemen Berkas</h2>
           <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
             <ul class="file-tree" id="rootTreeContainer"></ul>
           </div>
@@ -475,11 +477,12 @@
       <div id="userManagementPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
-          <div class="info-box" style="margin-bottom: 20px;">
+          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
+          <div class="info-box" style="margin-top: 16px;">
             <i class="fas fa-info-circle"></i> 
             <strong>Informasi:</strong> Kelola semua pengguna sistem. Admin dapat mengedit role, reset password, dan menghapus user.
           </div>
-          <div style="overflow-x:auto;">
+          <div style="overflow-x:auto; margin-top:20px;">
             <table style="width:100%;">
               <thead>
                 <tr>
@@ -564,7 +567,7 @@
       </div>
     </div>
 
-    <!-- Reset Password Modal -->
+    <!-- Reset Password Modal (Simplified - No password field) -->
     <div id="resetPasswordModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 450px;">
         <h3><i class="fas fa-key"></i> Reset Password User</h3>
@@ -572,18 +575,13 @@
           <label>Email User</label>
           <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
         </div>
-        <div class="form-group">
-          <label>Password Baru</label>
-          <input type="password" id="newPassword" placeholder="Masukkan password baru (minimal 6 karakter)">
+        <div class="info-box" style="margin-bottom: 16px;">
+          <i class="fas fa-envelope"></i>
+          Email reset password akan dikirim ke alamat di atas.
         </div>
-        <div class="form-group">
-          <label>Konfirmasi Password</label>
-          <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
-        </div>
-        <div class="password-hint" style="margin-bottom: 16px;">* Kosongkan untuk mengirim email reset password</div>
         <div class="modal-buttons">
           <button class="btn btn-danger" id="closeResetModalBtn">Batal</button>
-          <button class="btn btn-warning" id="confirmResetPasswordBtn">Reset Password</button>
+          <button class="btn btn-warning" id="confirmResetPasswordBtn">Kirim Email Reset Password</button>
         </div>
       </div>
     </div>
