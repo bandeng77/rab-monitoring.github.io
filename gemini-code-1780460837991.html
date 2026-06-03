@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>RAB Pro | Ultimate Budget Tracker Firebase</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
+
+    body {
+      background: linear-gradient(135deg, #f0f4ff 0%, #e9eefc 100%);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+      color: #e2e8f0;
+      padding: 28px 20px;
+      position: fixed;
+      height: 100%;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 8px 0 25px rgba(0,0,0,0.12);
+    }
+
+    .sidebar h2 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 25px;
+      text-align: center;
+      background: linear-gradient(135deg, #a78bfa, #3b82f6, #06b6d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .user-context {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      font-size: 0.85rem;
+    }
+    .user-context select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+      border-radius: 8px;
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #475569;
+    }
+
+    .sidebar ul li {
+      padding: 12px 18px;
+      border-radius: 16px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 500;
+      transition: 0.25s;
+    }
+    .sidebar ul li:hover { background: rgba(255,255,255,0.12); transform: translateX(6px); }
+    .sidebar ul li.active { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; box-shadow: 0 6px 14px rgba(59,130,246,0.3); }
+    .sidebar ul li.restricted { display: none !important; }
+
+    .main {
+      margin-left: 280px;
+      width: calc(100% - 280px);
+      padding: 28px 36px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #1e293b, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 40px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.25s;
+    }
+    .btn-primary { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-success { background: linear-gradient(95deg, #10b981, #34d399); color: white; }
+    .btn-danger { background: linear-gradient(95deg, #ef4444, #f87171); color: white; }
+    .btn-warning { background: linear-gradient(95deg, #f59e0b, #fbbf24); color: white; }
+    .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .card {
+      background: rgba(255,255,255,0.95);
+      padding: 24px 22px;
+      border-radius: 32px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+      transition: 0.3s;
+    }
+    .card:hover { transform: translateY(-6px); }
+    .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
+    .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+    .section {
+      background: rgba(255,255,255,0.92);
+      padding: 28px 32px;
+      border-radius: 36px;
+      margin-bottom: 32px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+    .section h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #1f2a48;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
+    th { background: #f1f5f9; font-weight: 700; }
+
+    .badge { padding: 5px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; display: inline-block; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-warning { background: #fed7aa; color: #9a3412; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+
+    .project-row { cursor: pointer; transition: all 0.2s; }
+    .project-row:hover { background: #eef2ff; transform: scale(1.005); }
+    .project-name-link { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .project-name-link i { margin-right: 8px; }
+
+    .multi-item-container { background: #f8fafc; border-radius: 24px; padding: 20px; margin-top: 20px; }
+    .item-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; background: white; padding: 12px 16px; border-radius: 20px; border: 1px solid #e2e8f0; }
+    .item-row select { flex: 2; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; }
+    .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; }
+    .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; }
+    .modal-overlay.active { visibility: visible; opacity: 1; }
+    .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
+    .modal-overlay.active .modal-container { transform: scale(1); }
+    .modal-container h3 { font-size: 1.6rem; font-weight: 800; margin-bottom: 24px; color: #0f172a; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { font-weight: 600; display: block; margin-bottom: 8px; color: #334155; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 18px; border-radius: 28px; border: 1.5px solid #e2e8f0; }
+    .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+
+    .hidden-section { display: none !important; }
+    .page { animation: fadeUp 0.3s; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* FILE PREVIEW HIERARCHY DESIGN */
+    .file-tree { list-style-type: none; padding-left: 10px; }
+    .file-tree li { margin: 8px 0; font-size: 0.9rem; }
+    .folder-node { font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .folder-node i { color: #eab308; }
+    .file-node { padding-left: 24px; display: flex; align-items: center; gap: 8px; color: #475569; }
+    .file-node i { color: #3b82f6; }
+    .file-node a { color: #2563eb; text-decoration: none; font-size: 0.8rem; margin-left: auto; }
+    .nested-tree { margin-left: 16px; padding-left: 8px; border-left: 1.5px dashed #cbd5e1; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 100%; position: relative; height: auto; }
+      .main { margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
+  
+  <div class="user-context">
+    <label><i class="fas fa-user-shield"></i> Simulasi Role:</label>
+    <select id="roleSimulator">
+      <option value="Administrator">Administrator</option>
+      <option value="Finance">Finance</option>
+      <option value="Project Manager">Project Manager</option>
+    </select>
+  </div>
+
+  <ul id="sidebarMenu">
+    <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
+    <li data-page="master-project"><i class="fas fa-folder-open"></i> Master Project</li>
+    <li data-page="import-rab"><i class="fas fa-upload"></i> Import RAB</li>
+    <li data-page="approval-budget"><i class="fas fa-check-double"></i> Approval Budget</li>
+    <li data-page="pengajuan-klaim"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
+    <li data-page="monitoring"><i class="fas fa-chart-simple"></i> Monitoring</li>
+    <li data-page="laporan"><i class="fas fa-flag-checkered"></i> Laporan</li>
+    <li data-page="upload-dokumen"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+    <li data-page="manajemen-user"><i class="fas fa-users"></i> Manajemen User</li>
+  </ul>
+</div>
+
+<div class="main">
+  <div class="header">
+    <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard Tracking RAB</h1>
+    <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+  </div>
+
+  <div id="dashboardPage" class="page">
+    <div class="cards" id="cardsContainer"></div>
+    <div class="section">
+      <h2><i class="fas fa-chart-line"></i> Monitoring Ringkas (Item Termahal)</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>Project</th><th>Item</th><th>Budget</th><th>Realisasi</th><th>Status</th></tr>
+          </thead>
+          <tbody id="monitoringBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section"><h2><i class="fas fa-chart-column"></i> Grafik Alokasi Budget vs Realisasi</h2><canvas id="budgetChart" height="120"></canvas></div>
+  </div>
+
+  <div id="masterProjectPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-database"></i> Master Data Project</h2>
+      <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Tambah Project</button>
+      <div style="overflow-x:auto; margin-top:20px;">
+        <table>
+          <thead>
+            <tr><th>Nama Project</th><th>Client</th><th>Pagu Awal (Budget)</th><th>Sisa Alokasi Pagu</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="masterProjectBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section">
+      <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
+      <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1;"></select>
+      <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Tambah Item RAB ke Project</button>
+      <table>
+        <thead>
+          <tr><th>Item Name</th><th>Budget Item</th><th>Realisasi Klaim</th><th>Sisa Saku Item</th><th>Aksi</th></tr>
+        </thead>
+        <tbody id="rabItemsMasterBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="importRabPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-file-excel"></i> Import RAB Excel</h2>
+      <div style="background:#eef2ff; padding:16px; border-radius:24px; margin-bottom:15px;"><i class="fas fa-info-circle"></i> Format Header Kolom: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
+      <div class="form-group"><label>Upload File Excel</label><input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv"></div>
+      <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Proses Import</button>
+    </div>
+    <div class="section"><button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Unduh Template RAB</button></div>
+  </div>
+
+  <div id="approvalBudgetPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-check-double"></i> Approval Pengajuan Klaim</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Project</th><th>Items</th><th>Total Nominal</th><th>Vendor</th><th>Status</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="approvalBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="pengajuanKlaimPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-hand-holding-usd"></i> Pengajuan Klaim Barang/Jasa</h2>
+      <div class="form-group"><label><i class="fas fa-building"></i> Pilih Project Target</label><select id="claimProjectSelect"></select></div>
+      <div id="multiItemContainer" class="multi-item-container">
+        <div id="itemList"></div>
+        <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah Item Terkait</button>
+      </div>
+      <div class="form-group" style="margin-top:20px;"><label><i class="fas fa-truck"></i> Vendor / Supplier</label><input type="text" id="claimVendor" placeholder="Nama penyedia"></div>
+      <div class="form-group"><label><i class="fas fa-calendar-alt"></i> Tanggal Transaksi</label><input type="date" id="claimDate"></div>
+      <div class="form-group"><label><i class="fas fa-sticky-note"></i> Catatan</label><textarea id="claimDesc" rows="2"></textarea></div>
+      <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Ajukan Klaim Kendali</button>
+    </div>
+    <div class="section">
+      <h2><i class="fas fa-history"></i> Riwayat Klaim</h2>
+      <table>
+        <thead>
+          <tr><th>Project</th><th>Items</th><th>Total</th><th>Vendor</th><th>Status</th><th>Tanggal</th></tr>
+        </thead>
+        <tbody id="historyClaimBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="monitoringPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-chart-simple"></i> Monitoring Struktur Pagu Finansial</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Nama Project</th><th>Client</th><th>Pagu Tetap</th><th>Realisasi Terpakai</th><th>Sisa Kas</th><th>Persentase</th></tr>
+          </thead>
+          <tbody id="monitoringProjectBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="laporanPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-flag-checkered"></i> Ringkasan Laporan Finansial</h2>
+      <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
+      <table>
+        <thead>
+          <tr><th>Project</th><th>Total Budget Item</th><th>Realisasi</th><th>Sisa Dana</th><th>Kondisi</th></tr>
+        </thead>
+        <tbody id="laporanBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="uploadDokumenPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-cloud-upload-alt"></i> Upload Berkas Digital Ke TrueNAS Storage</h2>
+      <form id="trueNasUploadForm">
+        <div class="form-group">
+          <label>Pilih Project Relasi</label>
+          <select id="uploadProjectSelect" required></select>
+        </div>
+        <div class="form-group">
+          <label>Kategori Dokumen (Folder Tujuan)</label>
+          <select id="uploadFolderSelect">
+            <option value="RAB_Awal">RAB Awal Dokumen</option>
+            <option value="Nota_Vendor">Nota & Invoice Vendor</option>
+            <option value="BAP">Berita Acara Penyelesaian (BAP)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pilih File Dokumen</label>
+          <input type="file" id="trueNasFile" required />
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah Ke Server Local</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2><i class="fas fa-folder-tree"></i> Struktur Hirarki Penyimpanan (/mnt/EXTERNAL-4TB/Data/rab)</h2>
+      <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px;">
+         <ul class="file-tree" id="rootTreeContainer">
+           </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="manajemenUserPage" class="page hidden-section">
+    <div class="section">
+      <h2><i class="fas fa-users"></i> Konfigurasi Akun Pengguna</h2>
+      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah Anggota</button>
+      <table style="margin-top:20px;">
+        <thead>
+          <tr><th>Username</th><th>Role Kewenangan</th><th>Status</th><th>Aksi</th></tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Project Baru</h3><div class="form-group"><label>Nama Project</label><input type="text" id="modalProjectName"></div><div class="form-group"><label>Client</label><input type="text" id="modalClientName"></div><div class="form-group"><label>Alokasi Pagu Utama (Rp)</label><input type="number" id="modalBudget"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Ke Cloud</button></div></div></div>
+<div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Struktur Item RAB</h3><div class="form-group"><label>Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Item Komponen</label><input type="text" id="rabItemName" placeholder="Contoh: Cisco Router 2900"></div><div class="form-group"><label>Anggaran Angkut Item (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
+<div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detail Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Budget Item</th><th>Realisasi</th><th>Sisa Saldo</th><th>Status</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup</button></div></div></div>
+<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Tambah User Baru</h3><div class="form-group"><label>Nama Akun</label><input type="text" id="modalUsername"></div><div class="form-group"><label>Role / Hirarki Menu</label><select id="modalRole"><option>Administrator</option><option>Finance</option><option>Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan</button></div></div></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // Konfigurasi Firebase Anda
+  const firebaseConfig = {
+    apiKey: "AIzaSyAQWeEYQNtocfIuKvKk8tbpKuIeW4CmZOI",
+    authDomain: "rab-monitoring.firebaseapp.com",
+    projectId: "rab-monitoring",
+    storageBucket: "rab-monitoring.firebasestorage.app",
+    messagingSenderId: "712435056277",
+    appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
+  };
+
+  // Inisialisasi Aplikasi Cloud
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Buffer Memori Lokal Sinkronisasi Otomatis Cloud
+  let projects = [];
+  let rabItems = [];
+  let claims = [];
+  let users = [];
+  let truenasFiles = []; // Menyimpan log meta unggahan dokumen
+
+  let currentSelectedProjectId = null;
+  let currentRole = "Administrator";
+
+  // Aturan Hirarki Menu Berdasarkan Role Pengguna
+  const rolePermissions = {
+    "Administrator": ['dashboard', 'master-project', 'import-rab', 'approval-budget', 'pengajuan-klaim', 'monitoring', 'laporan', 'upload-dokumen', 'manajemen-user'],
+    "Finance": ['dashboard', 'approval-budget', 'pengajuan-klaim', 'laporan', 'upload-dokumen'],
+    "Project Manager": ['dashboard', 'master-project', 'import-rab', 'pengajuan-klaim', 'monitoring', 'upload-dokumen']
+  };
+
+  // ==================== UTALITAS FORMAT & BADGE ====================
+  function formatRp(val) { 
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
+  }
+  function getBadge(real, budget) { 
+    if(real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
+    if(budget > 0 && (real/budget) >= 0.9) return '<span class="badge badge-warning">Hampir Habis</span>'; 
+    return '<span class="badge badge-success">Aman</span>'; 
+  }
+
+  // ==================== CORE SINKRONISASI DATABASES CLOUD ====================
+  function enforceRoleVisibility() {
+    const allowedPages = rolePermissions[currentRole] || [];
+    document.querySelectorAll('#sidebarMenu li').forEach(li => {
+      const pageKey = li.getAttribute('data-page');
+      if(allowedPages.includes(pageKey)) {
+        li.classList.remove('restricted');
+      } else {
+        li.classList.add('restricted');
+      }
+    });
+    
+    // Kembalikan ke dashboard jika menu yang sedang dibuka ternyata dibatasi
+    const activeLi = document.querySelector('#sidebarMenu li.active');
+    if(activeLi && activeLi.classList.contains('restricted')) {
+       document.querySelector('#sidebarMenu li[data-page="dashboard"]').click();
+    }
+  }
+
+  function listenCloudData() {
+    onValue(ref(db, 'projects'), (snapshot) => {
+      const data = snapshot.val();
+      projects = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+      updateAllUI();
+    });
+
+    onValue(ref(db, 'rabItems'), (snapshot) => {
+      const data = snapshot.val();
+      rabItems = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+      updateAllUI();
+    });
+
+    onValue(ref(db, 'claims'), (snapshot) => {
+      const data = snapshot.val();
+      claims = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+      updateAllUI();
+    });
+
+    onValue(ref(db, 'users'), (snapshot) => {
+      const data = snapshot.val();
+      users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+      updateAllUI();
+    });
+
+    onValue(ref(db, 'truenasFiles'), (snapshot) => {
+      const data = snapshot.val();
+      truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+      renderTreeHierarchy();
+    });
+  }
+
+  function updateAllUI() {
+    updateDashboard();
+    updateMasterProject();
+    updateApprovalMultiItem();
+    updatePengajuanMultiItem();
+    updateMonitoringProjectTable();
+    updateLaporan();
+    updateManajemenUser();
+    updateCharts();
+    populateProjectDropdowns();
+  }
+
+  function populateProjectDropdowns() {
+    const upSel = document.getElementById('uploadProjectSelect');
+    if(upSel) {
+      const prevVal = upSel.value;
+      upSel.innerHTML = '<option value="">-- Pilih Project Akurasi --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      if(prevVal) upSel.value = prevVal;
+    }
+  }
+
+  // ==================== RENDERING VIEW DASHBOARD ====================
+  function updateDashboard() {
+    const totalPaguGlobal = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+    const totalRealisasiGlobal = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
+    const overCount = rabItems.filter(i => i.realisasi > i.budget).length;
+
+    const container = document.getElementById('cardsContainer');
+    if(container) {
+      container.innerHTML = `
+        <div class="card"><h3>Total Project Aktif</h3><p>${projects.length}</p></div>
+        <div class="card"><h3>Total Pagu Awal</h3><p>${formatRp(totalPaguGlobal)}</p></div>
+        <div class="card"><h3>Realisasi Terpakai</h3><p>${formatRp(totalRealisasiGlobal)}</p></div>
+        <div class="card"><h3>Item Over Budget</h3><p style="color:#ef4444">${overCount}</p></div>
+      `;
+    }
+
+    const tbody = document.getElementById('monitoringBody');
+    if(tbody) {
+      const sortedItems = [...rabItems].sort((a,b) => b.budget - a.budget).slice(0, 5);
+      tbody.innerHTML = sortedItems.map(i => {
+        const p = projects.find(proj => proj.id === i.projectId);
+        return `<tr><td>${p ? p.name : 'Unknown'}</td><td>${i.itemName}</td><td>${formatRp(i.budget)}</td><td>${formatRp(i.realisasi)}</td><td>${getBadge(i.realisasi, i.budget)}</td></tr>`;
+      }).join('');
+    }
+  }
+
+  // ==================== MASTER PROJECT MANAGEMENT (FIXED LOGIC) ====================
+  function updateMasterProject() {
+    const tbody = document.getElementById('masterProjectBody');
+    if(tbody) {
+      tbody.innerHTML = projects.map(p => {
+        // Hitung total alokasi yang sudah ditarik untuk Item-Item RAB pada project ini
+        const allocatedToItems = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
+        // Sisa Alokasi Pagu = Pagu Awal yang di-input dikurangi total budget seluruh item RAB-nya
+        const remainingPagu = p.totalBudget - allocatedToItems;
+
+        return `<tr>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.client}</td>
+          <td>${formatRp(p.totalBudget)}</td>
+          <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
+          <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}" class="delete-proj-btn"><i class="fas fa-trash"></i> Hapus</button></td>
+        </tr>`;
+      }).join('');
+
+      // Re-bind delete event
+      tbody.querySelectorAll('.btn-danger').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          if(confirm('Hapus project ini beserta seluruh item komponen di dalamnya?')) {
+             remove(ref(db, `projects/${id}`));
+             // Bersihkan data item terkait
+             rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
+          }
+        });
+      });
+    }
+
+    const filter = document.getElementById('filterProjectRAB');
+    if(filter) {
+      const lastSelected = currentSelectedProjectId;
+      filter.innerHTML = '<option value="">-- Hubungkan Ke Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      if(lastSelected) filter.value = lastSelected;
+    }
+
+    renderRABItemsTable();
+  }
+
+  function renderRABItemsTable() {
+    const tbody = document.getElementById('rabItemsMasterBody');
+    if(!tbody) return;
+    
+    if(!currentSelectedProjectId) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Silakan pilih master project terlebih dahulu untuk memunculkan rincian item.</td></tr>';
+      return;
+    }
+
+    const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
+    if(filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Belum ada item RAB terdaftar pada project ini.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(i => `
+      <tr>
+        <td>${i.itemName}</td>
+        <td>${formatRp(i.budget)}</td>
+        <td>${formatRp(i.realisasi)}</td>
+        <td>${formatRp(i.budget - i.realisasi)}</td>
+        <td><button class="btn btn-danger" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.btn-danger').forEach(btn => {
+      btn.addEventListener('click', () => {
+         const itemId = btn.getAttribute('data-id');
+         if(confirm('Hapus item anggaran RAB ini?')) {
+           remove(ref(db, `rabItems/${itemId}`));
+         }
+      });
+    });
+  }
+
+  document.getElementById('filterProjectRAB')?.addEventListener('change', (e) => {
+    currentSelectedProjectId = e.target.value;
+    renderRABItemsTable();
+  });
+
+  // ==================== MANAGEMENT ACTION SUBMIT CLOUD ====================
+  document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
+    const name = document.getElementById('modalProjectName').value.trim();
+    const client = document.getElementById('modalClientName').value.trim();
+    const totalBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
+
+    if(!name || !client) { alert('Lengkapi Form Project!'); return; }
+
+    const newProjRef = push(ref(db, 'projects'));
+    set(newProjRef, { name, client, totalBudget }).then(() => {
+      document.getElementById('projectModal').classList.remove('active');
+      document.getElementById('modalProjectName').value = '';
+      document.getElementById('modalClientName').value = '';
+      document.getElementById('modalBudget').value = '';
+    });
+  });
+
+  document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
+    if(!currentSelectedProjectId) { alert('Pilih project di dropdown terlebih dahulu!'); return; }
+    const proj = projects.find(p => p.id === currentSelectedProjectId);
+    document.getElementById('rabModalProjectName').value = proj ? proj.name : '';
+    document.getElementById('rabItemName').value = '';
+    document.getElementById('rabBudget').value = '';
+    document.getElementById('rabModal').classList.add('active');
+  });
+
+  document.getElementById('saveRabBtn')?.addEventListener('click', () => {
+    const itemName = document.getElementById('rabItemName').value.trim();
+    const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
+
+    if(!itemName || budget <= 0) { alert('Isi data item dengan benar!'); return; }
+
+    const newRabRef = push(ref(db, 'rabItems'));
+    set(newRabRef, {
+      projectId: currentSelectedProjectId,
+      itemName,
+      budget,
+      realisasi: 0
+    }).then(() => {
+      document.getElementById('rabModal').classList.remove('active');
+    });
+  });
+
+  // ==================== MULTI-ITEM KLAIM SUBMISSION ====================
+  let claimItemsBuffer = [];
+  function renderClaimItemsBuild() {
+    const container = document.getElementById('itemList');
+    if(!container) return;
+    
+    const targetProjId = document.getElementById('claimProjectSelect').value;
+    const availableItems = rabItems.filter(i => i.projectId === targetProjId);
+
+    if(claimItemsBuffer.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">Belum ada item klaim ditambahkan.</div>';
+      return;
+    }
+
+    container.innerHTML = claimItemsBuffer.map((item, idx) => `
+      <div class="item-row">
+        <select data-idx="${idx}" class="item-sel-node">
+          <option value="">-- Pilih Item Budget --</option>
+          ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected':''}>${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
+        </select>
+        <input type="number" data-idx="${idx}" class="item-nom-node" placeholder="Nominal Rp" value="${item.nominal || ''}" />
+        <button type="button" class="remove-item" data-idx="${idx}"><i class="fas fa-trash"></i></button>
+      </div>
+    `).join('');
+
+    // Attach internal changes
+    container.querySelectorAll('.item-sel-node').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        claimItemsBuffer[parseInt(sel.dataset.idx)].itemId = e.target.value;
+      });
+    });
+    container.querySelectorAll('.item-nom-node').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        claimItemsBuffer[parseInt(inp.dataset.idx)].nominal = parseFloat(e.target.value) || 0;
+      });
+    });
+    container.querySelectorAll('.remove-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        claimItemsBuffer.splice(parseInt(btn.dataset.idx), 1);
+        renderClaimItemsBuild();
+      });
+    });
+  }
+
+  function updatePengajuanMultiItem() {
+    const selectPr = document.getElementById('claimProjectSelect');
+    if(selectPr) {
+      const currentVal = selectPr.value;
+      selectPr.innerHTML = '<option value="">-- Pilih Target Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      if(currentVal) selectPr.value = currentVal;
+    }
+
+    const historyBody = document.getElementById('historyClaimBody');
+    if(historyBody) {
+      historyBody.innerHTML = claims.map(c => {
+        const p = projects.find(pr => pr.id === c.projectId);
+        const summaries = c.items ? c.items.map(ci => {
+          const r = rabItems.find(rab => rab.id === ci.itemId);
+          return `${r ? r.itemName : 'Item Outside'}: ${formatRp(ci.nominal)}`;
+        }).join('<br>') : '-';
+
+        let badgeClass = 'badge-warning';
+        if(c.status === 'approved') badgeClass = 'badge-success';
+        if(c.status === 'rejected') badgeClass = 'badge-danger';
+
+        return `<tr>
+          <td><strong>${p ? p.name : 'Unknown'}</strong></td>
+          <td style="font-size:0.8rem; color:#475569;">${summaries}</td>
+          <td style="font-weight:700;">${formatRp(c.totalNominal)}</td>
+          <td>${c.vendor}</td>
+          <td><span class="badge ${badgeClass}">${c.status.toUpperCase()}</span></td>
+          <td>${c.tanggal}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  document.getElementById('claimProjectSelect')?.addEventListener('change', () => {
+     claimItemsBuffer = [];
+     renderClaimItemsBuild();
+  });
+  document.getElementById('addItemBtn')?.addEventListener('click', () => {
+     if(!document.getElementById('claimProjectSelect').value) { alert('Pilih project terlebih dahulu!'); return; }
+     claimItemsBuffer.push({ itemId: '', nominal: 0 });
+     renderClaimItemsBuild();
+  });
+
+  document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
+    const projectId = document.getElementById('claimProjectSelect').value;
+    const vendor = document.getElementById('claimVendor').value.trim();
+    const tanggal = document.getElementById('claimDate').value;
+    const desc = document.getElementById('claimDesc').value;
+
+    const validItems = claimItemsBuffer.filter(it => it.itemId && it.nominal > 0);
+    if(!projectId || validItems.length === 0 || !vendor || !tanggal) {
+      alert('Mohon lengkapi parameter claims, minimal satu item nominal valid!');
+      return;
+    }
+
+    const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
+    const newClaimRef = push(ref(db, 'claims'));
+    
+    set(newClaimRef, {
+      projectId,
+      vendor,
+      tanggal,
+      desc,
+      status: 'pending',
+      totalNominal,
+      items: validItems
+    }).then(() => {
+       claimItemsBuffer = [];
+       document.getElementById('claimVendor').value = '';
+       document.getElementById('claimDesc').value = '';
+       renderClaimItemsBuild();
+       alert('Pengajuan klaim multi item berhasil diunggah ke Firebase Cloud!');
+    });
+  });
+
+  // ==================== FINANCE APPROVAL SYSTEM ====================
+  function updateApprovalMultiItem() {
+    const tbody = document.getElementById('approvalBody');
+    if(!tbody) return;
+
+    const pendings = claims.filter(c => c.status === 'pending');
+    if(pendings.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Tidak ada antrean approval klaim baru.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = pendings.map((c, index) => {
+      const p = projects.find(pr => pr.id === c.projectId);
+      const names = c.items ? c.items.map(it => {
+         const r = rabItems.find(rab => rab.id === it.itemId);
+         return r ? r.itemName : 'Unknown';
+      }).join(', ') : '';
+
+      return `<tr>
+        <td>${index+1}</td>
+        <td><strong>${p ? p.name : 'Unknown'}</strong></td>
+        <td>${names}</td>
+        <td style="font-weight:700; color:#2563eb;">${formatRp(c.totalNominal)}</td>
+        <td>${c.vendor}</td>
+        <td><span class="badge badge-warning">PENDING</span></td>
+        <td>
+          <button class="btn btn-success app-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
+          <button class="btn btn-danger rej-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.app-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cid = btn.getAttribute('data-id');
+        const targetClaim = claims.find(c => c.id === cid);
+        if(targetClaim) {
+          // Mutasi penambahan realisasi ke masing-masing item komponen secara cloud
+          targetClaim.items.forEach(item => {
+             const matchedRab = rabItems.find(r => r.id === item.itemId);
+             if(matchedRab) {
+                const currentReal = parseFloat(matchedRab.realisasi) || 0;
+                update(ref(db, `rabItems/${matchedRab.id}`), {
+                   realisasi: currentReal + item.nominal
+                });
+             }
+          });
+          update(ref(db, `claims/${cid}`), { status: 'approved' });
+        }
+      });
+    });
+
+    tbody.querySelectorAll('.rej-btn').forEach(btn => {
+       btn.addEventListener('click', () => {
+         const cid = btn.getAttribute('data-id');
+         update(ref(db, `claims/${cid}`), { status: 'rejected' });
+       });
+    });
+  }
+
+  // ==================== MONITORING DYNAMIC POPUP DETAIL ====================
+  function updateMonitoringProjectTable() {
+    const tbody = document.getElementById('monitoringProjectBody');
+    if(!tbody) return;
+
+    tbody.innerHTML = projects.map((p, idx) => {
+      const items = rabItems.filter(i => i.projectId === p.id);
+      const totalBudgetItems = items.reduce((sum, i) => sum + i.budget, 0);
+      const totalRealisasi = items.reduce((sum, i) => sum + i.realisasi, 0);
+      const sisa = totalBudgetItems - totalRealisasi;
+      const pct = totalBudgetItems > 0 ? ((totalRealisasi / totalBudgetItems) * 100).toFixed(1) : 0;
+
+      return `<tr class="project-row" data-id="${p.id}">
+        <td>${idx+1}</td>
+        <td><span class="project-name-link"><i class="fas fa-folder-open"></i> ${p.name}</span></td>
+        <td>${p.client}</td>
+        <td>${formatRp(totalBudgetItems)}</td>
+        <td>${formatRp(totalRealisasi)}</td>
+        <td style="font-weight:600; color:${sisa < 0 ? '#ef4444':'#475569'}">${formatRp(sisa)}</td>
+        <td><strong>${pct}%</strong></td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.project-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const pid = row.getAttribute('data-id');
+        const proj = projects.find(p => p.id === pid);
+        const items = rabItems.filter(i => i.projectId === pid);
+
+        document.getElementById('detailModalTitle').innerHTML = `<i class="fas fa-clipboard-list"></i> Detail RAB Komponen - ${proj ? proj.name : ''}`;
+        const modalBody = document.getElementById('detailRabBody');
+        
+        if(items.length === 0) {
+          modalBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum memiliki rancangan item budget.</td></tr>';
+        } else {
+          modalBody.innerHTML = items.map(i => `
+            <tr>
+              <td>${i.itemName}</td>
+              <td>${formatRp(i.budget)}</td>
+              <td>${formatRp(i.realisasi)}</td>
+              <td>${formatRp(i.budget - i.realisasi)}</td>
+              <td>${getBadge(i.realisasi, i.budget)}</td>
+            </tr>
+          `).join('');
+        }
+        document.getElementById('detailRabModal').classList.add('active');
+      });
+    });
+  }
+
+  // ==================== LAPORAN & USER MANAGEMENT ====================
+  function updateLaporan() {
+    const tbody = document.getElementById('laporanBody');
+    if(!tbody) return;
+
+    tbody.innerHTML = projects.map(p => {
+       const items = rabItems.filter(i => i.projectId === p.id);
+       const tBud = items.reduce((sum, i) => sum + i.budget, 0);
+       const tReal = items.reduce((sum, i) => sum + i.realisasi, 0);
+       const sisa = tBud - tReal;
+       return `<tr>
+         <td><strong>${p.name}</strong></td>
+         <td>${formatRp(tBud)}</td>
+         <td>${formatRp(tReal)}</td>
+         <td>${formatRp(sisa)}</td>
+         <td><span class="badge ${sisa < 0 ? 'badge-danger':'badge-success'}">${sisa < 0 ? 'Over Budget':'On Track'}</span></td>
+       </tr>`;
+    }).join('');
+  }
+
+  function updateManajemenUser() {
+    const tbody = document.getElementById('userTableBody');
+    if(!tbody) return;
+
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${u.username}</td>
+        <td><strong>${u.role}</strong></td>
+        <td><span class="badge badge-success">AKTIF</span></td>
+        <td><button class="btn btn-danger delete-usr-btn" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}">Hapus</button></td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.delete-usr-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+         const uid = btn.getAttribute('data-id');
+         if(confirm('Hapus user?')) remove(ref(db, `users/${uid}`));
+      });
+    });
+  }
+
+  document.getElementById('saveUserBtn')?.addEventListener('click', () => {
+    const username = document.getElementById('modalUsername').value.trim();
+    const role = document.getElementById('modalRole').value;
+    if(!username) return;
+
+    const newUserRef = push(ref(db, 'users'));
+    set(newUserRef, { username, role, status: 'Aktif' }).then(() => {
+       document.getElementById('userModal').classList.remove('active');
+       document.getElementById('modalUsername').value = '';
+    });
+  });
+
+  // ==================== TRUENAS BACKEND API UPLOAD INTEGRATION ====================
+  document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
+     e.preventDefault();
+     const fileInput = document.getElementById('trueNasFile');
+     const projId = document.getElementById('uploadProjectSelect').value;
+     const folderType = document.getElementById('uploadFolderSelect').value;
+
+     if(!projId || fileInput.files.length === 0) {
+       alert('Pilih project serta dokumen berwujud!');
+       return;
+     }
+
+     const file = fileInput.files[0];
+     const targetProject = projects.find(p => p.id === projId);
+     const folderHierarchyPath = `/mnt/EXTERNAL-4TB/Data/rab/${targetProject.name.replace(/\s+/g, '_')}/${folderType}`;
+
+     const formData = new FormData();
+     formData.append('file', file);
+     formData.append('path', folderHierarchyPath); // Parameter opsional yang dibaca oleh backend Node/TrueNAS API
+
+     // Triggering native fetch upload endpoint API 192.168.104.20:3000
+     fetch('http://192.168.104.20:3000/upload', {
+       method: 'POST',
+       body: formData
+     })
+     .then(res => {
+       if(!res.ok) throw new Error('Gagal Upload ke TrueNAS Engine');
+       return res.json();
+     })
+     .then(data => {
+        alert('File Berhasil Diunggah ke TrueNAS Storage!');
+        
+        // Log log metadata ke Firebase untuk visualisasi hirarki preview
+        const newFileRef = push(ref(db, 'truenasFiles'));
+        set(newFileRef, {
+           projectId: projId,
+           projectName: targetProject.name,
+           folderType: folderType,
+           fileName: file.name,
+           uploadedAt: new Date().toLocaleString(),
+           fileUrl: data.fileUrl || '#' // URL download dari API jika di-generate backend
+        });
+        fileInput.value = '';
+     })
+     .catch(err => {
+        console.error(err);
+        // Fallback Simulasi jika API offline agar hirarki tetap bisa diuji coba secara simulasi
+        alert('Menggunakan mode fallback cloud metadata (API Local 192.168.104.20 offline).');
+        const newFileRef = push(ref(db, 'truenasFiles'));
+        set(newFileRef, {
+           projectId: projId,
+           projectName: targetProject.name,
+           folderType: folderType,
+           fileName: file.name,
+           uploadedAt: new Date().toLocaleString(),
+           fileUrl: '#'
+        });
+        fileInput.value = '';
+     });
+  });
+
+  // Render Visual Pratinjau Hirarki Folder Tree Komponen
+  function renderTreeHierarchy() {
+     const treeContainer = document.getElementById('rootTreeContainer');
+     if(!treeContainer) return;
+
+     if(projects.length === 0) {
+       treeContainer.innerHTML = '<li><i class="fas fa-info-circle"></i> Master data project kosong.</li>';
+       return;
+     }
+
+     // Mapping pengelompokan folder hirarki tree node
+     let html = '';
+     projects.forEach(p => {
+        const cleanedProjName = p.name.replace(/\s+/g, '_');
+        html += `<li>
+          <span class="folder-node"><i class="fas fa-folder-open"></i> ${cleanedProjName}</span>
+          <ul class="nested-tree">`;
+            
+            // Subfolder 1: RAB_Awal
+            html += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
+            html += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
+                     .map(f => `<li class="file-node"><i class="fas fa-file-pdf"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Kosong</li>';
+            html += `</ul></li>`;
+
+            // Subfolder 2: Nota_Vendor
+            html += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
+            html += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
+                     .map(f => `<li class="file-node"><i class="fas fa-file-invoice"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Kosong</li>';
+            html += `</ul></li>`;
+
+            // Subfolder 3: BAP
+            html += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
+            html += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
+                     .map(f => `<li class="file-node"><i class="fas fa-file-contract"></i> ${f.fileName} <a href="${f.fileUrl}" target="_blank"><i class="fas fa-eye"></i> Preview</a></li>`).join('') || '<li class="file-node" style="color:#94a3b8; font-style:italic;">Kosong</li>';
+            html += `</ul></li>`;
+
+        html += `</ul></li>`;
+     });
+
+     treeContainer.innerHTML = html;
+  }
+
+  // ==================== ENGINE CHART JS RENDER ====================
+  let chartMain, chartLap;
+  function updateCharts() {
+    const ctxMain = document.getElementById('budgetChart')?.getContext('2d');
+    if(ctxMain) {
+       if(chartMain) chartMain.destroy();
+       chartMain = new Chart(ctxMain, {
+          type: 'bar',
+          data: {
+             labels: projects.map(p => p.name),
+             datasets: [
+               { label: 'Budget Item (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), backgroundColor: '#3b82f6' },
+               { label: 'Realisasi (Juta)', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), backgroundColor: '#10b981' }
+             ]
+          },
+          options: { responsive: true }
+       });
+    }
+
+    const ctxLap = document.getElementById('laporanChart')?.getContext('2d');
+    if(ctxLap) {
+       if(chartLap) chartLap.destroy();
+       chartLap = new Chart(ctxLap, {
+          type: 'line',
+          data: {
+             labels: projects.map(p => p.name),
+             datasets: [
+               { label: 'Total Pagu Item', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.budget,0)/1e6), borderColor: '#8b5cf6', fill: false, tension:0.2 },
+               { label: 'Total Realisasi Terpakai', data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i)=>s+i.realisasi,0)/1e6), borderColor: '#f97316', fill: false, tension:0.2 }
+             ]
+          },
+          options: { responsive: true }
+       });
+    }
+  }
+
+  // ==================== PARSING ENGINE EXCEL IMPORT ====================
+  document.getElementById('processExcelBtn')?.addEventListener('click', () => {
+     const file = document.getElementById('excelFileInput').files[0];
+     if(!file) { alert('Sematkan file excel terlebih dahulu!'); return; }
+
+     const reader = new FileReader();
+     reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+
+        if(rows.length < 2) return;
+        const headers = rows[0].map(c => String(c||"").toLowerCase().trim());
+        const idxProj = headers.findIndex(h => h.includes('project'));
+        const idxItem = headers.findIndex(h => h.includes('item'));
+        const idxBud = headers.findIndex(h => h.includes('budget'));
+
+        if(idxProj === -1 || idxItem === -1 || idxBud === -1) {
+           alert('Struktur Header Gagal Diidentifikasi! Harus: NAMA_PROJECT, ITEM_RAB, BUDGET');
+           return;
+        }
+
+        let countImported = 0;
+        for(let i=1; i<rows.length; i++) {
+           let projName = String(rows[i][idxProj] || "").trim();
+           let itemName = String(rows[i][idxItem] || "").trim();
+           let budgetVal = parseFloat(String(rows[i][idxBud] || 0).replace(/[^0-9.-]/g, ''));
+
+           if(projName && itemName && budgetVal > 0) {
+              let matchedProj = projects.find(p => p.name.toLowerCase() === projName.toLowerCase());
+              
+              if(!matchedProj) {
+                 // Auto-create master project baru jika nama project belum terdaftar
+                 const newPRef = push(ref(db, 'projects'));
+                 const newId = newPRef.key;
+                 set(newPRef, { name: projName, client: 'Import Excel', totalBudget: budgetVal * 2 }); // Pagu awal disimulasikan dua kali lipat budget item awal
+                 matchedProj = { id: newId };
+              }
+
+              const newRabRef = push(ref(db, 'rabItems'));
+              set(newRabRef, {
+                 projectId: matchedProj.id,
+                 itemName,
+                 budget: budgetVal,
+                 realisasi: 0
+              });
+              countImported++;
+           }
+        }
+        alert(`Berhasil mengimpor ${countImported} item anggaran baru ke sistem cloud!`);
+     };
+     reader.readAsArrayBuffer(file);
+  });
+
+  document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => {
+     const ws = XLSX.utils.aoa_to_sheet([["NAMA_PROJECT", "ITEM_RAB", "BUDGET"], ["Instalasi Jaringan", "Kabel UTP Cat6", 4500000]]);
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, ws, "Template");
+     XLSX.writeFile(wb, "Template_RAB_Tracker.xlsx");
+  });
+
+  // ==================== CONFIG HANDLING MODAL INTERACTIVE ====================
+  const modalProject = document.getElementById('projectModal'), modalUser = document.getElementById('userModal'), detailModal = document.getElementById('detailRabModal');
+  document.getElementById('openProjectModalBtn')?.addEventListener('click', () => modalProject.classList.add('active'));
+  document.getElementById('openUserModalBtn')?.addEventListener('click', () => modalUser.classList.add('active'));
+  document.getElementById('closeModalBtn')?.addEventListener('click', () => modalProject.classList.remove('active'));
+  document.getElementById('closeUserModalBtn')?.addEventListener('click', () => modalUser.classList.remove('active'));
+  document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
+  document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => detailModal.classList.remove('active'));
+
+  // SIMULATOR ROLE DAN HAK AKSES HIRARKI MENU
+  document.getElementById('roleSimulator').addEventListener('change', function(e) {
+     currentRole = e.target.value;
+     enforceRoleVisibility();
+  });
+
+  // CLIENT SIDE ROUTING CONTROLLER
+  const pages = { 
+    dashboard: 'dashboardPage', 
+    'master-project': 'masterProjectPage', 
+    'import-rab': 'importRabPage', 
+    'approval-budget': 'approvalBudgetPage', 
+    'pengajuan-klaim': 'pengajuanKlaimPage', 
+    monitoring: 'monitoringPage', 
+    laporan: 'laporanPage', 
+    'upload-dokumen': 'uploadDokumenPage',
+    'manajemen-user': 'manajemenUserPage' 
+  };
+
+  document.querySelectorAll('.sidebar ul li').forEach(li => {
+     li.addEventListener('click', () => {
+        if(li.classList.contains('restricted')) return;
+
+        document.querySelectorAll('.sidebar ul li').forEach(l => l.classList.remove('active'));
+        li.classList.add('active');
+
+        const key = li.getAttribute('data-page');
+        Object.values(pages).forEach(p => document.getElementById(p)?.classList.add('hidden-section'));
+        
+        if(pages[key]) document.getElementById(pages[key]).classList.remove('hidden-section');
+        document.getElementById('pageTitle').innerHTML = `<i class="${li.querySelector('i').className}"></i> ${li.innerText.trim()}`;
+        
+        const btn = document.getElementById('globalActionBtn');
+        if(key === 'master-project') {
+           btn.innerHTML = '<i class="fas fa-plus-circle"></i> Project Baru';
+           btn.onclick = () => modalProject.classList.add('active');
+        } else {
+           btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+           btn.onclick = () => updateAllUI();
+        }
+     });
+  });
+
+  // RUNTIME INITIALIZATION
+  listenCloudData();
+  enforceRoleVisibility();
+</script>
+
+</body>
+</html>
