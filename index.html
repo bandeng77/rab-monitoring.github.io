@@ -1178,7 +1178,7 @@
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
                      .map(f => {
                         // FIX: Memaksa pembangunan URL preview berbasis folder tersanitasi agar sinkron total dengan router backend
-                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
+                        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-pdf"></i> ${f.fileName} 
                                   <div class="action-links">
