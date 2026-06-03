@@ -33,7 +33,10 @@ onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = 'login.html';
   } else {
-    // Tarik profile role dari Realtime Database berdasarkan UID user
+    // Jalankan skrip proteksi untuk memastikan UID Admin Anda terdaftar permanen
+    ensureAdminUIDInDatabase(user);
+
+    // Ambil profile role dari Realtime Database berdasarkan UID user
     get(ref(db, `users/${user.uid}`)).then((snapshot) => {
       if (snapshot.exists()) {
         const profile = snapshot.val();
@@ -43,16 +46,26 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('sbUserEmail').innerText = user.email;
         document.getElementById('sbUserRole').innerText = currentRole;
         
-        // Atur visibilitas modul
+        // Atur visibilitas modul halaman
         enforceRoleVisibility();
         initCloudDatabaseListeners();
       } else {
-        // Jika akun di Auth ada tapi data profilenya terhapus di DB
         signOut(auth);
       }
     });
   }
 });
+
+// Fungsi Pengunci untuk Force-Inject UID Admin Anda jika terhapus
+function ensureAdminUIDInDatabase(user) {
+  if (user.uid === "Wswgb5mhjRe1gnTF3X365bKXo7k1" || user.email === "admin@genetek.co.id") {
+    set(ref(db, `users/Wswgb5mhjRe1gnTF3X365bKXo7k1`), {
+      email: "admin@genetek.co.id",
+      role: "Administrator",
+      createdAt: "03/06/2026"
+    });
+  }
+}
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
   if(confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
@@ -103,7 +116,6 @@ function initCloudDatabaseListeners() {
     renderTreeHierarchy();
   });
 
-  // Listener khusus tabel manajemen pengguna
   onValue(ref(db, 'users'), (snapshot) => {
     const data = snapshot.val();
     users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
@@ -157,7 +169,7 @@ function populateDropdownMenus() {
   }
 }
 
-// ==================== DASHBOARD & REVENUE MODUL ====================
+// ==================== DASHBOARD MODUL ====================
 function renderDashboard() {
   const totalPaguGlobal = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
   const totalRealisasiGlobal = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
@@ -363,7 +375,7 @@ document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => 
   XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
 });
 
-// ==================== MULTI-ITEM CLAIM LOGIC COMPONENTS ====================
+// ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
 function renderClaimItemsBuildLayout() {
   const container = document.getElementById('itemList');
@@ -472,7 +484,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   });
 });
 
-// ==================== REVENUE APPROVAL LOGICS PIPELINE ====================
+// ==================== APPROVAL LOGICS ====================
 function renderApprovalList() {
   const tbody = document.getElementById('approvalBody');
   if (!tbody) return;
@@ -533,7 +545,7 @@ function renderApprovalList() {
   });
 }
 
-// ==================== MONITORING FINANSLAL ENGINE ====================
+// ==================== MONITORING COMPONENTS ====================
 function renderMonitoringTable() {
   const tbody = document.getElementById('monitoringProjectBody');
   if (!tbody) return;
@@ -557,7 +569,8 @@ function renderMonitoringTable() {
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return; // Lewati jika menekan aksi internal
       const id = row.getAttribute('data-id');
       const proj = projects.find(p => p.id === id);
       const elements = rabItems.filter(i => i.projectId === id);
@@ -602,7 +615,7 @@ function renderReports() {
   }).join('');
 }
 
-// ==================== TRUENAS STORAGE DISK POOL ACTIONS ====================
+// ==================== TRUENAS STORAGE Pool ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const fileInputElement = document.getElementById('trueNasFile');
@@ -666,7 +679,7 @@ window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
   })
   .catch(err => {
     remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-      triggerNotification("Metadata dibersihkan (File fisik sudah tidak ada).", false);
+      triggerNotification("Metadata dibersihkan dari cloud tracker database.", false);
     });
   });
 }
@@ -742,7 +755,7 @@ function refreshGraphicCharts() {
   }
 }
 
-// ==================== ULTIMATE USER MANAGEMENT ARCHITECTURE ====================
+// ==================== IMPROVED USER MANAGEMENT LAYOUTS ====================
 function renderUsersTable() {
   const tbody = document.getElementById('userTableBody');
   if (!tbody) return;
@@ -752,50 +765,50 @@ function renderUsersTable() {
       <td><strong>${u.email}</strong></td>
       <td><span class="user-role" style="padding:4px 10px; background:#eef2ff; color:#2563eb; font-weight:700; border-radius:10px;">${u.role}</span></td>
       <td>${u.createdAt || '-'}</td>
-      <td><button class="btn btn-danger btn-del-usr" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}">Hapus</button></td>
+      <td><button class="btn btn-danger btn-del-usr" style="padding:4px 10px; border-radius:8px; font-size:0.75rem" data-id="${u.id}" data-email="${u.email}">Hapus</button></td>
     </tr>
   `).join('');
 
   tbody.querySelectorAll('.btn-del-usr').forEach(btn => {
     btn.addEventListener('click', () => {
        const uid = btn.getAttribute('data-id');
-       if (confirm('Hapus profil hak akses pengguna ini?')) {
-         remove(ref(db, `users/${uid}`)).then(() => triggerNotification('Profil user dicabut.'));
+       const email = btn.getAttribute('data-email');
+       if (confirm(`Hapus profil hak akses pengguna ${email}?`)) {
+         remove(ref(db, `users/${uid}`));
+         const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
+         remove(ref(db, `user_emails/${sanitizedEmail}`)).then(() => {
+            triggerNotification('Profil user dicabut.');
+         });
        }
     });
   });
 }
 
 document.getElementById('saveUserBtn')?.addEventListener('click', () => {
-  const email = document.getElementById('modalUserEmail').value.trim();
-  const password = document.getElementById('modalUserPassword').value;
+  const email = document.getElementById('modalUserEmail').value.trim().toLowerCase();
   const role = document.getElementById('modalRole').value;
 
-  if (!email || password.length < 6) { 
-    triggerNotification('Email wajib diisi & password minimal 6 karakter!', false); 
+  if (!email) { 
+    triggerNotification('Email wajib diisi!', false); 
     return; 
   }
 
-  /* 
-     KARENA PROSES BERADA DI SISI KLIEN: 
-     Kita menyimpan data registrasi user baru ke antrean Realtime Database agar tidak mengacaukan session login Admin aktif. 
-     Metode penulisan UID kustom ini akan dibaca secara periodik atau langsung dicocokkan saat login.html berjalan.
-  */
-  const newUserProfileRef = push(ref(db, 'users'));
-  set(newUserProfileRef, {
+  // Sanitasi email untuk digunakan sebagai Key di Firebase (mengubah titik menjadi koma)
+  const sanitizedEmail = email.replace(/\./g, ',');
+  
+  // Daftarkan ke node antrean email tunggu
+  set(ref(db, `user_emails/${sanitizedEmail}`), {
      email: email,
      role: role,
      createdAt: new Date().toLocaleDateString('id-ID')
   }).then(() => {
-     // Daftarkan manual instruksi kredensial ke DB (Alternatif Firebase Client Secure Cloud)
-     triggerNotification('Metadata user berhasil dibuat! Daftarkan email tersebut di konsol Auth Firebase Anda.');
+     triggerNotification('Role berhasil didaftarkan! Selesai membuat akun dengan email ini di konsol Firebase Auth.');
      document.getElementById('userModal').classList.remove('active');
      document.getElementById('modalUserEmail').value = '';
-     document.getElementById('modalUserPassword').value = '';
   });
 });
 
-// ==================== APPLICATION SYSTEM ROUTING LAYOUTS ====================
+// ==================== SYSTEM ROUTING ====================
 const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode.classList.add('active'));
 document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.add('active'));
