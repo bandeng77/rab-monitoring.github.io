@@ -1064,14 +1064,14 @@
      const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
      
      // Construct the storage folder layout scheme path for TrueNAS
-     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/rab/${resolvedProjectObj.name.replace(/\s+/g, '_')}/${targetFolderSelection}`;
+     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${resolvedProjectObj.name.replace(/\s+/g, '_')}/${targetFolderSelection}`;
 
      const dataPayload = new FormData();
      dataPayload.append('file', fileObj);
      dataPayload.append('path', serverStoragePath); 
 
      // Dispatch standard multipart request to endpoint API
-     fetch('http://192.168.104.20:3000/upload', {
+     fetch('http://192.168.104.45:3000/upload', {
        method: 'POST',
        body: dataPayload
      })
