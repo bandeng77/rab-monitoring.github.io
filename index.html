@@ -5,40 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>RAB Pro | Ultimate Budget Tracker</title>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    // SALIN KREDENSIAL LENGKAP DARI APP.JS ATAU LOGIN.HTML ANDA DI SINI
-    const firebaseConfig = {
-  apiKey: "AIzaSyAQWeEYQNtocfIuKvKk8tbpKuIeW4CmZOI",
-  authDomain: "rab-monitoring.firebaseapp.com",
-  databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "rab-monitoring",
-  storageBucket: "rab-monitoring.firebasestorage.app",
-  messagingSenderId: "712435056277",
-  appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    // Mencegat render halaman sejak awal dan menunggu konfirmasi status login murni dari Firebase
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        // Jika benar-benar terkonfirmasi tidak ada sesi aktif, baru lempar ke login
-        window.location.href = 'login.html';
-      } else {
-        // Jika sesi login valid, cetak log dan tampilkan element body secara utuh
-        console.log("Sesi aman terverifikasi untuk:", user.email);
-        const bodyEl = document.getElementById("mainAppBody");
-        if (bodyEl) {
-          bodyEl.style.setProperty("display", "flex", "important");
-        }
-      }
-    });
-  </script>
-
+  <!-- CSS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -47,12 +14,48 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
 
-    /* Secara default disembunyikan lewat ID #mainAppBody agar tidak flicker/loop saat inisialisasi Firebase */
     body {
       background: linear-gradient(135deg, #f0f4ff 0%, #e9eefc 100%);
       min-height: 100vh;
     }
 
+    /* Loading Screen */
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e9eefc 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    /* Main App - Hidden Initially */
+    #mainAppBody {
+      display: none;
+    }
+
+    /* Sidebar Styles */
     .sidebar {
       width: 280px;
       background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
@@ -132,10 +135,12 @@
     }
     .btn-logout-sidebar:hover { background: #ef4444; color: white; }
 
+    /* Main Content */
     .main { margin-left: 280px; width: calc(100% - 280px); padding: 28px 36px; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
     .header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #1e293b, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+    /* Button Styles */
     .btn { padding: 10px 24px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.25s; }
     .btn-primary { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
@@ -146,35 +151,42 @@
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
 
+    /* Cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px; }
     .card { background: rgba(255,255,255,0.95); padding: 24px 22px; border-radius: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: 0.3s; }
     .card:hover { transform: translateY(-6px); }
     .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
     .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+    /* Sections */
     .section { background: rgba(255,255,255,0.92); padding: 28px 32px; border-radius: 36px; margin-bottom: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); }
     .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1f2a48; }
 
+    /* Tables */
     .info-box { background: #eef2ff; padding: 16px; border-radius: 24px; margin-bottom: 16px; font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
     th { background: #f1f5f9; font-weight: 700; color: #334155; }
 
+    /* Badges */
     .badge { padding: 5px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; display: inline-block; text-transform: uppercase; }
     .badge-success { background: #d1fae5; color: #065f46; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
     .badge-warning { background: #fed7aa; color: #9a3412; }
 
+    /* Project Row */
     .project-row { cursor: pointer; transition: all 0.2s; }
     .project-row:hover { background: #eef2ff; transform: scale(1.005); }
     .project-name-link { color: #2563eb; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; }
 
+    /* Multi Item Container */
     .multi-item-container { background: #f8fafc; border-radius: 24px; padding: 20px; margin-top: 20px; }
     .item-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; background: white; padding: 12px 16px; border-radius: 20px; border: 1px solid #e2e8f0; }
     .item-row select { flex: 2; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
+    /* File Tree */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -190,6 +202,7 @@
     .file-node .delete-file-btn:hover { color: #dc2626; transform: scale(1.2); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
+    /* Modals */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; }
     .modal-overlay.active { visibility: visible; opacity: 1; }
     .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
@@ -201,16 +214,19 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
 
+    /* Notification */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
     .notify-popup.active { transform: translateX(0); }
     .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
     .notify-popup.error { border-left: 6px solid #ef4444; color: #991b1b; }
     .notify-popup i { font-size: 1.4rem; }
 
+    /* Utility */
     .hidden-section { display: none !important; }
     .page { animation: fadeUp 0.3s; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Responsive */
     @media (max-width: 900px) {
       .sidebar { width: 100%; position: relative; height: auto; }
       .main { margin-left: 0; width: 100%; }
@@ -218,232 +234,286 @@
   </style>
 </head>
 
-<body id="mainAppBody" style="display: none;">
-
-<div id="customPopupNotice" class="notify-popup">
-  <i id="noticeIcon" class="fas"></i>
-  <span id="noticeMessage">Notifikasi</span>
-</div>
-
-<div class="sidebar">
-  <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
-  
-  <div class="user-profile-box">
-    <div class="user-email" id="sbUserEmail">Loading...</div>
-    <div class="user-role" id="sbUserRole">Peran</div>
+<body>
+  <!-- Loading Screen -->
+  <div id="loadingScreen">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Memuat Aplikasi RAB Pro...</div>
   </div>
 
-  <ul id="sidebarMenu">
-    <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
-    <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
-    <li data-page="import-rab" class="restricted"><i class="fas fa-upload"></i> Import RAB</li>
-    <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
-    <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
-    <li data-page="monitoring" class="restricted"><i class="fas fa-chart-bar"></i> Monitoring</li>
-    <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Laporan</li>
-    <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
-    <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> Manajemen User</li>
-  </ul>
+  <!-- Main App Body -->
+  <div id="mainAppBody">
+    <div id="customPopupNotice" class="notify-popup">
+      <i id="noticeIcon" class="fas"></i>
+      <span id="noticeMessage">Notifikasi</span>
+    </div>
 
-  <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
-</div>
+    <div class="sidebar">
+      <h2><i class="fas fa-chart-line"></i> RAB Tracker</h2>
+      
+      <div class="user-profile-box">
+        <div class="user-email" id="sbUserEmail">Loading...</div>
+        <div class="user-role" id="sbUserRole">Peran</div>
+      </div>
 
-<div class="main">
-  <div class="header">
-    <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard</h1>
-    <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-  </div>
+      <ul id="sidebarMenu">
+        <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
+        <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
+        <li data-page="import-rab" class="restricted"><i class="fas fa-upload"></i> Import RAB</li>
+        <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
+        <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
+        <li data-page="monitoring" class="restricted"><i class="fas fa-chart-bar"></i> Monitoring</li>
+        <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Laporan</li>
+        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+        <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> Manajemen User</li>
+      </ul>
 
-  <div id="dashboardPage" class="page">
-    <div class="cards" id="cardsContainer"></div>
-    <div class="section">
-      <h2><i class="fas fa-chart-line"></i> Monitoring Ringkas</h2>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr><th>Project</th><th>Item Component</th><th>Budget</th><th>Actual Realization</th><th>Status</th></tr>
-          </thead>
-          <tbody id="monitoringBody"></tbody>
-        </table>
-      </div>
+      <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
     </div>
-    <div class="section">
-      <h2><i class="fas fa-chart-column"></i> Grafik Alokasi vs Realisasi Anggaran</h2>
-      <canvas id="budgetChart" height="120"></canvas>
-    </div>
-  </div>
 
-  <div id="masterProjectPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-database"></i> Master Data Project</h2>
-      <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Tambah Project</button>
-      <div style="overflow-x:auto; margin-top:20px;">
-        <table>
-          <thead>
-            <tr><th>Project Name</th><th>Client</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Action</th></tr>
-          </thead>
-          <tbody id="masterProjectBody"></tbody>
-        </table>
+    <div class="main">
+      <div class="header">
+        <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard</h1>
+        <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
       </div>
-    </div>
-    
-    <div class="section">
-      <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
-      <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
-      <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Tambah Item RAB Component</button>
-      <table>
-        <thead>
-          <tr><th>Item Name</th><th>Item Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
-        </thead>
-        <tbody id="rabItemsMasterBody"></tbody>
-      </table>
-    </div>
-  </div>
 
-  <div id="importRabPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-file-excel"></i> Import RAB via Excel Spreadsheet</h2>
-      <div class="info-box"><i class="fas fa-info-circle"></i> Layout Header Kolom: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
-      <div class="form-group">
-        <label>Pilih File Spreadsheet</label>
-        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
-      </div>
-      <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Eksekusi Import</button>
-    </div>
-    <div class="section">
-      <button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Unduh Template Excel RAB</button>
-    </div>
-  </div>
-
-  <div id="approvalBudgetPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr><th>No</th><th>Project Target</th><th>Item Lists</th><th>Total Amount</th><th>Vendor Name</th><th>Status</th><th>Action</th></tr>
-          </thead>
-          <tbody id="approvalBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div id="claimRequestPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-hand-holding-usd"></i> Ajukan Pengajuan Multi-Item Klaim</h2>
-      <div class="form-group">
-        <label><i class="fas fa-building"></i> Asosiasi Target Project</label>
-        <select id="claimProjectSelect"></select>
-      </div>
-      <div id="multiItemContainer" class="multi-item-container">
-        <div id="itemList"></div>
-        <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah Baris Item</button>
-      </div>
-      <div class="form-group" style="margin-top:20px;">
-        <label><i class="fas fa-truck"></i> Vendor / Supplier</label>
-        <input type="text" id="claimVendor" placeholder="Nama Penyedia / Toko">
-      </div>
-      <div class="form-group">
-        <label><i class="fas fa-calendar-alt"></i> Tanggal Transaksi</label>
-        <input type="date" id="claimDate">
-      </div>
-      <div class="form-group">
-        <label><i class="fas fa-sticky-note"></i> Catatan Keterangan</label>
-        <textarea id="claimDesc" rows="2" placeholder="Keterangan tambahan (opsional)"></textarea>
-      </div>
-      <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Kirim Pengajuan Klaim</button>
-    </div>
-    <div class="section">
-      <h2><i class="fas fa-history"></i> Riwayat Log Klaim</h2>
-      <table>
-        <thead>
-          <tr><th>Project Name</th><th>Items</th><th>Total Nominal</th><th>Vendor</th><th>Status</th><th>Submitted Date</th></tr>
-        </thead>
-        <tbody id="historyClaimBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="monitoringPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-chart-bar"></i> Metrik Struktur Finansial Project</h2>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></tr>
-          </thead>
-          <tbody id="monitoringProjectBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div id="reportsPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-flag-checkered"></i> Analisis Laporan Finansial Perusahaan</h2>
-      <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
-      <table>
-        <thead>
-          <tr><th>Project Context</th><th>Total Budget Item</th><th>Actual Consumption</th><th>Net Margin Balance</th><th>Condition Status</th></tr>
-        </thead>
-        <tbody id="laporanBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="uploadDocumentPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen Lampiran ke TrueNAS Storage</h2>
-      <form id="trueNasUploadForm">
-        <div class="form-group">
-          <label>Asosiasi Project Terkait</label>
-          <select id="uploadProjectSelect" required></select>
+      <!-- Dashboard Page -->
+      <div id="dashboardPage" class="page">
+        <div class="cards" id="cardsContainer"></div>
+        <div class="section">
+          <h2><i class="fas fa-chart-line"></i> Monitoring Ringkas</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>Project</th><th>Item Component</th><th>Budget</th><th>Actual Realization</th><th>Status</th></tr>
+              </thead>
+              <tbody id="monitoringBody"></tbody>
+            </table>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Kategori Subfolder Target</label>
-          <select id="uploadFolderSelect">
-            <option value="RAB_Awal">RAB_Awal (Initial RAB Files)</option>
-            <option value="Nota_Vendor">Nota_Vendor (Invoices & Receipts)</option>
-            <option value="BAP">BAP (Handover Records)</option>
-          </select>
+        <div class="section">
+          <h2><i class="fas fa-chart-column"></i> Grafik Alokasi vs Realisasi Anggaran</h2>
+          <canvas id="budgetChart" height="120"></canvas>
         </div>
-        <div class="form-group">
-          <label>Pilih File Dokumen</label>
-          <input type="file" id="trueNasFile" required />
+      </div>
+
+      <!-- Master Project Page -->
+      <div id="masterProjectPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-database"></i> Master Data Project</h2>
+          <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Tambah Project</button>
+          <div style="overflow-x:auto; margin-top:20px;">
+            <table>
+              <thead>
+                <tr><th>Project Name</th><th>Client</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Action</th></tr>
+              </thead>
+              <tbody id="masterProjectBody"></tbody>
+            </table>
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah File Sekarang</button>
-      </form>
+        
+        <div class="section">
+          <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
+          <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
+          <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Tambah Item RAB Component</button>
+          <table>
+            <thead>
+              <tr><th>Item Name</th><th>Item Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
+            </thead>
+            <tbody id="rabItemsMasterBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Import RAB Page -->
+      <div id="importRabPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-file-excel"></i> Import RAB via Excel Spreadsheet</h2>
+          <div class="info-box"><i class="fas fa-info-circle"></i> Layout Header Kolom: <strong>NAMA_PROJECT, ITEM_RAB, BUDGET</strong></div>
+          <div class="form-group">
+            <label>Pilih File Spreadsheet</label>
+            <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
+          </div>
+          <button class="btn btn-primary" id="processExcelBtn"><i class="fas fa-cloud-upload-alt"></i> Eksekusi Import</button>
+        </div>
+        <div class="section">
+          <button class="btn btn-success" id="downloadTemplateBtn"><i class="fas fa-file-excel"></i> Unduh Template Excel RAB</button>
+        </div>
+      </div>
+
+      <!-- Approval Budget Page -->
+      <div id="approvalBudgetPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>No</th><th>Project Target</th><th>Item Lists</th><th>Total Amount</th><th>Vendor Name</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody id="approvalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Claim Request Page -->
+      <div id="claimRequestPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-hand-holding-usd"></i> Ajukan Pengajuan Multi-Item Klaim</h2>
+          <div class="form-group">
+            <label><i class="fas fa-building"></i> Asosiasi Target Project</label>
+            <select id="claimProjectSelect"></select>
+          </div>
+          <div id="multiItemContainer" class="multi-item-container">
+            <div id="itemList"></div>
+            <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah Baris Item</button>
+          </div>
+          <div class="form-group" style="margin-top:20px;">
+            <label><i class="fas fa-truck"></i> Vendor / Supplier</label>
+            <input type="text" id="claimVendor" placeholder="Nama Penyedia / Toko">
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-calendar-alt"></i> Tanggal Transaksi</label>
+            <input type="date" id="claimDate">
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-sticky-note"></i> Catatan Keterangan</label>
+            <textarea id="claimDesc" rows="2" placeholder="Keterangan tambahan (opsional)"></textarea>
+          </div>
+          <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Kirim Pengajuan Klaim</button>
+        </div>
+        <div class="section">
+          <h2><i class="fas fa-history"></i> Riwayat Log Klaim</h2>
+          <table>
+            <thead>
+              <tr><th>Project Name</th><th>Items</th><th>Total Nominal</th><th>Vendor</th><th>Status</th><th>Submitted Date</th></tr>
+            </thead>
+            <tbody id="historyClaimBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Monitoring Page -->
+      <div id="monitoringPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-chart-bar"></i> Metrik Struktur Finansial Project</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>No</th><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Available Balance</th><th>Usage %</th></tr>
+              </thead>
+              <tbody id="monitoringProjectBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Page -->
+      <div id="reportsPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-flag-checkered"></i> Analisis Laporan Finansial Perusahaan</h2>
+          <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
+          <table>
+            <thead>
+              <tr><th>Project Context</th><th>Total Budget Item</th><th>Actual Consumption</th><th>Net Margin Balance</th><th>Condition Status</th></tr>
+            </thead>
+            <tbody id="laporanBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Upload Document Page -->
+      <div id="uploadDocumentPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen Lampiran ke TrueNAS Storage</h2>
+          <form id="trueNasUploadForm">
+            <div class="form-group">
+              <label>Asosiasi Project Terkait</label>
+              <select id="uploadProjectSelect" required></select>
+            </div>
+            <div class="form-group">
+              <label>Kategori Subfolder Target</label>
+              <select id="uploadFolderSelect">
+                <option value="RAB_Awal">RAB_Awal (Initial RAB Files)</option>
+                <option value="Nota_Vendor">Nota_Vendor (Invoices & Receipts)</option>
+                <option value="BAP">BAP (Handover Records)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Pilih File Dokumen</label>
+              <input type="file" id="trueNasFile" required />
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah File Sekarang</button>
+          </form>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-folder-tree"></i> Explorer Manajemen Berkas Cloud Directory</h2>
+          <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
+            <ul class="file-tree" id="rootTreeContainer"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Management Page -->
+      <div id="userManagementPage" class="page hidden-section">
+        <div class="section">
+          <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
+          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Daftarkan User Baru</button>
+          <table style="margin-top:20px;">
+            <thead>
+              <tr><th>Email Pengguna</th><th>Akses Peran Menu</th><th>Tanggal Dibuat</th><th>Action</th></tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <h2><i class="fas fa-folder-tree"></i> Explorer Manajemen Berkas Cloud Directory</h2>
-      <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
-         <ul class="file-tree" id="rootTreeContainer"></ul>
+    <!-- Modals -->
+    <div id="projectModal" class="modal-overlay">
+      <div class="modal-container">
+        <h3>Tambah Project Assignment Baru</h3>
+        <div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div>
+        <div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div>
+        <div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div>
+      </div>
+    </div>
+
+    <div id="rabModal" class="modal-overlay">
+      <div class="modal-container">
+        <h3>Tambah Komponen Struktur RAB</h3>
+        <div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div>
+        <div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div>
+        <div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div>
+      </div>
+    </div>
+
+    <div id="detailRabModal" class="modal-overlay">
+      <div class="modal-container" style="max-width: 700px;">
+        <h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead>
+            <tbody id="detailRabBody"></tbody>
+          </table>
+        </div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div>
+      </div>
+    </div>
+
+    <div id="userModal" class="modal-overlay">
+      <div class="modal-container">
+        <h3>Daftarkan Pengguna Sistem Baru</h3>
+        <div class="form-group"><label>Alamat Email Pengguna</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div>
+        <div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div>
       </div>
     </div>
   </div>
 
-  <div id="userManagementPage" class="page hidden-section">
-    <div class="section">
-      <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
-      <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Daftarkan User Baru</button>
-      <table style="margin-top:20px;">
-        <thead>
-          <tr><th>Email Pengguna</th><th>Akses Peran Menu</th><th>Tanggal Dibuat</th><th>Action</th></tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div id="projectModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Project Assignment Baru</h3><div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div><div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div><div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div></div></div>
-<div id="rabModal" class="modal-overlay"><div class="modal-container"><h3>Tambah Komponen Struktur RAB</h3><div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div><div class="form-group"><label>Nama Alokasi Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div><div class="form-group"><label>Nominal Budget Anggaran (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div><div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div></div></div>
-<div id="detailRabModal" class="modal-overlay"><div class="modal-container" style="max-width: 700px;"><h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detil Rincian Konstruksi RAB</h3><div style="overflow-x:auto;"><table><thead><tr><th>Item RAB</th><th>Batas Pagu Budget</th><th>Realisasi Klaim</th><th>Sisa Dana</th><th>Status State</th></tr></thead><tbody id="detailRabBody"></tbody></table></div><div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup Tampilan</button></div></div></div>
-
-<div id="userModal" class="modal-overlay"><div class="modal-container"><h3>Daftarkan Pengguna Sistem Baru</h3><div class="form-group"><label>Alamat Email Pengguna</label><input type="email" id="modalUserEmail" placeholder="user@genetek.co.id"></div><div class="form-group"><label>Tingkat Otoritas Hak Akses Peran</label><select id="modalRole"><option value="Administrator">Administrator</option><option value="Finance">Finance</option><option value="Project Manager">Project Manager</option></select></div><div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Batal</button><button class="btn btn-primary" id="saveUserBtn">Simpan & Daftarkan</button></div></div></div>
-
-<script type="module" src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
