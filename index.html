@@ -187,7 +187,6 @@
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    /* FILE MANAGER ARCHITECTURE STYLE - TREE HIERARCHY WITH X DELETE */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -203,7 +202,6 @@
     .file-node .delete-file-btn:hover { color: #dc2626; transform: scale(1.2); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
-    /* MODAL LAYOUTS */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.2s; }
     .modal-overlay.active { visibility: visible; opacity: 1; }
     .modal-container { background: white; width: 90%; max-width: 750px; border-radius: 48px; padding: 32px; transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; overflow-y: auto; }
@@ -215,7 +213,6 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
 
-    /* NOTIFIKASI POP-UP ANIMASI ELEGAN */
     .notify-popup { position: fixed; top: 24px; right: 24px; background: white; padding: 18px 26px; border-radius: 24px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15); display: flex; align-items: center; gap: 14px; transform: translateX(180%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; font-weight: 600; font-size: 0.95rem; }
     .notify-popup.active { transform: translateX(0); }
     .notify-popup.success { border-left: 6px solid #10b981; color: #065f46; }
@@ -435,8 +432,7 @@
     <div class="section">
       <h2><i class="fas fa-folder-tree"></i> Explorer Manajemen Berkas Cloud Directory</h2>
       <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
-         <ul class="file-tree" id="rootTreeContainer">
-           </ul>
+         <ul class="file-tree" id="rootTreeContainer"></ul>
       </div>
     </div>
   </div>
@@ -464,7 +460,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // ==================== URL DOMAIN TUNNEL CLOUDFLARE ====================
   const API_BASE_URL = "https://api.genetek.co.id"; 
 
   const firebaseConfig = {
@@ -489,7 +484,6 @@
     "Project Manager": ['dashboard', 'master-project', 'import-rab', 'claim-request', 'monitoring', 'upload-document']
   };
 
-  // ANIMASI TRIGGER POP-UP NOTIFIKASI
   function triggerNotification(message, isSuccess = true) {
     const popup = document.getElementById('customPopupNotice');
     const icon = document.getElementById('noticeIcon');
@@ -503,11 +497,7 @@
       popup.className = "notify-popup active error";
       icon.className = "fas fa-exclamation-circle";
     }
-
-    // Hilang otomatis dalam 4.5 detik
-    setTimeout(() => {
-      popup.classList.remove('active');
-    }, 4500);
+    setTimeout(() => { popup.classList.remove('active'); }, 4500);
   }
 
   function formatRp(val) { 
@@ -648,7 +638,6 @@
       filter.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       if (prevFilterValue) filter.value = prevFilterValue;
     }
-
     renderRABItemsSubTable();
   }
 
@@ -1078,7 +1067,7 @@
      XLSX.writeFile(workbookObj, "Template_RAB_Tracker.xlsx");
   });
 
-  // ==================== OPERASI BACKEND DISK POOL STORAGE TRUENAS ====================
+  // ==================== OPERASI FILE DISK POOL STORAGE TRUENAS ====================
   document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
      e.preventDefault();
      const fileInputElement = document.getElementById('trueNasFile');
@@ -1093,16 +1082,14 @@
      const fileObj = fileInputElement.files[0];
      const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
      
-     // Sanitasi nama direktori Linux ramah sistem SMB
+     // FIX: Nama folder disanitasi secara seragam
      const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-     const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}/${targetFolderSelection}`;
+     const serverStoragePath = `${BASE_NAS_PATH}/${safeProjectDirName}/${targetFolderSelection}`;
 
-     // STRUKTUR PAYLOAD FORMDATA SINKRON
      const dataPayload = new FormData();
      dataPayload.append('path', serverStoragePath); 
      dataPayload.append('file', fileObj);
 
-     // EKSEKUSI AJAX KE CLOUDFLARE TUNNEL URL
      fetch(`${API_BASE_URL}/upload`, {
        method: 'POST',
        body: dataPayload
@@ -1115,10 +1102,9 @@
        return response.json();
      })
      .then(data => {
-        // TRIGGER POP-UP BERHASIL
         triggerNotification('File sukses diunggah ke storage pool TrueNAS!');
         
-        // Memformat URL preview secara aman menggunakan encodeURIComponent per segmen path
+        // FIX: URL dibuat bersih memanfaatkan folder tersanitasi agar terbaca router statis
         const safeEncodedProject = encodeURIComponent(safeProjectDirName);
         const safeEncodedFolder = encodeURIComponent(targetFolderSelection);
         const safeEncodedFileName = encodeURIComponent(fileObj.name);
@@ -1138,12 +1124,10 @@
      })
      .catch(error => {
         console.error("Upload fail:", error);
-        // TRIGGER POP-UP GAGAL
         triggerNotification(`Gagal Upload: ${error.message || 'Koneksi Tunnel Terputus'}`, false);
      });
   });
 
-  // OPERASI INTEGRASI REMOVAL HAPUS FILE TRUENAS
   window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
     if(!confirm("Hapus file ini secara permanen dari penyimpanan TrueNAS?")) return;
 
@@ -1163,14 +1147,13 @@
     })
     .catch(err => {
       console.warn(err);
-      // Fallback: Jika file fisik sudah terhapus manual, ijinkan membersihkan metadata di Firebase
       remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
         triggerNotification("Metadata dibersihkan (File fisik sudah tidak ada).", false);
       });
     });
   }
 
-  // BUILDER ENGINE POHON DIREKTORI DAN PREVIEW + TOMBOL (X)
+  // BUILDER ENGINE POHON DIREKTORI DAN PREVIEW
   function renderTreeHierarchy() {
      const treeWrapper = document.getElementById('rootTreeContainer');
      if (!treeWrapper) return;
@@ -1194,8 +1177,8 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> RAB_Awal</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'RAB_Awal')
                      .map(f => {
-                        // Memastikan tautan URL di-encode secara real-time saat render jika data lama belum terencode
-                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
+                        // FIX: Memaksa pembangunan URL preview berbasis folder tersanitasi agar sinkron total dengan router backend
+                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/RAB_Awal/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-pdf"></i> ${f.fileName} 
                                   <div class="action-links">
@@ -1210,7 +1193,7 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> Nota_Vendor</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'Nota_Vendor')
                      .map(f => {
-                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
+                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/Nota_Vendor/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-invoice"></i> ${f.fileName} 
                                   <div class="action-links">
@@ -1225,7 +1208,7 @@
             innerLayoutCodeHtml += `<li><span class="folder-node"><i class="fas fa-folder"></i> BAP</span><ul class="nested-tree">`;
             innerLayoutCodeHtml += truenasFiles.filter(f => f.projectId === p.id && f.folderType === 'BAP')
                      .map(f => {
-                        const safeUrl = f.fileUrl.includes('%') ? f.fileUrl : `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
+                        const safeUrl = `${API_BASE_URL}/files/${encodeURIComponent(folderSanitizedName)}/BAP/${encodeURIComponent(f.fileName)}`;
                         return `<li class="file-node">
                                   <i class="fas fa-file-contract"></i> ${f.fileName} 
                                   <div class="action-links">
@@ -1243,7 +1226,6 @@
      treeWrapper.innerHTML = innerLayoutCodeHtml;
   }
 
-  // ==================== ENGINE GRAFIK CHART.JS ====================
   let mainBarChartInstance, systemLineReportChartInstance;
   function refreshGraphicCharts() {
     const barCtx = document.getElementById('budgetChart')?.getContext('2d');
@@ -1279,7 +1261,6 @@
     }
   }
 
-  // ==================== INTERACTIVE PAGE NAVIGATION & INTERFACES ====================
   const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
   document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode.classList.add('active'));
   document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.add('active'));
@@ -1331,7 +1312,7 @@
      });
   });
 
-  // ENGINE RUNNING ON START
+  const BASE_NAS_PATH = '/mnt/EXTERNAL-4TB/Data/speakup/apps/rab';
   initCloudDatabaseListeners();
   enforceRoleVisibility();
 </script>
