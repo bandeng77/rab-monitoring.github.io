@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
@@ -274,14 +274,14 @@
   <!-- Loading Screen -->
   <div id="loadingScreen">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Memuat Aplikasi RAB Pro...</div>
+    <div class="loading-text">Loading RAB Pro Application...</div>
   </div>
 
   <!-- Main App Body -->
   <div id="mainAppBody">
     <div id="customPopupNotice" class="notify-popup">
       <i id="noticeIcon" class="fas"></i>
-      <span id="noticeMessage">Notifikasi</span>
+      <span id="noticeMessage">Notification</span>
     </div>
 
     <div class="sidebar">
@@ -289,22 +289,22 @@
       
       <div class="user-profile-box">
         <div class="user-email" id="sbUserEmail">Loading...</div>
-        <div class="user-role" id="sbUserRole">Peran</div>
+        <div class="user-role" id="sbUserRole">Role</div>
       </div>
 
       <ul id="sidebarMenu">
         <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
         <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
-        <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Pengajuan Klaim</li>
+        <li data-page="claim-request" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Claim Request</li>
         <li data-page="approval-budget" class="restricted"><i class="fas fa-check-double"></i> Approval Budget</li>
         <li data-page="monitoring" class="restricted"><i class="fas fa-chart-bar"></i> Monitoring</li>
-        <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Laporan</li>
-        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Dokumen</li>
+        <li data-page="reports" class="restricted"><i class="fas fa-flag-checkered"></i> Reports</li>
+        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Document</li>
         <li data-page="files" class="restricted"><i class="fas fa-folder-tree"></i> Files</li>
-        <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> Manajemen User</li>
+        <li data-page="user-management" class="restricted"><i class="fas fa-users"></i> User Management</li>
       </ul>
 
-      <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+      <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
 
     <div class="main">
@@ -317,7 +317,7 @@
       <div id="dashboardPage" class="page">
         <div class="cards" id="cardsContainer"></div>
         <div class="section">
-          <h2><i class="fas fa-chart-line"></i> Monitoring Ringkas</h2>
+          <h2><i class="fas fa-chart-line"></i> Quick Monitoring</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
@@ -328,7 +328,7 @@
           </div>
         </div>
         <div class="section">
-          <h2><i class="fas fa-chart-column"></i> Grafik Alokasi vs Realisasi Anggaran</h2>
+          <h2><i class="fas fa-chart-column"></i> Budget vs Realization Chart</h2>
           <canvas id="budgetChart" height="120"></canvas>
         </div>
       </div>
@@ -336,8 +336,8 @@
       <!-- Master Project Page -->
       <div id="masterProjectPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-database"></i> Master Data Project</h2>
-          <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Tambah Project</button>
+          <h2><i class="fas fa-database"></i> Master Project Data</h2>
+          <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Add Project</button>
           <div style="overflow-x:auto; margin-top:20px;">
             <table>
               <thead>
@@ -351,10 +351,10 @@
         <div class="section">
           <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
           <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
-          <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Tambah Item RAB Component</button>
+          <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Add RAB Item</button>
           <table>
             <thead>
-              <tr><th>Item Name</th><th>Item Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
+              <tr><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
             </thead>
             <tbody id="rabItemsMasterBody"></tbody>
           </table>
@@ -364,34 +364,34 @@
       <!-- Claim Request Page -->
       <div id="claimRequestPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-hand-holding-usd"></i> Ajukan Pengajuan Multi-Item Klaim</h2>
+          <h2><i class="fas fa-hand-holding-usd"></i> Submit Multi-Item Claim</h2>
           <div class="form-group">
-            <label><i class="fas fa-building"></i> Asosiasi Target Project</label>
+            <label><i class="fas fa-building"></i> Target Project</label>
             <select id="claimProjectSelect"></select>
           </div>
           <div id="multiItemContainer" class="multi-item-container">
             <div id="itemList"></div>
-            <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah Baris Item</button>
+            <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Add Item Row</button>
           </div>
           <div class="form-group" style="margin-top:20px;">
             <label><i class="fas fa-truck"></i> Vendor / Supplier</label>
-            <input type="text" id="claimVendor" placeholder="Nama Penyedia / Toko">
+            <input type="text" id="claimVendor" placeholder="Vendor Name">
           </div>
           <div class="form-group">
-            <label><i class="fas fa-calendar-alt"></i> Tanggal Transaksi</label>
+            <label><i class="fas fa-calendar-alt"></i> Transaction Date</label>
             <input type="date" id="claimDate">
           </div>
           <div class="form-group">
-            <label><i class="fas fa-sticky-note"></i> Catatan Keterangan</label>
-            <textarea id="claimDesc" rows="2" placeholder="Keterangan tambahan (opsional)"></textarea>
+            <label><i class="fas fa-sticky-note"></i> Notes</label>
+            <textarea id="claimDesc" rows="2" placeholder="Additional notes (optional)"></textarea>
           </div>
-          <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Kirim Pengajuan Klaim</button>
+          <button class="btn btn-success" id="submitClaimMainBtn"><i class="fas fa-paper-plane"></i> Submit Claim</button>
         </div>
         <div class="section">
-          <h2><i class="fas fa-history"></i> Riwayat Log Klaim</h2>
+          <h2><i class="fas fa-history"></i> Claim History Log</h2>
           <table>
             <thead>
-              <tr><th>Project Name</th><th>Items</th><th>Total Nominal</th><th>Vendor</th><th>Status</th><th>Submitted Date</th></tr>
+              <tr><th>Project Name</th><th>Items</th><th>Total Amount</th><th>Vendor</th><th>Status</th><th>Submitted Date</th></tr>
             </thead>
             <tbody id="historyClaimBody"></tbody>
           </table>
@@ -416,7 +416,7 @@
       <!-- Monitoring Page -->
       <div id="monitoringPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-chart-bar"></i> Metrik Struktur Finansial Project</h2>
+          <h2><i class="fas fa-chart-bar"></i> Project Financial Metrics</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
@@ -431,10 +431,10 @@
       <!-- Reports Page -->
       <div id="reportsPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-flag-checkered"></i> Analisis Laporan Finansial Perusahaan</h2>
-          <button class="btn btn-primary" id="downloadPDFBtn" style="margin-bottom: 20px;"><i class="fas fa-file-pdf"></i> Download Laporan PDF</button>
-          <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
+          <h2><i class="fas fa-flag-checkered"></i> Financial Report Analysis</h2>
+          <button class="btn btn-primary" id="downloadPDFBtn" style="margin-bottom: 20px;"><i class="fas fa-file-pdf"></i> Download PDF Report</button>
           <div id="reportContent">
+            <canvas id="laporanChart" style="max-height:240px; margin-bottom:30px;"></canvas>
             <table style="width:100%;">
               <thead>
                 <tr><th>Project Context</th><th>Total Budget Item</th><th>Actual Consumption</th><th>Net Margin Balance</th><th>Condition Status</th></tr>
@@ -448,17 +448,17 @@
       <!-- Upload Document Page -->
       <div id="uploadDocumentPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-cloud-upload-alt"></i> Unggah File Dokumen ke Storage</h2>
+          <h2><i class="fas fa-cloud-upload-alt"></i> Upload Document to Storage</h2>
           <form id="trueNasUploadForm">
             <div class="form-group">
-              <label>Asosiasi Project Terkait</label>
+              <label>Associated Project</label>
               <select id="uploadProjectSelect" required></select>
             </div>
             <div class="form-group">
-              <label>Pilih File Dokumen</label>
+              <label>Select Document File</label>
               <input type="file" id="trueNasFile" required />
             </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Unggah File Sekarang</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload File</button>
           </form>
         </div>
       </div>
@@ -466,7 +466,7 @@
       <!-- Files Page (Explorer) -->
       <div id="filesPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-folder-tree"></i> File Explorer - Manajemen Berkas</h2>
+          <h2><i class="fas fa-folder-tree"></i> File Explorer - Document Management</h2>
           <div id="hierarchyPreviewBox" style="background:#fff; border:1px solid #cbd5e1; padding:24px; border-radius:24px; margin-top:16px;">
             <ul class="file-tree" id="rootTreeContainer"></ul>
           </div>
@@ -476,25 +476,21 @@
       <!-- User Management Page -->
       <div id="userManagementPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-users"></i> Manajemen Pengguna & Otoritas Sistem</h2>
-          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Tambah User Baru</button>
-          <div class="info-box" style="margin-top: 16px;">
-            <i class="fas fa-info-circle"></i> 
-            <strong>Informasi:</strong> Kelola semua pengguna sistem. Admin dapat mengedit role, reset password, dan menghapus user.
-          </div>
+          <h2><i class="fas fa-users"></i> User Management & System Access</h2>
+          <button class="btn btn-primary" id="openUserModalBtn"><i class="fas fa-user-plus"></i> Add New User</button>
           <div style="overflow-x:auto; margin-top:20px;">
             <table style="width:100%;">
               <thead>
                 <tr>
-                  <th>Email Pengguna</th>
-                  <th>Role Akses</th>
+                  <th>User Email</th>
+                  <th>Access Role</th>
                   <th>UID</th>
-                  <th>Tanggal Dibuat</th>
-                  <th>Aksi</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="userTableBody">
-                <tr><td colspan="5" style="text-align:center;">Memuat data user...</td></tr>
+                <tr><td colspan="5" style="text-align:center;">Loading user data...</td></tr>
               </tbody>
             </table>
           </div>
@@ -505,83 +501,83 @@
     <!-- Project Modal -->
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
-        <h3><i class="fas fa-folder-plus"></i> Tambah Project Baru</h3>
-        <div class="form-group"><label>Nama Judul Project</label><input type="text" id="modalProjectName" placeholder="Contoh: Infrastruktur Fiber Optic"></div>
-        <div class="form-group"><label>Nama Client</label><input type="text" id="modalClientName" placeholder="Contoh: PT Bank Nasional"></div>
-        <div class="form-group"><label>Batas Pagu Anggaran (Rp)</label><input type="number" id="modalBudget" placeholder="0"></div>
-        <div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Batal</button><button class="btn btn-primary" id="saveProjectBtn">Simpan Project</button></div>
+        <h3><i class="fas fa-folder-plus"></i> Add New Project</h3>
+        <div class="form-group"><label>Project Name</label><input type="text" id="modalProjectName" placeholder="Example: Fiber Optic Infrastructure"></div>
+        <div class="form-group"><label>Client Name</label><input type="text" id="modalClientName" placeholder="Example: PT Bank Nasional"></div>
+        <div class="form-group"><label>Budget Ceiling (IDR)</label><input type="number" id="modalBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeModalBtn">Cancel</button><button class="btn btn-primary" id="saveProjectBtn">Save Project</button></div>
       </div>
     </div>
 
     <!-- RAB Modal -->
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
-        <h3><i class="fas fa-plus-circle"></i> Tambah Komponen RAB</h3>
+        <h3><i class="fas fa-plus-circle"></i> Add RAB Component</h3>
         <div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div>
-        <div class="form-group"><label>Nama Komponen Item</label><input type="text" id="rabItemName" placeholder="Contoh: Edge Switch Layer 3"></div>
-        <div class="form-group"><label>Nominal Budget (Rp)</label><input type="number" id="rabBudget" placeholder="0"></div>
-        <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Batal</button><button class="btn btn-primary" id="saveRabBtn">Simpan Item</button></div>
+        <div class="form-group"><label>Component Item Name</label><input type="text" id="rabItemName" placeholder="Example: Edge Switch Layer 3"></div>
+        <div class="form-group"><label>Budget Amount (IDR)</label><input type="number" id="rabBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Cancel</button><button class="btn btn-primary" id="saveRabBtn">Save Item</button></div>
       </div>
     </div>
 
     <!-- Detail RAB Modal -->
     <div id="detailRabModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 700px;">
-        <h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> Detail Komponen RAB</h3>
+        <h3 id="detailModalTitle"><i class="fas fa-clipboard-list"></i> RAB Component Details</h3>
         <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Item RAB</th><th>Budget</th><th>Realisasi</th><th>Sisa Dana</th><th>Status</th></tr></thead>
+            <thead><tr><th>Item Name</th><th>Budget</th><th>Realization</th><th>Remaining</th><th>Status</th></tr></thead>
             <tbody id="detailRabBody"></tbody>
           </table>
         </div>
-        <div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Tutup</button></div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeDetailModalBtn">Close</button></div>
       </div>
     </div>
 
     <!-- User Management Modal (Add/Edit User) -->
     <div id="userModal" class="modal-overlay">
       <div class="modal-container">
-        <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Tambah User Baru</h3>
+        <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
         <div class="form-group">
-          <label>Alamat Email</label>
+          <label>Email Address</label>
           <input type="email" id="modalUserEmail" placeholder="user@company.com" required>
         </div>
         <div class="form-group" id="passwordFieldGroup">
           <label>Password</label>
-          <input type="password" id="modalUserPassword" placeholder="Minimal 6 karakter">
-          <div class="password-hint">* Kosongkan untuk menggunakan password default: "password123"</div>
+          <input type="password" id="modalUserPassword" placeholder="Minimum 6 characters">
+          <div class="password-hint">* Leave empty to use default password: "password123"</div>
         </div>
         <div class="form-group">
-          <label>Role Akses</label>
+          <label>Access Role</label>
           <select id="modalRole">
-            <option value="Administrator">Administrator (Akses Penuh)</option>
-            <option value="Finance">Finance (Keuangan & Approval)</option>
-            <option value="Project Manager">Project Manager (Manajemen Proyek)</option>
+            <option value="Administrator">Administrator (Full Access)</option>
+            <option value="Finance">Finance (Financial & Approval)</option>
+            <option value="Project Manager">Project Manager (Project Management)</option>
           </select>
         </div>
         <input type="hidden" id="editUserId" value="">
         <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeUserModalBtn">Batal</button>
-          <button class="btn btn-primary" id="saveUserBtn">Simpan User</button>
+          <button class="btn btn-danger" id="closeUserModalBtn">Cancel</button>
+          <button class="btn btn-primary" id="saveUserBtn">Save User</button>
         </div>
       </div>
     </div>
 
-    <!-- Reset Password Modal (Simplified - No password field) -->
+    <!-- Reset Password Modal (Simplified) -->
     <div id="resetPasswordModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 450px;">
-        <h3><i class="fas fa-key"></i> Reset Password User</h3>
+        <h3><i class="fas fa-key"></i> Reset User Password</h3>
         <div class="form-group">
-          <label>Email User</label>
+          <label>User Email</label>
           <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
         </div>
         <div class="info-box" style="margin-bottom: 16px;">
           <i class="fas fa-envelope"></i>
-          Email reset password akan dikirim ke alamat di atas.
+          Password reset email will be sent to the above address.
         </div>
         <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeResetModalBtn">Batal</button>
-          <button class="btn btn-warning" id="confirmResetPasswordBtn">Kirim Email Reset Password</button>
+          <button class="btn btn-danger" id="closeResetModalBtn">Cancel</button>
+          <button class="btn btn-warning" id="confirmResetPasswordBtn">Send Reset Email</button>
         </div>
       </div>
     </div>
