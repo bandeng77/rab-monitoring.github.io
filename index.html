@@ -681,12 +681,12 @@
     });
   }
 
-  document.getElementById('filterProjectRAB')?.addEventListener('change', (e) => {
+  document.getElementById('filterProjectRAB').addEventListener('change', (e) => {
     currentSelectedProjectId = e.target.value;
     renderRABItemsSubTable();
   });
 
-  document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
+  document.getElementById('saveProjectBtn').addEventListener('click', () => {
     const name = document.getElementById('modalProjectName').value.trim();
     const client = document.getElementById('modalClientName').value.trim();
     const totalBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
@@ -703,7 +703,7 @@
     });
   });
 
-  document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
+  document.getElementById('openRABModalBtn').addEventListener('click', () => {
     if (!currentSelectedProjectId) { triggerNotification('Pilih filter project terlebih dahulu!', false); return; }
     const currentProj = projects.find(p => p.id === currentSelectedProjectId);
     document.getElementById('rabModalProjectName').value = currentProj ? currentProj.name : '';
@@ -712,7 +712,7 @@
     document.getElementById('rabModal').classList.add('active');
   });
 
-  document.getElementById('saveRabBtn')?.addEventListener('click', () => {
+  document.getElementById('saveRabBtn').addEventListener('click', () => {
     const itemName = document.getElementById('rabItemName').value.trim();
     const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
 
@@ -801,17 +801,17 @@
     }
   }
 
-  document.getElementById('claimProjectSelect')?.addEventListener('change', () => {
+  document.getElementById('claimProjectSelect').addEventListener('change', () => {
      claimItemsListArray = [];
      renderClaimItemsBuildLayout();
   });
-  document.getElementById('addItemBtn')?.addEventListener('click', () => {
+  document.getElementById('addItemBtn').addEventListener('click', () => {
      if (!document.getElementById('claimProjectSelect').value) { triggerNotification('Pilih asosiasi project terlebih dahulu!', false); return; }
      claimItemsListArray.push({ itemId: '', nominal: 0 });
      renderClaimItemsBuildLayout();
   });
 
-  document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
+  document.getElementById('submitClaimMainBtn').addEventListener('click', () => {
     const projectId = document.getElementById('claimProjectSelect').value;
     const vendor = document.getElementById('claimVendor').value.trim();
     const tanggal = document.getElementById('claimDate').value;
@@ -987,7 +987,7 @@
     });
   }
 
-  document.getElementById('saveUserBtn')?.addEventListener('click', () => {
+  document.getElementById('saveUserBtn').addEventListener('click', () => {
     const username = document.getElementById('modalUsername').value.trim();
     const role = document.getElementById('modalRole').value;
     if (!username) return;
@@ -1000,7 +1000,7 @@
     });
   });
 
-  document.getElementById('processExcelBtn')?.addEventListener('click', () => {
+  document.getElementById('processExcelBtn').addEventListener('click', () => {
      const inputElement = document.getElementById('excelFileInput').files[0];
      if (!inputElement) { triggerNotification('Pilih berkas spreadsheet excel terlebih dahulu!', false); return; }
 
@@ -1050,7 +1050,7 @@
      reader.readAsArrayBuffer(inputElement);
   });
 
-  document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => {
+  document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
      const matricesData = [["NAMA_PROJECT", "ITEM_RAB", "BUDGET"], ["Smart Office Setup", "Cat6 Network Cabling", 7500000]];
      const worksheet = XLSX.utils.aoa_to_sheet(matricesData);
      const workbookObj = XLSX.utils.book_new();
@@ -1059,7 +1059,7 @@
   });
 
   // ==================== OPERASI BACKEND DISK POOL STORAGE TRUENAS ====================
-  document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
+  document.getElementById('trueNasUploadForm').addEventListener('submit', function(e) {
      e.preventDefault();
      const fileInputElement = document.getElementById('trueNasFile');
      const attachedProjectId = document.getElementById('uploadProjectSelect').value;
@@ -1101,7 +1101,6 @@
            folderType: targetFolderSelection,
            fileName: fileObj.name,
            uploadedAt: new Date().toLocaleString(),
-           // Backup Metadata FileUrl (Hanya sebagai catatan cadangan)
            fileUrl: `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(safeProjectDirName)}/${targetFolderSelection}/${encodeURIComponent(fileObj.name)}`,
            fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
         });
@@ -1247,12 +1246,12 @@
   }
 
   const projModalNode = document.getElementById('projectModal'), usrModalNode = document.getElementById('userModal'), detailModalNode = document.getElementById('detailRabModal');
-  document.getElementById('openProjectModalBtn')?.addEventListener('click', () => projModalNode.classList.add('active'));
-  document.getElementById('openUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.add('active'));
-  document.getElementById('closeModalBtn')?.addEventListener('click', () => projModalNode.classList.remove('active'));
-  document.getElementById('closeUserModalBtn')?.addEventListener('click', () => usrModalNode.classList.remove('active'));
-  document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
-  document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => detailModalNode.classList.remove('active'));
+  document.getElementById('openProjectModalBtn').addEventListener('click', () => projModalNode.classList.add('active'));
+  document.getElementById('openUserModalBtn').addEventListener('click', () => usrModalNode.classList.add('active'));
+  document.getElementById('closeModalBtn').addEventListener('click', () => projModalNode.classList.remove('active'));
+  document.getElementById('closeUserModalBtn').addEventListener('click', () => usrModalNode.classList.remove('active'));
+  document.getElementById('closeRabModalBtn').addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
+  document.getElementById('closeDetailModalBtn').addEventListener('click', () => detailModalNode.classList.remove('active'));
 
   document.getElementById('roleSimulator').addEventListener('change', function(e) {
      currentRole = e.target.value;
