@@ -86,26 +86,35 @@ function getBadge(real, budget) {
   return '<span class="badge badge-success">Safe</span>'; 
 }
 
-// Progress Bar Render Utility
-function createProgressBarMarkup(real, budget) {
-  let percent = 0;
-  if (budget > 0) {
-    percent = Math.round((real / budget) * 100);
-  }
-  if (percent > 100) percent = 100; // Cap visual to 100%
+// Progress Bar Render Utility Berdasarkan Aturan Warna Persentase Pengerjaan Riil
+function createProgressBarMarkup(progressValue, rabItemId) {
+  let percent = parseInt(progressValue) || 0;
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
   
-  let barColor = '#10b981'; // Green
-  if (percent >= 90) barColor = '#f59e0b'; // Amber
-  if (real > budget) barColor = '#ef4444'; // Red
-
-  const rawPercentageNum = budget > 0 ? Math.round((real / budget) * 100) : 0;
+  // Penentuan Warna Dinamis Berdasarkan Tingkat Persentase Penyelesaian Kerja
+  let barColor = '#ef4444'; // Red (< 30%)
+  let textColor = '#ef4444';
+  
+  if (percent >= 30 && percent < 70) {
+    barColor = '#f59e0b'; // Orange / Amber (30% - 69%)
+    textColor = '#d97706';
+  } else if (percent >= 70 && percent < 100) {
+    barColor = '#3b82f6'; // Indigo Blue (70% - 99%)
+    textColor = '#2563eb';
+  } else if (percent === 100) {
+    barColor = '#10b981'; // Green (Selesai 100%)
+    textColor = '#059669';
+  }
 
   return `
     <div class="progress-wrapper">
+      <input type="number" min="0" max="100" class="input-progress-inline" 
+             value="${percent}" data-id="${rabItemId}" />
       <div class="progress-bar-container">
         <div class="progress-bar-fill" style="width: ${percent}%; background-color: ${barColor};"></div>
       </div>
-      <span class="progress-percent-label">${rawPercentageNum}%</span>
+      <span class="progress-percent-label" style="color: ${textColor};">${percent}%</span>
     </div>
   `;
 }
@@ -238,6 +247,12 @@ function initCloudDatabaseListeners() {
     const data = snapshot.val();
     rabItems = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     updateWholeUI();
+    
+    // Sinkronisasi data ulang jika pop-up monitoring sedang terbuka aktif
+    const detailsModal = document.getElementById('monitoringDetailsModal');
+    if (detailsModal && detailsModal.classList.contains('active') && currentSelectedProjectId) {
+      refreshMonitoringDetailsModalContent(currentSelectedProjectId);
+    }
   });
 
   onValue(ref(db, 'claims'), (snapshot) => {
@@ -277,7 +292,6 @@ function populateDropdownMenus() {
     if (valBackup) upSel.value = valBackup;
   }
   
-  // Populate Single Project Dropdown in Reports Section
   const repSel = document.getElementById('reportProjectFilterSelect');
   if (repSel) {
     const repBackup = repSel.value;
@@ -539,14 +553,15 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
     projectId: currentSelectedProjectId,
     itemName,
     budget,
-    realisasi: 0
+    realisasi: 0,
+    progressKerja: 0 // Inisialisasi progress pengerjaan riil awal = 0%
   }).then(() => {
     document.getElementById('rabModal').classList.remove('active');
     triggerNotification('RAB component item saved successfully!');
   });
 });
 
-// ==================== MULTI-ITEM CLAIM LOGIC (REFACTORED VENDOR/DATE/NOTES PER ITEM) ====================
+// ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
 
 function renderClaimItemsBuildLayout() {
@@ -591,7 +606,6 @@ function renderClaimItemsBuildLayout() {
     </div>
   `).join('');
 
-  // Event Listeners for Dynamic Value Mapping
   container.querySelectorAll('.item-sel-node').forEach(sel => {
     sel.addEventListener('change', (e) => {
       claimItemsListArray[parseInt(sel.dataset.idx)].itemId = e.target.value;
@@ -738,7 +752,6 @@ async function executeApprovalCommand(claimId, isApproved) {
   if (!claimObj) return;
 
   if (isApproved) {
-    // Process incremental deduction matrixes sequentially inside rabItems
     if (claimObj.items) {
       for (let item of claimObj.items) {
         const matchedRab = rabItems.find(r => r.id === item.itemId);
@@ -758,7 +771,7 @@ async function executeApprovalCommand(claimId, isApproved) {
   }
 }
 
-// ==================== MONITORING MODULE (REFACTORED POP-UP INTEGRATED WITH PROGRESS BAR) ====================
+// ==================== MONITORING MODULE ====================
 function renderMonitoringTable() {
   const tbody = document.getElementById('monitoringMainGridBody');
   if (!tbody) return;
@@ -787,7 +800,8 @@ function renderMonitoringTable() {
   tbody.querySelectorAll('.project-row').forEach(row => {
     row.addEventListener('click', (e) => {
       e.preventDefault();
-      openMonitoringDetailsPopup(row.getAttribute('data-id'));
+      currentSelectedProjectId = row.getAttribute('data-id');
+      openMonitoringDetailsPopup(currentSelectedProjectId);
     });
   });
 }
@@ -797,31 +811,58 @@ function openMonitoringDetailsPopup(projectId) {
   if (!targetProj) return;
 
   document.getElementById('modalDetailsProjectName').innerText = targetProj.name;
+  refreshMonitoringDetailsModalContent(projectId);
+  document.getElementById('monitoringDetailsModal').classList.add('active');
+}
+
+// Fungsi Terpisah untuk Refresh Content Modal Detail Saat Terjadi Realtime Input
+function refreshMonitoringDetailsModalContent(projectId) {
   const gridBody = document.getElementById('modalDetailsComponentsTableGridBody');
+  if (!gridBody) return;
+
   const items = rabItems.filter(i => i.projectId === projectId);
 
   if (items.length === 0) {
     gridBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No components allocated inside this project context.</td></tr>';
-  } else {
-    gridBody.innerHTML = items.map(i => {
-      const balance = i.budget - i.realisasi;
-      const progressMarkup = createProgressBarMarkup(i.realisasi, i.budget);
-
-      return `<tr>
-        <td><strong>${i.itemName}</strong></td>
-        <td>${formatRp(i.budget)}</td>
-        <td style="color:#2563eb; font-weight:600;">${formatRp(i.realisasi)}</td>
-        <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#10b981'};">${formatRp(balance)}</td>
-        <td>${getBadge(i.realisasi, i.budget)}</td>
-        <td>${progressMarkup}</td>
-      </tr>`;
-    }).join('');
+    return;
   }
 
-  document.getElementById('monitoringDetailsModal').classList.add('active');
+  gridBody.innerHTML = items.map(i => {
+    const balance = i.budget - i.realisasi;
+    // Menggunakan progressKerja dari database, default ke 0 jika belum diisi manual
+    const currentProgressValue = i.progressKerja !== undefined ? i.progressKerja : 0;
+    const progressMarkup = createProgressBarMarkup(currentProgressValue, i.id);
+
+    return `<tr>
+      <td><strong>${i.itemName}</strong></td>
+      <td>${formatRp(i.budget)}</td>
+      <td style="color:#2563eb; font-weight:600;">${formatRp(i.realisasi)}</td>
+      <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#10b981'};">${formatRp(balance)}</td>
+      <td>${getBadge(i.realisasi, i.budget)}</td>
+      <td>${progressMarkup}</td>
+    </tr>`;
+  }).join('');
+
+  // Menambahkan Event Listener "change" pada Input Manual Progress Persentase Kerja Terbimbing
+  gridBody.querySelectorAll('.input-progress-inline').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const rabItemId = input.getAttribute('data-id');
+      let updatedValue = parseInt(e.target.value) || 0;
+      
+      if (updatedValue < 0) updatedValue = 0;
+      if (updatedValue > 100) updatedValue = 100;
+      
+      // Update Nilai Progress Fisik Pengerjaan Riil Secara Langsung Ke Firebase Cluster Node
+      await update(ref(db, `rabItems/${rabItemId}`), {
+        progressKerja: updatedValue
+      });
+      
+      triggerNotification(`Progress Kerja Berhasil Diperbarui Ke ${updatedValue}%!`, true, 'success');
+    });
+  });
 }
 
-// ==================== REPORTS MODULE (REFACTORED TO SINGLE PROJECT ANALYTICS & DETAILED CURVE) ====================
+// ==================== REPORTS MODULE ====================
 function renderReports() {
   const filterSelect = document.getElementById('reportProjectFilterSelect');
   if (!filterSelect) return;
@@ -848,11 +889,12 @@ function renderReports() {
   const relatedComponents = rabItems.filter(i => i.projectId === selectedProjId);
   const aggregatePaguAllocated = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
   const aggregateRealisasiFunds = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
-  const absoluteEfficiencyBalance = aggregatePaguAllocated - aggregateRealisasiFunds;
   
+  // Mengkalkulasi Rata-Rata Progress Kerja Riil Aktual dari Seluruh Sub-Item Komponen Terkait
   let averageProgressCalculated = 0;
-  if (aggregatePaguAllocated > 0) {
-    averageProgressCalculated = Math.round((aggregateRealisasiFunds / aggregatePaguAllocated) * 100);
+  if (relatedComponents.length > 0) {
+    const totalWorkProgressSum = relatedComponents.reduce((sum, i) => sum + (parseInt(i.progressKerja) || 0), 0);
+    averageProgressCalculated = Math.round(totalWorkProgressSum / relatedComponents.length);
   }
 
   // Bind Statistics Values
@@ -871,18 +913,24 @@ function renderReports() {
   // Populate Grid Representation
   tbody.innerHTML = relatedComponents.map(i => {
     const rem = i.budget - i.realisasi;
-    const itemPct = i.budget > 0 ? Math.round((i.realisasi / i.budget) * 100) : 0;
+    const progressTextVal = i.progressKerja !== undefined ? i.progressKerja : 0;
+    
+    // Penentuan Warna Teks Kondisional pada Report Sesuai Persentase Manual Kerja
+    let reportTextColor = '#ef4444'; // Red (<30%)
+    if (progressTextVal >= 30 && progressTextVal < 70) reportTextColor = '#d97706'; // Orange
+    else if (progressTextVal >= 70 && progressTextVal < 100) reportTextColor = '#2563eb'; // Blue
+    else if (progressTextVal === 100) reportTextColor = '#059669'; // Green
+
     return `<tr>
       <td><strong>${i.itemName}</strong></td>
       <td>${formatRp(i.budget)}</td>
       <td>${formatRp(i.realisasi)}</td>
       <td style="font-weight:600; color:${rem < 0 ? '#ef4444':'#10b981'}">${formatRp(rem)}</td>
-      <td style="font-weight:700; color:#475569;">${itemPct}%</td>
+      <td style="font-weight:800; color:${reportTextColor};">${progressTextVal}%</td>
       <td>${getBadge(i.realisasi, i.budget)}</td>
     </tr>`;
   }).join('');
 
-  // Re-Initialize Chart System With Specific Data Metrics
   renderAdvancedGraphicReportCharts(relatedComponents);
 }
 
@@ -953,7 +1001,7 @@ function renderAdvancedGraphicReportCharts(components) {
       data: {
         labels: labels,
         datasets: [{
-          data: realisasiDataset.map(v => v === 0 ? 1 : v), // Avoid 0 visual bugs
+          data: realisasiDataset.map(v => v === 0 ? 1 : v),
           backgroundColor: backgroundColorsGenerated,
           borderWidth: 2
         }]
@@ -969,7 +1017,6 @@ function renderAdvancedGraphicReportCharts(components) {
   }
 }
 
-// Bind Change Event for Report Dropdown Filter Target
 document.getElementById('reportProjectFilterSelect')?.addEventListener('change', renderReports);
 
 // ==================== DOCUMENT PRINT EXPORT DRIVERS ====================
@@ -1001,7 +1048,7 @@ document.getElementById('exportExcelReportBtn')?.addEventListener('click', () =>
     "Pagu Anggaran": i.budget,
     "Realisasi Anggaran": i.realisasi,
     "Sisa Saldo": i.budget - i.realisasi,
-    "Persentase": i.budget > 0 ? `${Math.round((i.realisasi / i.budget)*100)}%` : '0%'
+    "Persentase Kerja": i.progressKerja !== undefined ? `${i.progressKerja}%` : '0%'
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedRows);
@@ -1020,7 +1067,6 @@ function renderTreeHierarchy() {
     return;
   }
 
-  // Create unified storage tree framework map
   let hierarchicalStructureMap = {};
 
   truenasFiles.forEach(file => {
@@ -1135,7 +1181,6 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
         actionButtonContext.onclick = () => updateWholeUI();
       }
       
-      // Hook reporting workspace layout adjustments upon tab focus
       if (activePageKey === 'reports') {
         renderReports();
       }
@@ -1146,7 +1191,10 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
 document.getElementById('closeProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal').classList.remove('active'));
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal').classList.add('active'));
 document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
-document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => document.getElementById('monitoringDetailsModal').classList.remove('active'));
+document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => {
+  document.getElementById('monitoringDetailsModal').classList.remove('active');
+  currentSelectedProjectId = null;
+});
 document.getElementById('openAddUserModalBtn')?.addEventListener('click', () => {
   document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Register System Identity User';
   document.getElementById('modalUserEmail').value = '';
@@ -1189,7 +1237,6 @@ onAuthStateChanged(auth, (user) => {
         initCloudDatabaseListeners();
         hideLoadingScreen();
       } else {
-        // Fallback profile lookup if propagation delays happen
         get(ref(db, `users/${user.uid}`)).then((snap) => {
           if(!snap.exists() && (user.email === 'admin@genetek.co.id')) {
              currentRole = "Administrator";
@@ -1201,9 +1248,7 @@ onAuthStateChanged(auth, (user) => {
       }
     });
   } else {
-    // If unauthenticated, pipe registration or redirect loops here
     hideLoadingScreen();
-    // Simulate automatic sign in sequence fallback for rapid prototyping environments
     triggerNotification("No active cloud session found. Simulating sandbox pipeline gateway...", false, 'info');
     currentRole = "Administrator";
     currentUserEmail = "sandbox-pm@genetek.co.id";
