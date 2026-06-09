@@ -239,10 +239,11 @@
     .btn-delete { background: #fee2e2; color: #991b1b; }
 
     /* Progress Visual Styles */
-    .progress-wrapper { display: flex; align-items: center; gap: 8px; min-width: 120px; }
-    .progress-bar-container { background: #e2e8f0; border-radius: 10px; width: 100%; height: 8px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
-    .progress-percent-label { font-size: 0.75rem; font-weight: 700; color: #475569; white-space: nowrap; }
+    .progress-wrapper { display: flex; align-items: center; gap: 12px; min-width: 180px; }
+    .progress-bar-container { background: #e2e8f0; border-radius: 10px; width: 100px; height: 10px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; width: 0%; }
+    .progress-percent-label { font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+    .input-progress-inline { width: 65px !important; padding: 4px 6px !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; text-align: center; font-size: 0.8rem; font-weight: 600; }
 
     /* Report Layout Utilities */
     .report-select-box { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
@@ -438,7 +439,7 @@
 
       <div id="monitoringPage" class="hidden-section">
         <div class="section">
-          <h2><i class="fas fa-chart-bar"></i> Realtime Realization Analytics Terminal</h2>
+          <h2><i class="fas fa-desktop"></i> Realtime Realization Analytics Terminal</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
@@ -459,7 +460,7 @@
 
       <div id="reportsPage" class="hidden-section">
         <div class="section">
-          <h2><i class="fas fa-file-chart-line"></i> Project Performance & Financial Report Viewer</h2>
+          <h2><i class="fas fa-file-invoice-dollar"></i> Project Performance & Financial Report Viewer</h2>
           <p style="color:#64748b; font-size:0.85rem; margin-bottom:16px;">Pilih proyek tertentu untuk melihat analisis performa anggaran, kurva deviasi, dan matriks pemakaian mendalam.</p>
           
           <div class="report-select-box">
@@ -517,7 +518,7 @@
                     <th>Pagu Anggaran</th>
                     <th>Realisasi Klaim</th>
                     <th>Sisa Saldo Efisiensi</th>
-                    <th>Persentase Progress</th>
+                    <th>Persentase Progress Kerja</th>
                     <th>Status Kesehatan</th>
                   </tr>
                 </thead>
@@ -630,9 +631,13 @@
     </div>
 
     <div id="monitoringDetailsModal" class="modal-overlay">
-      <div class="modal-container" style="max-width: 850px;">
+      <div class="modal-container" style="max-width: 900px;">
         <h3><i class="fas fa-chart-pie"></i> Detailed Breakdown Performance: <span id="modalDetailsProjectName" style="color:#2563eb;">-</span></h3>
         
+        <div class="info-box" style="margin-bottom: 12px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+          <i class="fas fa-edit"></i> Progress Pengerjaan di bawah ini dapat diubah secara manual (%) dan akan langsung tersimpan otomatis.
+        </div>
+
         <div style="overflow-x:auto; margin-top:15px; max-height:50vh;">
           <table>
             <thead>
@@ -642,7 +647,7 @@
                 <th>Approved Realization Expenses</th>
                 <th>Remaining Account Funds</th>
                 <th>Workflow Status Health</th>
-                <th>Progress Tracker</th>
+                <th>Progress Pengerjaan RAB</th>
               </tr>
             </thead>
             <tbody id="modalDetailsComponentsTableGridBody">
