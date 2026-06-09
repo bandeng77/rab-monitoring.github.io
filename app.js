@@ -39,6 +39,11 @@ const rolePermissions = {
   "Project Manager": ['dashboard', 'master-project', 'claim-request', 'monitoring', 'upload-document', 'files']
 };
 
+// Chart instances
+let currentChart = null;
+let currentPieChart = null;
+let currentBarChart = null;
+
 // ==================== HELPER FUNCTIONS ====================
 function hideLoadingScreen() {
   const loadingScreen = document.getElementById('loadingScreen');
@@ -266,6 +271,7 @@ function updateWholeUI() {
 }
 
 function populateDropdownMenus() {
+  // Populate Upload Project Select
   const upSel = document.getElementById('uploadProjectSelect');
   if (upSel) {
     const valBackup = upSel.value;
@@ -273,11 +279,14 @@ function populateDropdownMenus() {
     if (valBackup) upSel.value = valBackup;
   }
   
+  // Populate Report Project Filter Select
   const repSel = document.getElementById('reportProjectFilterSelect');
   if (repSel) {
     const repBackup = repSel.value;
     repSel.innerHTML = '<option value="">-- Pilih Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (repBackup) repSel.value = repBackup;
+    // Trigger renderReports when selection changes
+    repSel.onchange = () => renderReports();
   }
 }
 
@@ -391,7 +400,7 @@ function renderUsersTable() {
   if (!tbody) return;
 
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered.</td></tr>';
+    tbody.innerHTML = '<td><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered.</td></tr>';
     return;
   }
 
@@ -721,7 +730,7 @@ function renderApprovalList() {
           <button class="btn-edit btn-appr-ok" style="background:#d1fae5; color:#065f46;" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
           <button class="btn-delete btn-appr-no" style="background:#fee2e2; color:#991b1b;" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
         </div>
-       </td>
+        </td>
     </tr>`;
   }).join('');
 
@@ -780,7 +789,7 @@ function renderMonitoringTable() {
       <td style="font-weight:600;">${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(totalSpent)}</td>
       <td>${statusBadge}</td>
-    </table>`;
+    </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
@@ -795,35 +804,51 @@ function openMonitoringDetailsPopup(projectId) {
   const targetProj = projects.find(p => p.id === projectId);
   if (!targetProj) return;
 
-  document.getElementById('modalDetailsProjectName').innerText = targetProj.name;
+  const projectNameElem = document.getElementById('modalDetailsProjectName');
+  if (projectNameElem) projectNameElem.innerText = targetProj.name;
+  
   const gridBody = document.getElementById('modalDetailsComponentsTableGridBody');
   const items = rabItems.filter(i => i.projectId === projectId);
 
-  if (items.length === 0) {
-    gridBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No components allocated inside this project context.</td></tr>';
-  } else {
-    gridBody.innerHTML = items.map(i => {
-      const balance = i.budget - i.realisasi;
-      const progressMarkup = createProgressBarMarkup(i.realisasi, i.budget);
+  if (gridBody) {
+    if (items.length === 0) {
+      gridBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No components allocated inside this project context.</td></tr>';
+    } else {
+      gridBody.innerHTML = items.map(i => {
+        const balance = i.budget - i.realisasi;
+        const progressMarkup = createProgressBarMarkup(i.realisasi, i.budget);
 
-      return `<tr>
-        <td><strong>${i.itemName}</strong></td>
-        <td>${formatRp(i.budget)}</td>
-        <td style="color:#2563eb; font-weight:600;">${formatRp(i.realisasi)}</td>
-        <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#10b981'};">${formatRp(balance)}</td>
-        <td>${getBadge(i.realisasi, i.budget)}</td>
-        <td>${progressMarkup}</td>
-      </tr>`;
-    }).join('');
+        return `<tr>
+          <td><strong>${i.itemName}</strong></td>
+          <td>${formatRp(i.budget)}</td>
+          <td style="color:#2563eb; font-weight:600;">${formatRp(i.realisasi)}</td>
+          <td style="font-weight:600; color:${balance < 0 ? '#ef4444':'#10b981'};">${formatRp(balance)}</td>
+          <td>${getBadge(i.realisasi, i.budget)}</td>
+          <td>${progressMarkup}</td>
+        </tr>`;
+      }).join('');
+    }
   }
 
-  document.getElementById('monitoringDetailsModal').classList.add('active');
+  const modal = document.getElementById('monitoringDetailsModal');
+  if (modal) modal.classList.add('active');
 }
 
 // ==================== REPORTS MODULE WITH DETAILED CHARTS ====================
-let currentChart = null;
-let currentPieChart = null;
-let currentBarChart = null;
+function destroyCharts() {
+  if (currentChart) {
+    currentChart.destroy();
+    currentChart = null;
+  }
+  if (currentPieChart) {
+    currentPieChart.destroy();
+    currentPieChart = null;
+  }
+  if (currentBarChart) {
+    currentBarChart.destroy();
+    currentBarChart = null;
+  }
+}
 
 function renderReports() {
   const filterSelect = document.getElementById('reportProjectFilterSelect');
@@ -831,27 +856,35 @@ function renderReports() {
   
   const selectedProjId = filterSelect.value;
   const tbody = document.getElementById('reportsTableGridBody');
+  const containerTitle = document.getElementById('reportContainerProjectTitle');
+  const statTotalPagu = document.getElementById('repStatTotalPagu');
+  const statTotalRealisasi = document.getElementById('repStatTotalRealisasi');
+  const statSisaSaldo = document.getElementById('repStatSisaSaldo');
+  const statAvgProgress = document.getElementById('repStatAvgProgress');
+  const statOverBudget = document.getElementById('repStatOverBudget');
+  const statNearLimit = document.getElementById('repStatNearLimit');
+  const statSafe = document.getElementById('repStatSafe');
   
   if (!selectedProjId) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.</td></tr>';
-    document.getElementById('reportContainerProjectTitle').innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
-    document.getElementById('repStatTotalPagu').innerText = "Rp 0";
-    document.getElementById('repStatTotalRealisasi').innerText = "Rp 0";
-    document.getElementById('repStatSisaSaldo').innerText = "Rp 0";
-    document.getElementById('repStatAvgProgress').innerText = "0%";
-    document.getElementById('repStatOverBudget').innerText = "0";
-    document.getElementById('repStatNearLimit').innerText = "0";
-    document.getElementById('repStatSafe').innerText = "0";
-    if (currentChart) currentChart.destroy();
-    if (currentPieChart) currentPieChart.destroy();
-    if (currentBarChart) currentBarChart.destroy();
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.<tr></tr>';
+    if (containerTitle) containerTitle.innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
+    if (statTotalPagu) statTotalPagu.innerText = "Rp 0";
+    if (statTotalRealisasi) statTotalRealisasi.innerText = "Rp 0";
+    if (statSisaSaldo) statSisaSaldo.innerText = "Rp 0";
+    if (statAvgProgress) statAvgProgress.innerText = "0%";
+    if (statOverBudget) statOverBudget.innerText = "0";
+    if (statNearLimit) statNearLimit.innerText = "0";
+    if (statSafe) statSafe.innerText = "0";
+    destroyCharts();
     return;
   }
 
   const proj = projects.find(p => p.id === selectedProjId);
   if (!proj) return;
 
-  document.getElementById('reportContainerProjectTitle').innerHTML = `<i class="fas fa-briefcase"></i> Analisis Finansial Terbimbing: <span style="color:#2563eb;">${proj.name}</span> <small style="font-size:0.8rem; color:#64748b; font-weight:400;">(${proj.client})</small>`;
+  if (containerTitle) {
+    containerTitle.innerHTML = `<i class="fas fa-briefcase"></i> Analisis Finansial Terbimbing: <span style="color:#2563eb;">${proj.name}</span> <small style="font-size:0.8rem; color:#64748b; font-weight:400;">(${proj.client})</small>`;
+  }
 
   const relatedComponents = rabItems.filter(i => i.projectId === selectedProjId);
   const aggregatePaguAllocated = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
@@ -862,41 +895,42 @@ function renderReports() {
     averageProgressCalculated = Math.round((aggregateRealisasiFunds / aggregatePaguAllocated) * 100);
   }
 
-  // Calculate statistics for badges
   const overBudgetCount = relatedComponents.filter(i => i.realisasi > i.budget).length;
   const nearLimitCount = relatedComponents.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
   const safeCount = relatedComponents.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
 
-  document.getElementById('repStatTotalPagu').innerText = formatRp(proj.totalBudget);
-  document.getElementById('repStatTotalRealisasi').innerText = formatRp(aggregateRealisasiFunds);
-  document.getElementById('repStatSisaSaldo').innerText = formatRp(proj.totalBudget - aggregateRealisasiFunds);
-  document.getElementById('repStatSisaSaldo').style.color = (proj.totalBudget - aggregateRealisasiFunds) < 0 ? '#ef4444' : '#10b981';
-  document.getElementById('repStatAvgProgress').innerText = `${averageProgressCalculated}%`;
-  document.getElementById('repStatOverBudget').innerText = overBudgetCount;
-  document.getElementById('repStatNearLimit').innerText = nearLimitCount;
-  document.getElementById('repStatSafe').innerText = safeCount;
+  if (statTotalPagu) statTotalPagu.innerText = formatRp(proj.totalBudget);
+  if (statTotalRealisasi) statTotalRealisasi.innerText = formatRp(aggregateRealisasiFunds);
+  if (statSisaSaldo) {
+    statSisaSaldo.innerText = formatRp(proj.totalBudget - aggregateRealisasiFunds);
+    statSisaSaldo.style.color = (proj.totalBudget - aggregateRealisasiFunds) < 0 ? '#ef4444' : '#10b981';
+  }
+  if (statAvgProgress) statAvgProgress.innerText = `${averageProgressCalculated}%`;
+  if (statOverBudget) statOverBudget.innerText = overBudgetCount;
+  if (statNearLimit) statNearLimit.innerText = nearLimitCount;
+  if (statSafe) statSafe.innerText = safeCount;
 
   if (relatedComponents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.</td></tr>';
-    if (currentChart) currentChart.destroy();
-    if (currentPieChart) currentPieChart.destroy();
-    if (currentBarChart) currentBarChart.destroy();
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.<tr></tr>';
+    destroyCharts();
     return;
   }
 
   // Populate Grid Representation
-  tbody.innerHTML = relatedComponents.map(i => {
-    const rem = i.budget - i.realisasi;
-    const itemPct = i.budget > 0 ? Math.round((i.realisasi / i.budget) * 100) : 0;
-    return `<tr>
-      <td><strong>${i.itemName}</strong></td>
-      <td>${formatRp(i.budget)}</td>
-      <td>${formatRp(i.realisasi)}</td>
-      <td style="font-weight:600; color:${rem < 0 ? '#ef4444':'#10b981'}">${formatRp(rem)}</td>
-      <td style="font-weight:700; color:#475569;">${itemPct}%</td>
-      <td>${getBadge(i.realisasi, i.budget)}</td>
-    </tr>`;
-  }).join('');
+  if (tbody) {
+    tbody.innerHTML = relatedComponents.map(i => {
+      const rem = i.budget - i.realisasi;
+      const itemPct = i.budget > 0 ? Math.round((i.realisasi / i.budget) * 100) : 0;
+      return `<tr>
+        <td><strong>${i.itemName}</strong></td>
+        <td>${formatRp(i.budget)}</td>
+        <td>${formatRp(i.realisasi)}</td>
+        <td style="font-weight:600; color:${rem < 0 ? '#ef4444':'#10b981'}">${formatRp(rem)}</td>
+        <td style="font-weight:700; color:#475569;">${itemPct}%</td>
+        <td>${getBadge(i.realisasi, i.budget)}</td>
+      </tr>`;
+    }).join('');
+  }
 
   // Create Detailed Charts
   createDetailedCharts(relatedComponents, proj);
@@ -904,9 +938,7 @@ function renderReports() {
 
 function createDetailedCharts(components, project) {
   // Destroy existing charts
-  if (currentChart) currentChart.destroy();
-  if (currentPieChart) currentPieChart.destroy();
-  if (currentBarChart) currentBarChart.destroy();
+  destroyCharts();
 
   const chartCanvas = document.getElementById('reportChartCanvas');
   const pieCanvas = document.getElementById('reportPieChartCanvas');
@@ -1140,15 +1172,17 @@ function createDetailedCharts(components, project) {
   });
 }
 
-// Bind Change Event for Report Dropdown Filter Target
-document.getElementById('reportProjectFilterSelect')?.addEventListener('change', renderReports);
-
 // ==================== DOCUMENT PRINT EXPORT DRIVERS ====================
 document.getElementById('printPdfReportBtn')?.addEventListener('click', () => {
-  const currentFilterVal = document.getElementById('reportProjectFilterSelect').value;
+  const currentFilterVal = document.getElementById('reportProjectFilterSelect')?.value;
   if (!currentFilterVal) { triggerNotification('Tentukan project target laporan dahulu!', false, 'error'); return; }
   
   const element = document.getElementById('printableReportAreaContainer');
+  if (!element) {
+    triggerNotification('Area laporan tidak ditemukan!', false, 'error');
+    return;
+  }
+  
   const config = {
     margin: 10,
     filename: `RAB_Pro_Report_Project_${currentFilterVal}.pdf`,
@@ -1215,10 +1249,10 @@ function renderTreeHierarchy() {
 
 // ==================== DOCUMENT SYNC UPLOAD HANDLER ====================
 document.getElementById('startUploadDocBtn')?.addEventListener('click', async () => {
-  const pId = document.getElementById('uploadProjectSelect').value;
+  const pId = document.getElementById('uploadProjectSelect')?.value;
   const fileInput = document.getElementById('documentLocalFile');
   
-  if (!pId || !fileInput.files || fileInput.files.length === 0) {
+  if (!pId || !fileInput?.files || fileInput.files.length === 0) {
     triggerNotification('Complete file association targets correctly!', false, 'error');
     return;
   }
@@ -1235,7 +1269,9 @@ document.getElementById('startUploadDocBtn')?.addEventListener('click', async ()
   const newFileRef = push(ref(db, 'truenasFiles'));
   set(newFileRef, payloadData).then(() => {
      fileInput.value = "";
-     document.getElementById('uploadProjectSelect').value = "";
+     if (document.getElementById('uploadProjectSelect')) {
+       document.getElementById('uploadProjectSelect').value = "";
+     }
      triggerNotification('Document entry registered in cloud cluster system!');
   });
 });
@@ -1284,26 +1320,34 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
       }
       
       if (activePageKey === 'reports') {
-        renderReports();
+        // Delay chart rendering to ensure canvas elements are visible
+        setTimeout(() => renderReports(), 100);
       }
    });
 });
 
 // Bind UI Close Trigger Event Modals
-document.getElementById('closeProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal').classList.remove('active'));
-document.getElementById('openProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal').classList.add('active'));
-document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal').classList.remove('active'));
-document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => document.getElementById('monitoringDetailsModal').classList.remove('active'));
+document.getElementById('closeProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal')?.classList.remove('active'));
+document.getElementById('openProjectModalBtn')?.addEventListener('click', () => document.getElementById('projectModal')?.classList.add('active'));
+document.getElementById('closeRabModalBtn')?.addEventListener('click', () => document.getElementById('rabModal')?.classList.remove('active'));
+document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => document.getElementById('monitoringDetailsModal')?.classList.remove('active'));
 document.getElementById('openAddUserModalBtn')?.addEventListener('click', () => {
-  document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Register System Identity User';
-  document.getElementById('modalUserEmail').value = '';
-  document.getElementById('modalUserEmail').disabled = false;
-  document.getElementById('passwordFieldGroup').style.display = 'block';
-  document.getElementById('saveUserBtn').onclick = saveNewUser;
-  document.getElementById('userModal').classList.add('active');
+  const titleElem = document.getElementById('userModalTitle');
+  if (titleElem) titleElem.innerHTML = '<i class="fas fa-user-plus"></i> Register System Identity User';
+  const emailInput = document.getElementById('modalUserEmail');
+  if (emailInput) {
+    emailInput.value = '';
+    emailInput.disabled = false;
+  }
+  const passwordGroup = document.getElementById('passwordFieldGroup');
+  if (passwordGroup) passwordGroup.style.display = 'block';
+  const saveBtn = document.getElementById('saveUserBtn');
+  if (saveBtn) saveBtn.onclick = saveNewUser;
+  const modal = document.getElementById('userModal');
+  if (modal) modal.classList.add('active');
 });
-document.getElementById('closeUserModalBtn')?.addEventListener('click', () => document.getElementById('userModal').classList.remove('active'));
-document.getElementById('closeResetModalBtn')?.addEventListener('click', () => document.getElementById('resetPasswordModal').classList.remove('active'));
+document.getElementById('closeUserModalBtn')?.addEventListener('click', () => document.getElementById('userModal')?.classList.remove('active'));
+document.getElementById('closeResetModalBtn')?.addEventListener('click', () => document.getElementById('resetPasswordModal')?.classList.remove('active'));
 
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
   signOut(auth).then(() => {
