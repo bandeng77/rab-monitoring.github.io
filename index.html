@@ -230,9 +230,9 @@
 
     /* Visual Utilities & Progress Bar */
     .hidden-section { display: none !important; }
-    .graphic-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-top: 24px; }
-    .chart-box { background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 380px; }
-    .action-buttons { display: flex; gap: 8px; }
+    .graphic-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 24px; }
+    .chart-box { background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 400px; }
+    .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
     .action-buttons button { padding: 6px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: none; }
     .btn-edit { background: #dbeafe; color: #1e40af; }
     .btn-reset { background: #fef3c7; color: #92400e; }
@@ -247,12 +247,21 @@
     /* Report Layout Utilities */
     .report-select-box { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); flex-wrap: wrap; }
     .report-select-box select { padding: 10px 16px; border-radius: 16px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; min-width: 250px; }
-    .report-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .report-stat-card { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px solid #e2e8f0; }
-    .report-stat-card h4 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+    .report-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .report-stat-card { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: center; }
+    .report-stat-card h4 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
     .report-stat-card p { font-size: 1.25rem; font-weight: 700; color: #1e293b; }
     
-    canvas { max-width: 100%; height: auto; max-height: 300px; }
+    canvas { max-width: 100%; height: auto; max-height: 320px; width: 100% !important; }
+    
+    @media (max-width: 768px) {
+      .sidebar { width: 80px; padding: 20px 10px; }
+      .sidebar h2, .user-profile-box, .sidebar ul li span, .btn-logout-sidebar span { display: none; }
+      .sidebar ul li { justify-content: center; padding: 12px; }
+      .sidebar ul li i { font-size: 1.2rem; margin: 0; }
+      .main { margin-left: 80px; width: calc(100% - 80px); padding: 20px; }
+      .graphic-grid-container { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -272,18 +281,18 @@
       </div>
 
       <ul id="sidebarMenu">
-        <li class="active" data-page="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</li>
-        <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> Master Project</li>
-        <li data-page="claim-request" class="restricted"><i class="fas fa-receipt"></i> Claim Request</li>
-        <li data-page="approval-budget" class="restricted"><i class="fas fa-file-invoice-dollar"></i> Approval Budget</li>
-        <li data-page="monitoring" class="restricted"><i class="fas fa-desktop"></i> Monitoring</li>
-        <li data-page="reports" class="restricted"><i class="fas fa-file-alt"></i> Reports</li>
-        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> Upload Document</li>
-        <li data-page="files" class="restricted"><i class="fas fa-server"></i> Storage Server</li>
-        <li data-page="user-management" class="restricted"><i class="fas fa-users-cog"></i> User Management</li>
+        <li class="active" data-page="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></li>
+        <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> <span>Master Project</span></li>
+        <li data-page="claim-request" class="restricted"><i class="fas fa-receipt"></i> <span>Claim Request</span></li>
+        <li data-page="approval-budget" class="restricted"><i class="fas fa-file-invoice-dollar"></i> <span>Approval Budget</span></li>
+        <li data-page="monitoring" class="restricted"><i class="fas fa-desktop"></i> <span>Monitoring</span></li>
+        <li data-page="reports" class="restricted"><i class="fas fa-file-alt"></i> <span>Reports</span></li>
+        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> <span>Upload Document</span></li>
+        <li data-page="files" class="restricted"><i class="fas fa-server"></i> <span>Storage Server</span></li>
+        <li data-page="user-management" class="restricted"><i class="fas fa-users-cog"></i> <span>User Management</span></li>
       </ul>
 
-      <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></button>
     </div>
 
     <div class="main">
@@ -294,7 +303,7 @@
 
       <div id="dashboardPage">
         <div class="cards" id="cardsContainer">
-          </div>
+        </div>
 
         <div class="section">
           <h2><i class="fas fa-chart-line"></i> Top Budget Distribution Overview</h2>
@@ -310,7 +319,7 @@
                 </tr>
               </thead>
               <tbody id="monitoringBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -337,7 +346,7 @@
                 </tr>
               </thead>
               <tbody id="masterProjectBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -365,7 +374,7 @@
                 </tr>
               </thead>
               <tbody id="rabItemsMasterBody">
-                <tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.ERC20</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.</td></tr>
               </tbody>
             </table>
           </div>
@@ -390,7 +399,7 @@
             <label>Daftar Pengeluaran & Rincian Transaksi</label>
             <div class="multi-item-container">
               <div id="itemList">
-                </div>
+              </div>
               <button class="btn btn-outline" id="addItemBtn" style="margin-top:10px;"><i class="fas fa-plus"></i> Add Item Row</button>
             </div>
           </div>
@@ -411,7 +420,7 @@
                 </tr>
               </thead>
               <tbody id="historyClaimBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -432,7 +441,7 @@
                 </tr>
               </thead>
               <tbody id="approvalTableBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -453,7 +462,7 @@
                 </tr>
               </thead>
               <tbody id="monitoringMainGridBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -469,7 +478,7 @@
             <select id="reportProjectFilterSelect">
               <option value="">-- Pilih Project Mandiri --</option>
             </select>
-            <button class="btn btn-success" id="exportExcelReportBtn" style="margin-left: auto;"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn btn-success" id="exportExcelReportBtn"><i class="fas fa-file-excel"></i> Export Excel</button>
             <button class="btn btn-danger" id="printPdfReportBtn"><i class="fas fa-file-pdf"></i> Save PDF Report</button>
           </div>
         </div>
@@ -492,15 +501,27 @@
                 <p id="repStatSisaSaldo" style="color:#10b981;">Rp 0</p>
               </div>
               <div class="report-stat-card">
-                <h4>Rata-Rata Progress Finansial</h4>
+                <h4>Rata-Rata Progress</h4>
                 <p id="repStatAvgProgress">0%</p>
+              </div>
+              <div class="report-stat-card">
+                <h4>Over Budget</h4>
+                <p id="repStatOverBudget" style="color:#ef4444;">0</p>
+              </div>
+              <div class="report-stat-card">
+                <h4>Near Limit</h4>
+                <p id="repStatNearLimit" style="color:#f59e0b;">0</p>
+              </div>
+              <div class="report-stat-card">
+                <h4>Safe</h4>
+                <p id="repStatSafe" style="color:#10b981;">0</p>
               </div>
             </div>
 
             <div class="graphic-grid-container">
               <div class="chart-box">
                 <h4 style="font-size:0.85rem; color:#1e293b; margin-bottom:12px;"><i class="fas fa-chart-bar"></i> Perbandingan Budget vs Realisasi</h4>
-                <canvas id="reportBarChartCanvas"></canvas>
+                <canvas id="reportComparisonChartCanvas"></canvas>
               </div>
               <div class="chart-box">
                 <h4 style="font-size:0.85rem; color:#1e293b; margin-bottom:12px;"><i class="fas fa-chart-pie"></i> Distribusi Budget per Komponen</h4>
@@ -524,12 +545,12 @@
                     <th>Pagu Anggaran</th>
                     <th>Realisasi Klaim</th>
                     <th>Sisa Saldo Efisiensi</th>
-                    <th>Persentase Progress Kerja</th>
+                    <th>Persentase Progress</th>
                     <th>Status Kesehatan</th>
                   </tr>
                 </thead>
                 <tbody id="reportsTableGridBody">
-                  <tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.ERC20</td></tr>
+                  <tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan data</td></tr>
                 </tbody>
               </table>
             </div>
@@ -559,7 +580,7 @@
           <h2><i class="fas fa-server"></i> Cloud Storage Hierarchy File Explorer</h2>
           <div style="background:#fff; padding:24px; border-radius:24px; border:1px solid #e2e8f0; min-height:350px;">
              <ul class="file-tree" id="rootFileTreeDirectory">
-                </ul>
+             </ul>
           </div>
         </div>
       </div>
@@ -585,7 +606,7 @@
                 </tr>
               </thead>
               <tbody id="userTableBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
@@ -643,21 +664,20 @@
           <table>
             <thead>
               <tr>
-                <th>Component Breakdowns Name</th>
-                <th>Ceiling Pagu Target</th>
-                <th>Approved Realization Expenses</th>
-                <th>Remaining Account Funds</th>
-                <th>Workflow Status Health</th>
-                <th>Progress Pengerjaan RAB</th>
+                <th>Component Name</th>
+                <th>Budget</th>
+                <th>Realization</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Progress</th>
               </tr>
             </thead>
             <tbody id="modalDetailsComponentsTableGridBody">
-              </tbody>
+            </tbody>
           </table>
         </div>
-
         <div class="modal-buttons">
-          <button class="btn btn-outline" id="closeMonitoringDetailsModalBtn" style="border-radius:20px;">Close Analytics Terminal</button>
+          <button class="btn btn-outline" id="closeMonitoringDetailsModalBtn">Close Analytics</button>
         </div>
       </div>
     </div>
@@ -666,43 +686,42 @@
       <div class="modal-container" style="max-width: 500px;">
         <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
         <div class="form-group">
-          <label>Account Identity Email</label>
-          <input type="email" id="modalUserEmail" placeholder="username@genetek.co.id">
+          <label>Email</label>
+          <input type="email" id="modalUserEmail" placeholder="user@company.com">
         </div>
         <div class="form-group" id="passwordFieldGroup">
-          <label>System Password</label>
-          <input type="password" id="modalUserPassword" placeholder="Minimum 6 characters (Default: password123)">
+          <label>Password</label>
+          <input type="password" id="modalUserPassword" placeholder="Min 6 characters">
         </div>
         <div class="form-group">
-          <label>Authorization Access Level Role</label>
+          <label>Role</label>
           <select id="modalRole">
-            <option value="Administrator">Administrator (Full Access)</option>
-            <option value="Finance">Finance (Financial & Approval)</option>
-            <option value="Project Manager">Project Manager (Project Management)</option>
+            <option value="Administrator">Administrator</option>
+            <option value="Finance">Finance</option>
+            <option value="Project Manager">Project Manager</option>
           </select>
         </div>
-        <input type="hidden" id="editUserId" value="">
+        <input type="hidden" id="editUserId">
         <div class="modal-buttons">
           <button class="btn btn-danger" id="closeUserModalBtn">Cancel</button>
-          <button class="btn btn-primary" id="saveUserBtn">Save User</button>
+          <button class="btn btn-primary" id="saveUserBtn">Save</button>
         </div>
       </div>
     </div>
 
     <div id="resetPasswordModal" class="modal-overlay">
-      <div class="modal-container" style="max-width: 450px;">
-        <h3><i class="fas fa-key"></i> Reset User Password</h3>
+      <div class="modal-container">
+        <h3><i class="fas fa-key"></i> Reset Password</h3>
         <div class="form-group">
           <label>User Email</label>
-          <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
+          <input type="text" id="resetUserEmail" readonly>
         </div>
-        <div class="info-box" style="margin-bottom: 16px;">
-          <i class="fas fa-envelope"></i>
-          Password reset email will be sent to the above address.
+        <div class="info-box">
+          <i class="fas fa-envelope"></i> Reset email will be sent
         </div>
         <div class="modal-buttons">
           <button class="btn btn-danger" id="closeResetModalBtn">Cancel</button>
-          <button class="btn btn-warning" id="confirmResetPasswordBtn">Send Reset Email</button>
+          <button class="btn btn-warning" id="confirmResetPasswordBtn">Send</button>
         </div>
       </div>
     </div>
@@ -710,7 +729,7 @@
 
   <div class="notify-popup" id="customPopupNotice">
     <i id="noticeIcon" class="fas fa-check-circle"></i>
-    <span id="noticeMessage">Action completed successfully.</span>
+    <span id="noticeMessage">Success</span>
   </div>
 
   <script type="module" src="app.js"></script>
