@@ -75,10 +75,6 @@ function formatRp(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
 }
 
-function formatNumber(val) {
-  return new Intl.NumberFormat('id-ID').format(val || 0);
-}
-
 function getBadge(real, budget) { 
   if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
   if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
@@ -122,7 +118,6 @@ async function createNewUser(email, password, role) {
     triggerNotification(`User ${email} successfully created with role ${role}!`, true);
     return { success: true, uid: user.uid };
   } catch (error) {
-    console.error("Error creating user:", error);
     let errorMessage = "Failed to create user: ";
     if (error.code === 'auth/email-already-in-use') {
       errorMessage += "Email already registered!";
@@ -148,7 +143,6 @@ async function updateUserRole(uid, newRole) {
     triggerNotification(`User role updated to ${newRole}!`, true);
     return { success: true };
   } catch (error) {
-    console.error("Error updating user role:", error);
     triggerNotification("Failed to update user role!", false, 'error');
     return { success: false };
   }
@@ -160,7 +154,6 @@ async function resetUserPassword(email) {
     triggerNotification(`Password reset email sent to ${email}.`, true, 'info');
     return { success: true };
   } catch (error) {
-    console.error("Error resetting password:", error);
     triggerNotification("Failed to reset password: " + error.message, false, 'error');
     return { success: false };
   }
@@ -177,7 +170,6 @@ async function deleteUserAccount(uid, email) {
     triggerNotification(`User ${email} has been removed from database.`, true, 'info');
     return { success: true };
   } catch (error) {
-    console.error("Error deleting user:", error);
     triggerNotification("Failed to delete user!", false, 'error');
     return { success: false };
   }
@@ -245,6 +237,7 @@ function initCloudDatabaseListeners() {
   onValue(ref(db, 'truenasFiles'), (snapshot) => {
     const data = snapshot.val();
     truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+    console.log("Files loaded:", truenasFiles.length);
     renderTreeHierarchy();
   });
 
@@ -263,6 +256,7 @@ function updateWholeUI() {
   renderMonitoringTable();
   renderReports();
   populateDropdownMenus();
+  renderTreeHierarchy();
 }
 
 function populateDropdownMenus() {
@@ -270,7 +264,7 @@ function populateDropdownMenus() {
   if (upSel) {
     const valBackup = upSel.value;
     upSel.innerHTML = '<option value="">-- Select Target Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (valBackup) upSel.value = valBackup;
+    if (valBackup && projects.find(p => p.id === valBackup)) upSel.value = valBackup;
   }
   
   const repSel = document.getElementById('reportProjectFilterSelect');
@@ -285,14 +279,14 @@ function populateDropdownMenus() {
   if (filterRAB) {
     const prevVal = filterRAB.value;
     filterRAB.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (prevVal) filterRAB.value = prevVal;
+    if (prevVal && projects.find(p => p.id === prevVal)) filterRAB.value = prevVal;
   }
   
   const claimSel = document.getElementById('claimProjectSelect');
   if (claimSel) {
     const oldVal = claimSel.value;
     claimSel.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (oldVal) claimSel.value = oldVal;
+    if (oldVal && projects.find(p => p.id === oldVal)) claimSel.value = oldVal;
   }
 }
 
@@ -359,7 +353,7 @@ function renderMasterProject() {
   if (filter) {
     const prevVal = currentSelectedProjectId;
     filter.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (prevVal) filter.value = prevVal;
+    if (prevVal && projects.find(p => p.id === prevVal)) filter.value = prevVal;
   }
   renderRABItemsSubTable();
 }
@@ -369,7 +363,7 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
+    tbody.innerHTML = '<td><td colspan="5" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
     return;
   }
   
@@ -426,7 +420,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-    </tr>`;
+    </table>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -640,7 +634,7 @@ function renderClaimView() {
   if (selectPr) {
     const oldVal = selectPr.value;
     selectPr.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (oldVal) selectPr.value = oldVal;
+    if (oldVal && projects.find(p => p.id === oldVal)) selectPr.value = oldVal;
   }
   
   const historyBody = document.getElementById('historyClaimBody');
@@ -873,7 +867,7 @@ function renderReports() {
   if (statSafe) statSafe.innerText = safeCount;
   
   if (components.length === 0) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada komponen RAB pada proyek ini</td></tr>';
+    if (tbody) tbody.innerHTML = '<td><td colspan="6" style="text-align:center;">Belum ada komponen RAB pada proyek ini</td></tr>';
     destroyCharts();
     return;
   }
@@ -882,7 +876,7 @@ function renderReports() {
     tbody.innerHTML = components.map(c => {
       const remaining = c.budget - c.realisasi;
       const percent = c.budget > 0 ? Math.round((c.realisasi / c.budget) * 100) : 0;
-      return `<tr>
+      return `<td>
         <td><strong>${c.itemName}</strong></td>
         <td>${formatRp(c.budget)}</td>
         <td>${formatRp(c.realisasi)}</td>
@@ -917,7 +911,6 @@ function createDetailedCharts(components, project) {
   
   const pieColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#4CAF50'];
   
-  // Chart 1: Budget vs Realization
   const ctx1 = comparisonCanvas.getContext('2d');
   comparisonChart = new Chart(ctx1, {
     type: 'bar',
@@ -934,56 +927,26 @@ function createDetailedCharts(components, project) {
       plugins: {
         legend: { position: 'top' },
         title: { display: true, text: `Budget vs Realisasi - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              let label = ctx.dataset.label || '';
-              let value = ctx.parsed.y;
-              let comp = sorted[ctx.dataIndex];
-              let pct = '';
-              if (ctx.dataset.label === 'Realisasi' && comp.budget > 0) {
-                pct = ` (${Math.round((value / comp.budget) * 100)}% dari Budget)`;
-              }
-              return `${label}: ${formatRp(value)}${pct}`;
-            }
-          }
-        }
+        tooltip: { callbacks: { label: (ctx) => { let label = ctx.dataset.label || ''; let value = ctx.parsed.y; let comp = sorted[ctx.dataIndex]; let pct = ''; if (ctx.dataset.label === 'Realisasi' && comp.budget > 0) { pct = ` (${Math.round((value / comp.budget) * 100)}% dari Budget)`; } return `${label}: ${formatRp(value)}${pct}`; } } }
       },
-      scales: {
-        y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } },
-        x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } }
-      }
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } }, x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } } }
     }
   });
   
-  // Chart 2: Pie Chart
   const ctx2 = pieCanvas.getContext('2d');
   pieChart = new Chart(ctx2, {
     type: 'pie',
-    data: {
-      labels: labels,
-      datasets: [{ data: budgetData, backgroundColor: pieColors.slice(0, budgetData.length), borderWidth: 2, borderColor: '#fff' }]
-    },
+    data: { labels: labels, datasets: [{ data: budgetData, backgroundColor: pieColors.slice(0, budgetData.length), borderWidth: 2, borderColor: '#fff' }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
+      responsive: true, maintainAspectRatio: true,
       plugins: {
         legend: { position: 'right' },
         title: { display: true, text: `Distribusi Budget - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const total = budgetData.reduce((a, b) => a + b, 0);
-              const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
-              return `${ctx.label}: ${formatRp(ctx.parsed)} (${pct}%)`;
-            }
-          }
-        }
+        tooltip: { callbacks: { label: (ctx) => { const total = budgetData.reduce((a, b) => a + b, 0); const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0; return `${ctx.label}: ${formatRp(ctx.parsed)} (${pct}%)`; } } }
       }
     }
   });
   
-  // Chart 3: Health Chart
   const ctx3 = healthCanvas.getContext('2d');
   healthChart = new Chart(ctx3, {
     type: 'bar',
@@ -995,32 +958,13 @@ function createDetailedCharts(components, project) {
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
+      responsive: true, maintainAspectRatio: true,
       plugins: {
         legend: { position: 'top' },
         title: { display: true, text: `Status Kesehatan Budget - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              let label = ctx.dataset.label || '';
-              let value = ctx.parsed.y;
-              let comp = sorted[ctx.dataIndex];
-              let info = '';
-              if (ctx.dataset.label === 'Sisa Budget' && comp.budget > 0) {
-                info = ` (${((value / comp.budget) * 100).toFixed(1)}% tersisa)`;
-              } else if (ctx.dataset.label === 'Over Budget' && value > 0 && comp.budget > 0) {
-                info = ` (Melebihi ${((value / comp.budget) * 100).toFixed(1)}%)`;
-              }
-              return `${label}: ${formatRp(value)}${info}`;
-            }
-          }
-        }
+        tooltip: { callbacks: { label: (ctx) => { let label = ctx.dataset.label || ''; let value = ctx.parsed.y; let comp = sorted[ctx.dataIndex]; let info = ''; if (ctx.dataset.label === 'Sisa Budget' && comp.budget > 0) { info = ` (${((value / comp.budget) * 100).toFixed(1)}% tersisa)`; } else if (ctx.dataset.label === 'Over Budget' && value > 0 && comp.budget > 0) { info = ` (Melebihi ${((value / comp.budget) * 100).toFixed(1)}%)`; } return `${label}: ${formatRp(value)}${info}`; } } }
       },
-      scales: {
-        y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } },
-        x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } }
-      }
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } }, x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } } }
     }
   });
 }
@@ -1075,53 +1019,100 @@ document.getElementById('printPdfReportBtn')?.addEventListener('click', async ()
   }
 });
 
-// ==================== FILE TREE ====================
+// ==================== FILE TREE (STORAGE SERVER) - DIPERBAIKI ====================
 function renderTreeHierarchy() {
   const root = document.getElementById('rootFileTreeDirectory');
-  if (!root) return;
+  if (!root) {
+    console.log("rootFileTreeDirectory element not found");
+    return;
+  }
   
-  if (!truenasFiles.length) {
-    root.innerHTML = '<li>Tidak ada dokumen</li>';
+  console.log("Rendering file tree, files count:", truenasFiles.length);
+  
+  if (!truenasFiles || truenasFiles.length === 0) {
+    root.innerHTML = '<li style="color:#64748b; padding:20px; text-align:center;"><i class="fas fa-folder-open"></i> Belum ada dokumen yang diupload. Silakan upload dokumen melalui menu Upload Document.</li>';
     return;
   }
   
   const map = {};
-  truenasFiles.forEach(f => {
-    const p = projects.find(pr => pr.id === f.projectId);
-    const folder = p ? p.name : 'Unsorted';
-    if (!map[folder]) map[folder] = [];
-    map[folder].push(f);
+  truenasFiles.forEach(file => {
+    const associatedProject = projects.find(p => p.id === file.projectId);
+    const projectName = associatedProject ? associatedProject.name : "Unsorted Attachments";
+    if (!map[projectName]) map[projectName] = [];
+    map[projectName].push(file);
   });
   
-  root.innerHTML = `
-    <li class="root-node"><i class="fas fa-network-wired"></i> Storage Root</li>
-    ${Object.keys(map).map(folder => `
-      <li style="padding-left:12px;">
-        <div class="folder-node"><i class="fas fa-folder-open"></i> ${folder}</div>
-        <ul style="list-style:none;padding-left:12px;">
-          ${map[folder].map(f => `
-            <li class="file-node">
-              <i class="fas fa-file-invoice"></i>
-              <span>${f.fileName} <small>(${f.uploadedBy || 'System'})</small></span>
-              <div class="action-links">
-                <a href="${API_BASE_URL}/preview/${f.id}" target="_blank">View</a>
-                ${currentRole === 'Administrator' ? `<button class="delete-file-btn" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : ''}
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      </li>
-    `).join('')}
-  `;
+  let html = '<li class="root-node"><i class="fas fa-database"></i> Cloud Storage Root <span style="font-size:0.7rem; color:#64748b;">(Network Attached Storage)</span></li>';
+  
+  for (const [folderName, files] of Object.entries(map)) {
+    html += `<li style="padding-left: 16px; margin-top: 12px;">
+      <div class="folder-node" style="cursor: pointer; padding: 8px 12px; background: #f1f5f9; border-radius: 12px; margin: 4px 0;">
+        <i class="fas fa-folder-open" style="color: #eab308;"></i> 
+        <strong>${folderName}</strong>
+        <span class="badge badge-info" style="margin-left: 10px; font-size: 0.7rem;">${files.length} files</span>
+      </div>
+      <ul style="list-style: none; padding-left: 20px; margin-top: 6px;">`;
+    
+    files.forEach(file => {
+      const dateStr = file.timestamp ? new Date(file.timestamp).toLocaleDateString('id-ID') : '-';
+      html += `<li class="file-node" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: white; border-radius: 12px; margin: 6px 0; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i class="fas fa-file-alt" style="color: #3b82f6;"></i>
+          <div>
+            <div style="font-weight: 600;">${escapeHtml(file.fileName)}</div>
+            <div style="font-size: 0.7rem; color: #64748b;">
+              <i class="fas fa-user"></i> ${file.uploadedBy || 'System'} | 
+              <i class="fas fa-calendar"></i> ${dateStr} |
+              ${file.fileSize ? `<i class="fas fa-database"></i> ${formatFileSize(file.fileSize)}` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="action-links" style="display: flex; gap: 12px;">
+          <a href="${API_BASE_URL}/preview/${file.id}" target="_blank" class="preview-link" style="color: #2563eb; text-decoration: none;">
+            <i class="fas fa-eye"></i> Preview
+          </a>
+          ${currentRole === 'Administrator' ? 
+            `<button class="delete-file-btn btn-delete-file" data-id="${file.id}" style="background: #fee2e2; border: none; padding: 6px 12px; border-radius: 8px; color: #dc2626; cursor: pointer;">
+              <i class="fas fa-trash"></i> Delete
+            </button>` : ''
+          }
+        </div>
+      </li>`;
+    });
+    
+    html += `</ul></li>`;
+  }
+  
+  root.innerHTML = html;
   
   document.querySelectorAll('.delete-file-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Delete this file?')) {
-        remove(ref(db, `truenasFiles/${btn.dataset.id}`));
-        triggerNotification('File deleted!');
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const fileId = btn.dataset.id;
+      if (confirm('Hapus file ini secara permanen dari storage?')) {
+        try {
+          await remove(ref(db, `truenasFiles/${fileId}`));
+          triggerNotification('File berhasil dihapus!', true, 'success');
+        } catch (error) {
+          triggerNotification('Gagal menghapus file!', false, 'error');
+        }
       }
     });
   });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
 // ==================== UPLOAD DOCUMENT ====================
@@ -1129,22 +1120,39 @@ document.getElementById('startUploadDocBtn')?.addEventListener('click', () => {
   const pId = document.getElementById('uploadProjectSelect')?.value;
   const fileInput = document.getElementById('documentLocalFile');
   
-  if (!pId || !fileInput?.files?.length) {
-    triggerNotification('Pilih project dan file terlebih dahulu!', false, 'error');
+  if (!pId) {
+    triggerNotification('Pilih project target terlebih dahulu!', false, 'error');
+    return;
+  }
+  
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    triggerNotification('Pilih file yang akan diupload!', false, 'error');
     return;
   }
   
   const file = fileInput.files[0];
+  
+  if (file.size > 10 * 1024 * 1024) {
+    triggerNotification('Ukuran file maksimal 10 MB!', false, 'error');
+    return;
+  }
+  
+  triggerNotification('Mengupload file...', true, 'info');
+  
   push(ref(db, 'truenasFiles'), {
     projectId: pId,
     fileName: file.name,
     fileSize: file.size,
     uploadedBy: currentUserEmail,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    fileType: file.type
   }).then(() => {
     fileInput.value = '';
     document.getElementById('uploadProjectSelect').value = '';
-    triggerNotification('File uploaded successfully!');
+    triggerNotification('File berhasil diupload ke storage!', true, 'success');
+  }).catch((error) => {
+    console.error("Upload error:", error);
+    triggerNotification('Gagal mengupload file!', false, 'error');
   });
 });
 
@@ -1222,6 +1230,10 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     
     if (page === 'reports') {
       setTimeout(() => renderReports(), 200);
+    }
+    
+    if (page === 'files') {
+      setTimeout(() => renderTreeHierarchy(), 100);
     }
   });
 });
