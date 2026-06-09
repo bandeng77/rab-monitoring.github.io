@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>RAB Pro | Ultimate Budget Tracker</title>
 
+  <!-- Pustaka Eksternal Terintegrasi -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -19,7 +20,7 @@
       min-height: 100vh;
     }
 
-    /* Loading Screen */
+    /* Loading Screen Gateway */
     #loadingScreen {
       position: fixed;
       top: 0;
@@ -50,12 +51,10 @@
       font-weight: 600;
     }
 
-    /* Main App Container */
-    #mainAppBody {
-      display: none;
-    }
+    /* Main App Body Wrapper */
+    #mainAppBody { display: none; }
 
-    /* Sidebar Styles */
+    /* Navigation Sidebar */
     .sidebar {
       width: 280px;
       background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
@@ -67,7 +66,6 @@
       z-index: 20;
       box-shadow: 8px 0 25px rgba(0,0,0,0.12);
     }
-
     .sidebar h2 {
       font-size: 1.75rem;
       font-weight: 800;
@@ -78,7 +76,6 @@
       background-clip: text;
       color: transparent;
     }
-
     .user-profile-box {
       background: rgba(255, 255, 255, 0.1);
       padding: 14px;
@@ -104,7 +101,6 @@
       font-size: 0.75rem;
       font-weight: 700;
     }
-
     .sidebar ul { list-style: none; }
     .sidebar ul li {
       padding: 12px 18px;
@@ -135,12 +131,12 @@
     }
     .btn-logout-sidebar:hover { background: #ef4444; color: white; }
 
-    /* Main Content */
+    /* Main Workspace Panel */
     .main { margin-left: 280px; width: calc(100% - 280px); padding: 28px 36px; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
     .header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #1e293b, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    /* Buttons */
+    /* UI Universal Buttons */
     .btn { padding: 10px 24px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.25s; }
     .btn-primary { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
@@ -153,31 +149,31 @@
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
 
-    /* Dashboard Metrics Cards */
+    /* Dashboard Grid Metrics */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px; }
     .card { background: rgba(255,255,255,0.95); padding: 24px 22px; border-radius: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: 0.3s; }
     .card:hover { transform: translateY(-6px); }
     .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
-    .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .card p { font-size: 1.6rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    /* Sections */
+    /* Content Layout Section */
     .section { background: rgba(255,255,255,0.92); padding: 28px 32px; border-radius: 36px; margin-bottom: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); }
     .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1f2a48; }
     .hidden-section { display: none !important; }
 
-    /* Tables */
+    /* Tables UI Component */
     .info-box { background: #eef2ff; padding: 16px; border-radius: 24px; margin-bottom: 16px; font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
     th { background: #f1f5f9; font-weight: 700; color: #334155; }
 
-    /* Form Fields */
+    /* Form Fields Control styling */
     .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 0.85rem; font-weight: 600; color: #475569; }
     .form-group input, .form-group select, .form-group textarea { padding: 12px 16px; border-radius: 16px; border: 1.5px solid #cbd5e1; outline: none; font-size: 0.9rem; }
     .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
 
-    /* Badges */
+    /* Badges Status Indicator */
     .badge { padding: 5px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; display: inline-block; text-transform: uppercase; }
     .badge-success { background: #d1fae5; color: #065f46; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
@@ -185,14 +181,14 @@
     .badge-info { background: #dbeafe; color: #1e40af; }
     .badge-secondary { background: #e2e8f0; color: #475569; }
 
-    /* Multi-Item Claim Container */
+    /* Multi-Item Form Dynamic Row Element */
     .multi-item-container { background: #f8fafc; border-radius: 24px; padding: 20px; margin-top: 20px; }
     .item-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; background: white; padding: 12px 16px; border-radius: 20px; border: 1px solid #e2e8f0; }
     .item-row select { flex: 2; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; }
     .item-row .remove-item { background: #fee2e2; color: #dc2626; border: none; width: 36px; height: 36px; border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    /* File Management Node Tree */
+    /* File Ingestion Tree Renderer */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -205,14 +201,14 @@
     .file-node .preview-link { color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
     .file-node .delete-file-btn { color: #ef4444; background: transparent; border: none; font-size: 1rem; cursor: pointer; }
 
-    /* Overlay Modal Popup */
+    /* Overlay Modal Layer */
     .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.3s ease; }
     .modal-overlay.active { display: flex; opacity: 1; }
     .modal-container { background: white; padding: 32px; border-radius: 32px; width: 100%; max-width: 550px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
     .modal-container h3 { font-size: 1.3rem; margin-bottom: 20px; color: #0f172a; display: flex; align-items: center; gap: 10px; }
     .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
-    /* Custom Popup Toast Notice */
+    /* Notification System Toast Box */
     .notify-popup { position: fixed; bottom: 24px; right: -400px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 16px 24px; border-radius: 20px; display: flex; align-items: center; gap: 12px; z-index: 1000; font-weight: 600; font-size: 0.9rem; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border-left: 6px solid #3b82f6; }
     .notify-popup.active { right: 24px; }
     .notify-popup.success { border-left-color: #10b981; color: #065f46; }
@@ -222,13 +218,16 @@
 </head>
 <body>
 
+  <!-- Loading Screen Gateway -->
   <div id="loadingScreen">
     <div class="loading-spinner"></div>
     <div class="loading-text">Securing session connection pipeline...</div>
   </div>
 
+  <!-- Workspace Container App Engine -->
   <div id="mainAppBody">
     
+    <!-- Sidebar Navigation Menu Left Side Panel -->
     <div class="sidebar">
       <h2>RAB PRO SYS</h2>
       
@@ -254,15 +253,16 @@
       </button>
     </div>
 
+    <!-- Main Dynamic Application Window Panels -->
     <div class="main">
       <div class="header">
         <h1 id="pageTitle"><i class="fas fa-chart-pie"></i> Dashboard</h1>
-        <button class="btn btn-outline" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-outline" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh Data</button>
       </div>
 
+      <!-- PAGE: DASHBOARD -->
       <div id="dashboardPage" class="page-view-section">
-        <div class="cards" id="cardsContainer">
-          </div>
+        <div class="cards" id="cardsContainer"></div>
         <div class="section">
           <h2><i class="fas fa-bell"></i> Top High Budget Distribution Matrix</h2>
           <table>
@@ -272,7 +272,7 @@
                 <th>RAB Sub-Item Component</th>
                 <th>Allocated Budget</th>
                 <th>Total Realization</th>
-                <th>Status Status</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody id="monitoringBody"></tbody>
@@ -280,10 +280,11 @@
         </div>
       </div>
 
+      <!-- PAGE: MASTER PROJECT & COMPONENTS -->
       <div id="masterProjectPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-folder-open"></i> Project Ledger Architecture</h2>
-          <div style="margin-bottom: 20px; display:flex; gap:12px;">
+          <div style="margin-bottom: 20px;">
             <button class="btn btn-primary" onclick="document.getElementById('projectModal').classList.add('active')">
               <i class="fas fa-plus"></i> Register Master Project
             </button>
@@ -295,7 +296,7 @@
                 <th>Client Target</th>
                 <th>Pagu Threshold</th>
                 <th>Remaining Unallocated</th>
-                <th>System Operations</th>
+                <th>Operations</th>
               </tr>
             </thead>
             <tbody id="masterProjectBody"></tbody>
@@ -323,6 +324,7 @@
         </div>
       </div>
 
+      <!-- PAGE: CLAIM REQUEST OPERATION -->
       <div id="claimRequestPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-receipt"></i> Issue New Operational Expense Reimbursement</h2>
@@ -374,6 +376,7 @@
         </div>
       </div>
 
+      <!-- PAGE: PIPELINE VERIFICATION APPROVALS -->
       <div id="approvalBudgetPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-stamp"></i> Review Pending Verification Queue</h2>
@@ -392,25 +395,29 @@
         </div>
       </div>
 
+      <!-- PAGE: MONITORING & GLOBAL AUDITING -->
       <div id="monitoringPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-search-dollar"></i> Global Realtime Budgetary Audit Track</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Project Scope</th>
-                <th>RAB Item Component</th>
-                <th>Threshold Limit</th>
-                <th>Realtime Realization</th>
-                <th>Remaining Liquid Fund</th>
-                <th>Risk Metrics Gauge</th>
-              </tr>
-            </thead>
-            <tbody id="globalTrackingBody"></tbody>
-          </table>
+          <div id="exportPdfTargetArea">
+            <table>
+              <thead>
+                <tr>
+                  <th>Project Scope</th>
+                  <th>RAB Item Component</th>
+                  <th>Threshold Limit</th>
+                  <th>Realtime Realization</th>
+                  <th>Remaining Liquid Fund</th>
+                  <th>Risk Metrics Gauge</th>
+                </tr>
+              </thead>
+              <tbody id="globalTrackingBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
+      <!-- PAGE: REPORTS CENTER ANALYTICS -->
       <div id="reportsPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-file-chart-line"></i> Analytics Data Presentation</h2>
@@ -418,12 +425,13 @@
             <button class="btn btn-success" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Export Excel Workbook</button>
             <button class="btn btn-danger" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Compile PDF Executive Brief</button>
           </div>
-          <div style="max-width: 700px; margin: 0 auto 30px auto; background:white; padding:20px; border-radius:24px; box-shadow:0 4px 12px rgba(0,0,0,0.02);">
-            <canvas id="analyticalBarChartCanvas"></canvas>
+          <div style="max-width: 100%; background:white; padding:24px; border-radius:24px; box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+            <canvas id="analyticalBarChartCanvas" style="max-height: 420px;"></canvas>
           </div>
         </div>
       </div>
 
+      <!-- PAGE: INGESTION CLOUD STORAGE UPLOAD -->
       <div id="uploadDocumentPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-upload"></i> Upload Files into Storage Cluster Engine</h2>
@@ -450,6 +458,7 @@
         </div>
       </div>
 
+      <!-- PAGE: STORAGE REPOSITORY FILE BROWSER -->
       <div id="filesPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-network-wired"></i> Internal TrueNAS File Storage File Browser Hierarchy</h2>
@@ -462,6 +471,7 @@
         </div>
       </div>
 
+      <!-- PAGE: USER GOVERNANCE CONTROL -->
       <div id="userManagementPage" class="page-view-section hidden-section">
         <div class="section">
           <h2><i class="fas fa-users-cog"></i> IAM Cloud Users Access Governance Controller</h2>
@@ -488,11 +498,13 @@
     </div>
   </div>
 
+  <!-- FLOATING SYSTEM NOTICE TOAST BOX -->
   <div id="customPopupNotice" class="notify-popup">
     <i id="noticeIcon" class="fas fa-info-circle"></i>
     <span id="noticeMessage">Processing state workflow...</span>
   </div>
 
+  <!-- MODAL LAYER: PROJECT MASTER REGISTRATION -->
   <div id="projectModal" class="modal-overlay">
     <div class="modal-container">
       <h3><i class="fas fa-cube"></i> Register New Project Scope</h3>
@@ -515,6 +527,7 @@
     </div>
   </div>
 
+  <!-- MODAL LAYER: BIND SUB-ITEM BUDGET -->
   <div id="rabModal" class="modal-overlay">
     <div class="modal-container">
       <h3><i class="fas fa-tags"></i> Bind New Budget Sub-Item Component</h3>
@@ -537,9 +550,10 @@
     </div>
   </div>
 
+  <!-- MODAL LAYER: IDENTITY IAM MANAGEMENT -->
   <div id="userModal" class="modal-overlay">
     <div class="modal-container">
-      <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Provision New Operational Identity Node</h3>
+      <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Provision New Identity Node</h3>
       <div class="form-group">
         <label>User Account Email Address Link</label>
         <input type="email" id="modalUserEmail" placeholder="e.g. employee@genetek.co.id">
@@ -558,12 +572,13 @@
       </div>
       <input type="hidden" id="editUserId" value="">
       <div class="modal-buttons">
-        <button class="btn btn-danger" id="closeUserModalBtn">Cancel</button>
-        <button class="btn btn-primary" id="saveUserBtn">Save User</button>
+        <button class="btn btn-outline" id="closeUserModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveUserBtn">Save User Data</button>
       </div>
     </div>
   </div>
 
+  <!-- MODAL LAYER: SYSTEM SECURITY RESET EMAIL PROTOCOL -->
   <div id="resetPasswordModal" class="modal-overlay">
     <div class="modal-container" style="max-width: 450px;">
       <h3><i class="fas fa-key"></i> Reset User Password</h3>
@@ -572,11 +587,10 @@
         <input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;">
       </div>
       <div class="info-box" style="margin-bottom: 16px;">
-        <i class="fas fa-envelope"></i>
-        Password reset email will be dispatched to the above address safely via Firebase Auth engine.
+        <i class="fas fa-envelope"></i> Password reset email will be dispatched safely via Firebase Auth engine.
       </div>
       <div class="modal-buttons">
-        <button class="btn btn-danger" id="closeResetModalBtn">Cancel</button>
+        <button class="btn btn-outline" id="closeResetModalBtn">Cancel</button>
         <button class="btn btn-warning" id="confirmResetPasswordBtn">Send Reset Email</button>
       </div>
     </div>
