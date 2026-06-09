@@ -284,13 +284,29 @@ function populateDropdownMenus() {
   if (repSel) {
     const repBackup = repSel.value;
     repSel.innerHTML = '<option value="">-- Pilih Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (repBackup) repSel.value = repBackup;
+    if (repBackup && projects.find(p => p.id === repBackup)) repSel.value = repBackup;
     // Trigger renderReports when selection changes
     repSel.onchange = () => renderReports();
   }
+  
+  // Populate Filter Project RAB
+  const filterRAB = document.getElementById('filterProjectRAB');
+  if (filterRAB) {
+    const prevVal = filterRAB.value;
+    filterRAB.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (prevVal) filterRAB.value = prevVal;
+  }
+  
+  // Populate Claim Project Select
+  const claimSel = document.getElementById('claimProjectSelect');
+  if (claimSel) {
+    const oldVal = claimSel.value;
+    claimSel.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (oldVal) claimSel.value = oldVal;
+  }
 }
 
-// ==================== DASHBOARD MODUL ====================
+// ==================== DASHBOARD MODULE ====================
 function renderDashboard() {
   const totalPaguGlobal = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
   const totalRealisasiGlobal = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
@@ -364,13 +380,13 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.ERC20</td></tr>';
     return;
   }
 
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No RAB items in this project.ERC20</td></tr>';
     return;
   }
 
@@ -400,7 +416,7 @@ function renderUsersTable() {
   if (!tbody) return;
 
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<td><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No users registered.ERD20</td></tr>';
     return;
   }
 
@@ -709,7 +725,7 @@ function renderApprovalList() {
 
   const pendingClaims = claims.filter(c => c.status === 'pending');
   if (pendingClaims.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No pending budget requests currently.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No pending budget requests currently.ERC20</td></tr>';
     return;
   }
 
@@ -812,7 +828,7 @@ function openMonitoringDetailsPopup(projectId) {
 
   if (gridBody) {
     if (items.length === 0) {
-      gridBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No components allocated inside this project context.</td></tr>';
+      gridBody.innerHTML = '</table><td colspan="6" style="text-align:center; color:#64748b;">No components allocated inside this project context.</td></tr>';
     } else {
       gridBody.innerHTML = items.map(i => {
         const balance = i.budget - i.realisasi;
@@ -866,7 +882,7 @@ function renderReports() {
   const statSafe = document.getElementById('repStatSafe');
   
   if (!selectedProjId) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.<tr></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.</td></tr>';
     if (containerTitle) containerTitle.innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
     if (statTotalPagu) statTotalPagu.innerText = "Rp 0";
     if (statTotalRealisasi) statTotalRealisasi.innerText = "Rp 0";
@@ -911,7 +927,7 @@ function renderReports() {
   if (statSafe) statSafe.innerText = safeCount;
 
   if (relatedComponents.length === 0) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.<tr></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.ERC20<tr></tr>';
     destroyCharts();
     return;
   }
@@ -1171,6 +1187,27 @@ function createDetailedCharts(components, project) {
     }
   });
 }
+
+// ==================== EXPORT EXCEL ====================
+document.getElementById('exportExcelReportBtn')?.addEventListener('click', () => {
+  const projectId = document.getElementById('reportProjectFilterSelect')?.value;
+  if (!projectId) { triggerNotification('Pilih proyek terlebih dahulu!', false, 'error'); return; }
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const components = rabItems.filter(i => i.projectId === projectId);
+  const data = components.map(c => ({ 
+    'Komponen': c.itemName, 
+    'Budget': c.budget, 
+    'Realisasi': c.realisasi, 
+    'Sisa': c.budget - c.realisasi, 
+    'Persentase': c.budget > 0 ? `${Math.round((c.realisasi / c.budget) * 100)}%` : '0%' 
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Report_${project.name}`);
+  XLSX.writeFile(wb, `RAB_Report_${project.name}.xlsx`);
+  triggerNotification('Excel exported!');
+});
 
 // ==================== DOCUMENT PRINT EXPORT DRIVERS ====================
 document.getElementById('printPdfReportBtn')?.addEventListener('click', () => {
