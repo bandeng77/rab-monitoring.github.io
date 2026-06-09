@@ -862,253 +862,200 @@ function refreshMonitoringDetailsModalContent(projectId) {
   });
 }
 
-// ==================== REPORTS MODULE ====================
+// ==================== REPORTS MODULE (REFACTORED TO SINGLE PROJECT ANALYTICS & DETAILED CURVE) ====================
 function renderReports() {
-  const filterSelect = document.getElementById('reportProjectFilterSelect');
+  const filterSelect = document.getElementById('reportProjectFilterSelect'); //
   if (!filterSelect) return;
   
-  const selectedProjId = filterSelect.value;
-  const tbody = document.getElementById('reportsTableGridBody');
+  const selectedProjId = filterSelect.value; //
+  const tbody = document.getElementById('reportsTableGridBody'); //
   
-  if (!selectedProjId) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.</td></tr>';
-    document.getElementById('reportContainerProjectTitle').innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
-    document.getElementById('repStatTotalPagu').innerText = "Rp 0";
-    document.getElementById('repStatTotalRealisasi').innerText = "Rp 0";
-    document.getElementById('repStatSisaSaldo').innerText = "Rp 0";
-    document.getElementById('repStatAvgProgress').innerText = "0%";
-    destroyGraphicChartsIfExist();
+  // Jika tidak ada proyek yang dipilih, reset tampilan laporan ke kondisi kosong yang rapi
+  if (!selectedProjId) { //
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center; color:#64748b; padding: 24px; font-style: italic;">
+          <i class="fas fa-chart-line" style="font-size: 1.5rem; display:block; margin-bottom: 8px; color: #94a3b8;"></i>
+          Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.
+        </td>
+      </tr>`; //
+    document.getElementById('reportContainerProjectTitle').innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek'; //
+    document.getElementById('repStatTotalPagu').innerText = "Rp 0"; //
+    document.getElementById('repStatTotalRealisasi').innerText = "Rp 0"; //
+    document.getElementById('repStatSisaSaldo').innerText = "Rp 0"; //
+    document.getElementById('repStatAvgProgress').innerText = "0%"; //
+    destroyGraphicChartsIfExist(); //
     return;
   }
 
-  const proj = projects.find(p => p.id === selectedProjId);
+  const proj = projects.find(p => p.id === selectedProjId); //
   if (!proj) return;
 
-  document.getElementById('reportContainerProjectTitle').innerHTML = `<i class="fas fa-briefcase"></i> Analisis Finansial Terbimbing: <span style="color:#2563eb;">${proj.name}</span> <small style="font-size:0.8rem; color:#64748b; font-weight:400;">(${proj.client})</small>`;
+  // Header judul dengan style info proyek yang bersih
+  document.getElementById('reportContainerProjectTitle').innerHTML = `
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <i class="fas fa-briefcase" style="color: #4f46e5;"></i> 
+      <span>Analisis Finansial Terbimbing: <strong style="color:#2563eb;">${proj.name}</strong></span> 
+      <span class="badge badge-info" style="font-size:0.75rem; font-weight:400; padding: 4px 8px; border-radius: 6px;">Client: ${proj.client}</span>
+    </div>
+  `; //
 
-  const relatedComponents = rabItems.filter(i => i.projectId === selectedProjId);
-  const aggregatePaguAllocated = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
-  const aggregateRealisasiFunds = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
+  const relatedComponents = rabItems.filter(i => i.projectId === selectedProjId); //
+  const aggregatePaguAllocated = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0); //
+  const aggregateRealisasiFunds = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0); //
   
-  // Mengkalkulasi Rata-Rata Progress Kerja Riil Aktual dari Seluruh Sub-Item Komponen Terkait
-  let averageProgressCalculated = 0;
-  if (relatedComponents.length > 0) {
-    const totalWorkProgressSum = relatedComponents.reduce((sum, i) => sum + (parseInt(i.progressKerja) || 0), 0);
-    averageProgressCalculated = Math.round(totalWorkProgressSum / relatedComponents.length);
+  // Hitung rata-rata progres berdasarkan total realisasi dana proyek
+  let averageProgressCalculated = 0; //
+  if (proj.totalBudget > 0) {
+    averageProgressCalculated = Math.round((aggregateRealisasiFunds / proj.totalBudget) * 100);
   }
 
-  // Bind Statistics Values
-  document.getElementById('repStatTotalPagu').innerText = formatRp(proj.totalBudget);
-  document.getElementById('repStatTotalRealisasi').innerText = formatRp(aggregateRealisasiFunds);
-  document.getElementById('repStatSisaSaldo').innerText = formatRp(proj.totalBudget - aggregateRealisasiFunds);
-  document.getElementById('repStatSisaSaldo').style.color = (proj.totalBudget - aggregateRealisasiFunds) < 0 ? '#ef4444' : '#10b981';
-  document.getElementById('repStatAvgProgress').innerText = `${averageProgressCalculated}%`;
+  // Bind Nilai Statistik Eksekutif Proyek
+  document.getElementById('repStatTotalPagu').innerText = formatRp(proj.totalBudget); //
+  document.getElementById('repStatTotalRealisasi').innerText = formatRp(aggregateRealisasiFunds); //
+  
+  const sisaSaldoSistem = proj.totalBudget - aggregateRealisasiFunds; //
+  const sisaSaldoElement = document.getElementById('repStatSisaSaldo'); //
+  sisaSaldoElement.innerText = formatRp(sisaSaldoSistem); //
+  
+  // Berikan warna dinamis (Merah jika over-budget, Hijau jika aman)
+  if (sisaSaldoSistem < 0) {
+    sisaSaldoElement.style.color = '#ef4444'; // Merah
+    sisaSaldoElement.style.fontWeight = '700';
+  } else {
+    sisaSaldoElement.style.color = '#10b981'; // Hijau
+    sisaSaldoElement.style.fontWeight = '700';
+  }
+  
+  document.getElementById('repStatAvgProgress').innerText = `${averageProgressCalculated}%`; //
 
-  if (relatedComponents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.</td></tr>';
-    destroyGraphicChartsIfExist();
+  // Kondisi jika komponen RAB proyek belum diinput
+  if (relatedComponents.length === 0) { //
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center; color:#94a3b8; padding: 24px;">
+          <i class="fas fa-exclamation-triangle" style="display:block; margin-bottom: 8px; color: #f59e0b;"></i>
+          Belum ada item breakdown teralokasi pada project ini.
+        </td>
+      </tr>`; //
+    destroyGraphicChartsIfExist(); //
     return;
   }
 
-  // Populate Grid Representation
+  // Populasi baris tabel data audit ledger rincian komponen RAB
   tbody.innerHTML = relatedComponents.map(i => {
-    const rem = i.budget - i.realisasi;
-    const progressTextVal = i.progressKerja !== undefined ? i.progressKerja : 0;
+    const rem = i.budget - i.realisasi; //
+    const itemPct = i.budget > 0 ? Math.round((i.realisasi / i.budget) * 100) : 0; //
     
-    // Penentuan Warna Teks Kondisional pada Report Sesuai Persentase Manual Kerja
-    let reportTextColor = '#ef4444'; // Red (<30%)
-    if (progressTextVal >= 30 && progressTextVal < 70) reportTextColor = '#d97706'; // Orange
-    else if (progressTextVal >= 70 && progressTextVal < 100) reportTextColor = '#2563eb'; // Blue
-    else if (progressTextVal === 100) reportTextColor = '#059669'; // Green
-
-    return `<tr>
-      <td><strong>${i.itemName}</strong></td>
-      <td>${formatRp(i.budget)}</td>
-      <td>${formatRp(i.realisasi)}</td>
-      <td style="font-weight:600; color:${rem < 0 ? '#ef4444':'#10b981'}">${formatRp(rem)}</td>
-      <td style="font-weight:800; color:${reportTextColor};">${progressTextVal}%</td>
-      <td>${getBadge(i.realisasi, i.budget)}</td>
-    </tr>`;
+    return `
+      <tr style="transition: background 0.2s; &:hover { background-color: #f8fafc; }">
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;"><strong>${i.itemName}</strong></td> //
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${formatRp(i.budget)}</td> //
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color:#2563eb; font-family: monospace;">${formatRp(i.realisasi)}</td> //
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight:600; font-family: monospace; color:${rem < 0 ? '#ef4444':'#10b981'}">
+          ${formatRp(rem)}
+        </td> //
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight:700; color:#475569; min-width: 40px;">${itemPct}%</span> //
+            <div style="width: 100%; background-color: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+              <div style="width: ${itemPct > 100 ? 100 : itemPct}%; background-color: ${rem < 0 ? '#ef4444' : itemPct >= 90 ? '#f59e0b' : '#10b981'}; height: 100%;"></div>
+            </div>
+          </div>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${getBadge(i.realisasi, i.budget)}</td> //
+      </tr>`;
   }).join('');
 
-  renderAdvancedGraphicReportCharts(relatedComponents);
+  // Re-Inisialisasi sistem rendering diagram grafik Chart.js
+  renderAdvancedGraphicReportCharts(relatedComponents); //
 }
 
 function destroyGraphicChartsIfExist() {
-  if (lineCurveChartInstanceRef) { lineCurveChartInstanceRef.destroy(); lineCurveChartInstanceRef = null; }
-  if (pieShareChartInstanceRef) { pieShareChartInstanceRef.destroy(); pieShareChartInstanceRef = null; }
+  if (lineCurveChartInstanceRef) { lineCurveChartInstanceRef.destroy(); lineCurveChartInstanceRef = null; } //
+  if (pieShareChartInstanceRef) { pieShareChartInstanceRef.destroy(); pieShareChartInstanceRef = null; } //
 }
 
 function renderAdvancedGraphicReportCharts(components) {
-  destroyGraphicChartsIfExist();
+  destroyGraphicChartsIfExist(); //
 
-  const labels = components.map(c => c.itemName.length > 22 ? c.itemName.substring(0,20)+'...' : c.itemName);
-  const budgetDataset = components.map(c => c.budget);
-  const realisasiDataset = components.map(c => c.realisasi);
+  // Batasi panjang string label agar layout chart tidak hancur atau bertabrakan
+  const labels = components.map(c => c.itemName.length > 22 ? c.itemName.substring(0,20)+'...' : c.itemName); //
+  const budgetDataset = components.map(c => c.budget); //
+  const realisasiDataset = components.map(c => c.realisasi); //
 
-  // 1. Detailed Multi-Curve Execution Area/Line Chart Instance
-  const lineCtx = document.getElementById('projectDistributionLineCurveChart')?.getContext('2d');
+  // 1. Pembuatan Line Area Chart (Kurva Alokasi Anggaran vs Realisasi Aktual)
+  const lineCtx = document.getElementById('projectDistributionLineCurveChart')?.getContext('2d'); //
   if (lineCtx) {
-    lineCurveChartInstanceRef = new Chart(lineCtx, {
+    lineCurveChartInstanceRef = new Chart(lineCtx, { //
       type: 'line',
       data: {
-        labels: labels,
+        labels: labels, //
         datasets: [
           {
-            label: 'Pagu Alokasi Anggaran',
-            data: budgetDataset,
-            borderColor: '#6366f1',
-            backgroundColor: 'rgba(99, 102, 241, 0.06)',
-            fill: true,
-            tension: 0.35,
-            borderWidth: 3,
-            pointBackgroundColor: '#6366f1'
+            label: 'Pagu Alokasi Anggaran', //
+            data: budgetDataset, //
+            borderColor: '#6366f1', //
+            backgroundColor: 'rgba(99, 102, 241, 0.06)', //
+            fill: true, //
+            tension: 0.35, //
+            borderWidth: 3, //
+            pointBackgroundColor: '#6366f1' //
           },
           {
-            label: 'Realisasi Pengeluaran Aktual',
-            data: realisasiDataset,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.12)',
-            fill: true,
-            tension: 0.35,
-            borderWidth: 3,
-            pointBackgroundColor: '#2563eb'
+            label: 'Realisasi Pengeluaran Aktual', //
+            data: realisasiDataset, //
+            borderColor: '#2563eb', //
+            backgroundColor: 'rgba(37, 99, 235, 0.12)', //
+            fill: true, //
+            tension: 0.35, //
+            borderWidth: 3, //
+            pointBackgroundColor: '#2563eb' //
           }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, //
+        maintainAspectRatio: false, //
         plugins: {
-          legend: { position: 'top', labels: { font: { weight: 600 } } }
+          legend: { position: 'top', labels: { font: { weight: 600, family: 'Inter' } } }
         },
         scales: {
-          y: { grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Inter' } } },
-          x: { grid: { display: false } }
+          y: { grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Inter' } } }, //
+          x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } } //
         }
       }
     });
   }
 
-  // 2. Proportional Share Donut/Pie Chart Instance
-  const pieCtx = document.getElementById('projectCompositionPieShareChart')?.getContext('2d');
+  // 2. Pembuatan Proportional Doughnut Chart (Komposisi Distribusi Biaya Aktual)
+  const pieCtx = document.getElementById('projectCompositionPieShareChart')?.getContext('2d'); //
   if (pieCtx) {
-    const pieColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
-    const backgroundColorsGenerated = realisasiDataset.map((_, i) => pieColors[i % pieColors.length]);
+    const pieColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6']; //
+    const backgroundColorsGenerated = realisasiDataset.map((_, i) => pieColors[i % pieColors.length]); //
 
-    pieShareChartInstanceRef = new Chart(pieCtx, {
+    pieShareChartInstanceRef = new Chart(pieCtx, { //
       type: 'doughnut',
       data: {
-        labels: labels,
+        labels: labels, //
         datasets: [{
-          data: realisasiDataset.map(v => v === 0 ? 1 : v),
-          backgroundColor: backgroundColorsGenerated,
-          borderWidth: 2
+          data: realisasiDataset.map(v => v === 0 ? 0.1 : v), // Cegah bug visual Chart.js jika bernilai nol
+          backgroundColor: backgroundColorsGenerated, //
+          borderWidth: 2 //
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, //
+        maintainAspectRatio: false, //
         plugins: {
-          legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+          legend: { 
+            position: 'right', 
+            labels: { boxWidth: 12, font: { size: 10, family: 'Inter' } } //
+          }
         }
       }
     });
   }
-}
-
-document.getElementById('reportProjectFilterSelect')?.addEventListener('change', renderReports);
-
-// ==================== DOCUMENT PRINT EXPORT DRIVERS ====================
-document.getElementById('printPdfReportBtn')?.addEventListener('click', () => {
-  const currentFilterVal = document.getElementById('reportProjectFilterSelect').value;
-  if (!currentFilterVal) { triggerNotification('Tentukan project target laporan dahulu!', false, 'error'); return; }
-  
-  const element = document.getElementById('printableReportAreaContainer');
-  const config = {
-    margin: 10,
-    filename: `RAB_Pro_Report_Project_${currentFilterVal}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-  };
-  html2pdf().set(config).from(element).save();
-});
-
-document.getElementById('exportExcelReportBtn')?.addEventListener('click', () => {
-  const currentFilterVal = document.getElementById('reportProjectFilterSelect').value;
-  if (!currentFilterVal) { triggerNotification('Tentukan project target laporan dahulu!', false, 'error'); return; }
-  
-  const selectedProj = projects.find(p => p.id === currentFilterVal);
-  const listComponents = rabItems.filter(i => i.projectId === currentFilterVal);
-  
-  const formattedRows = listComponents.map((i, idx) => ({
-    "No": idx + 1,
-    "Nama Komponen": i.itemName,
-    "Pagu Anggaran": i.budget,
-    "Realisasi Anggaran": i.realisasi,
-    "Sisa Saldo": i.budget - i.realisasi,
-    "Persentase Kerja": i.progressKerja !== undefined ? `${i.progressKerja}%` : '0%'
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(formattedRows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "RAB Audit Ledger");
-  XLSX.writeFile(workbook, `RAB_Pro_Ledger_${selectedProj ? selectedProj.name.replace(/[^a-z0-9]/gi, '_') : 'Project'}.xlsx`);
-});
-
-// ==================== HIERARCHICAL TREE ENGINE ====================
-function renderTreeHierarchy() {
-  const rootUl = document.getElementById('rootFileTreeDirectory');
-  if (!rootUl) return;
-
-  if (truenasFiles.length === 0) {
-    rootUl.innerHTML = '<li style="color:#64748b; padding-left:10px;">No documents compiled in backup cluster stack.</li>';
-    return;
-  }
-
-  let hierarchicalStructureMap = {};
-
-  truenasFiles.forEach(file => {
-    const associatedProject = projects.find(p => p.id === file.projectId);
-    const projectNameString = associatedProject ? associatedProject.name : "Unsorted System Attachments";
-
-    if (!hierarchicalStructureMap[projectNameString]) {
-      hierarchicalStructureMap[projectNameString] = [];
-    }
-    hierarchicalStructureMap[projectNameString].push(file);
-  });
-
-  rootUl.innerHTML = `
-    <li class="root-node"><i class="fas fa-network-wired"></i> Network NAS Storage File-System Root</li>
-    ${Object.keys(hierarchicalStructureMap).map(folderName => `
-      <li style="padding-left: 12px;">
-        <div class="folder-node"><i class="fas fa-folder-open"></i> ${folderName}</div>
-        <ul style="list-style-type:none; padding-left:12px;">
-          ${hierarchicalStructureMap[folderName].map(f => `
-            <li class="file-node">
-              <i class="fas fa-file-invoice"></i>
-              <span>${f.fileName} <small style="font-size:0.75rem; color:#64748b;">(${f.uploadedBy || 'System'})</small></span>
-              <div class="action-links">
-                <a class="preview-link" href="${API_BASE_URL}/preview/${f.fileId || f.id}" target="_blank"><i class="fas fa-external-link-alt"></i> View</a>
-                ${currentRole === 'Administrator' ? `<button class="delete-file-btn" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : ''}
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      </li>
-    `).join('')}
-  `;
-
-  rootUl.querySelectorAll('.delete-file-btn').forEach(btn => {
-     btn.addEventListener('click', () => {
-       const fId = btn.getAttribute('data-id');
-       if (confirm('Erase selected file from network tracking clusters permanently?')) {
-          remove(ref(db, `truenasFiles/${fId}`));
-          triggerNotification('Document association scrubbed successfully.', true, 'info');
-       }
-     });
-  });
 }
 
 // ==================== DOCUMENT SYNC UPLOAD HANDLER ====================
