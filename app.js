@@ -82,16 +82,17 @@ function getBadge(real, budget) {
   return '<span class="badge badge-success">Safe</span>'; 
 }
 
+// Progress Bar Render Utility
 function createProgressBarMarkup(real, budget) {
   let percent = 0;
   if (budget > 0) {
     percent = Math.round((real / budget) * 100);
   }
-  if (percent > 100) percent = 100; 
+  if (percent > 100) percent = 100;
   
-  let barColor = '#10b981'; 
-  if (percent >= 90) barColor = '#f59e0b'; 
-  if (real > budget) barColor = '#ef4444'; 
+  let barColor = '#10b981';
+  if (percent >= 90) barColor = '#f59e0b';
+  if (real > budget) barColor = '#ef4444';
 
   const rawPercentageNum = budget > 0 ? Math.round((real / budget) * 100) : 0;
 
@@ -275,7 +276,7 @@ function populateDropdownMenus() {
   const repSel = document.getElementById('reportProjectFilterSelect');
   if (repSel) {
     const repBackup = repSel.value;
-    repSel.innerHTML = '<option value="">-- Pilih Project Mandiri --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    repSel.innerHTML = '<option value="">-- Pilih Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (repBackup) repSel.value = repBackup;
   }
 }
@@ -301,7 +302,13 @@ function renderDashboard() {
     const limitedSorted = [...rabItems].sort((a,b) => b.budget - a.budget).slice(0, 6);
     tbody.innerHTML = limitedSorted.map(i => {
       const p = projects.find(proj => proj.id === i.projectId);
-      return `<tr><td>${p ? p.name : 'Unassigned'}</td><td>${i.itemName}</td><td>${formatRp(i.budget)}</td><td>${formatRp(i.realisasi)}</td><td>${getBadge(i.realisasi, i.budget)}</td></tr>`;
+      return `<tr>
+        <td>${p ? p.name : 'Unassigned'}</td>
+        <td>${i.itemName}</td>
+        <td>${formatRp(i.budget)}</td>
+        <td>${formatRp(i.realisasi)}</td>
+        <td>${getBadge(i.realisasi, i.budget)}</td>
+      </tr>`;
     }).join('');
   }
 }
@@ -320,7 +327,7 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="font-weight:700; color:${remainingPagu < 0 ? '#ef4444':'#10b981'}">${formatRp(remainingPagu)}</td>
         <td><button class="btn btn-danger btn-del-proj" style="padding: 4px 12px; border-radius:12px; font-size:0.75rem;" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
-       </tr>`;
+      </tr>`;
     }).join('');
 
     tbody.querySelectorAll('.btn-del-proj').forEach(btn => {
@@ -405,7 +412,7 @@ function renderUsersTable() {
             <button class="btn-delete" data-uid="${u.id}" data-email="${u.email}"><i class="fas fa-trash"></i> Delete</button>
           ` : `<span class="badge badge-secondary"><i class="fas fa-user-shield"></i> Your Account</span>`}
         ` : `<span class="badge badge-secondary">Admin Only</span>`}
-       </td>
+        </td>
     </tr>`;
   }).join('');
 
@@ -535,7 +542,7 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
     budget,
     realisasi: 0
   }).then(() => {
-    document.getElementById('rabModal').classList.add('active');
+    document.getElementById('rabModal').classList.remove('active');
     triggerNotification('RAB component item saved successfully!');
   });
 });
@@ -686,7 +693,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   });
 });
 
-// ==================== BUDGET APPROVAL SYSTEM ====================
+// ==================== BUDGET APPROVAL CORE SYSTEM ====================
 function renderApprovalList() {
   const tbody = document.getElementById('approvalTableBody');
   if (!tbody) return;
@@ -714,7 +721,7 @@ function renderApprovalList() {
           <button class="btn-edit btn-appr-ok" style="background:#d1fae5; color:#065f46;" data-id="${c.id}"><i class="fas fa-check"></i> Approve</button>
           <button class="btn-delete btn-appr-no" style="background:#fee2e2; color:#991b1b;" data-id="${c.id}"><i class="fas fa-times"></i> Reject</button>
         </div>
-      </td>
+       </td>
     </tr>`;
   }).join('');
 
@@ -773,7 +780,7 @@ function renderMonitoringTable() {
       <td style="font-weight:600;">${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(totalSpent)}</td>
       <td>${statusBadge}</td>
-    </tr>`;
+    </table>`;
   }).join('');
 
   tbody.querySelectorAll('.project-row').forEach(row => {
@@ -813,7 +820,11 @@ function openMonitoringDetailsPopup(projectId) {
   document.getElementById('monitoringDetailsModal').classList.add('active');
 }
 
-// ==================== REPORTS MODULE (MURNI TABEL & DATA BERSIH DI MENU) ====================
+// ==================== REPORTS MODULE WITH DETAILED CHARTS ====================
+let currentChart = null;
+let currentPieChart = null;
+let currentBarChart = null;
+
 function renderReports() {
   const filterSelect = document.getElementById('reportProjectFilterSelect');
   if (!filterSelect) return;
@@ -822,12 +833,18 @@ function renderReports() {
   const tbody = document.getElementById('reportsTableGridBody');
   
   if (!selectedProjId) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan bagan rincian audit.</td></tr>';
     document.getElementById('reportContainerProjectTitle').innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
     document.getElementById('repStatTotalPagu').innerText = "Rp 0";
     document.getElementById('repStatTotalRealisasi').innerText = "Rp 0";
     document.getElementById('repStatSisaSaldo').innerText = "Rp 0";
     document.getElementById('repStatAvgProgress').innerText = "0%";
+    document.getElementById('repStatOverBudget').innerText = "0";
+    document.getElementById('repStatNearLimit').innerText = "0";
+    document.getElementById('repStatSafe').innerText = "0";
+    if (currentChart) currentChart.destroy();
+    if (currentPieChart) currentPieChart.destroy();
+    if (currentBarChart) currentBarChart.destroy();
     return;
   }
 
@@ -837,28 +854,37 @@ function renderReports() {
   document.getElementById('reportContainerProjectTitle').innerHTML = `<i class="fas fa-briefcase"></i> Analisis Finansial Terbimbing: <span style="color:#2563eb;">${proj.name}</span> <small style="font-size:0.8rem; color:#64748b; font-weight:400;">(${proj.client})</small>`;
 
   const relatedComponents = rabItems.filter(i => i.projectId === selectedProjId);
+  const aggregatePaguAllocated = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
   const aggregateRealisasiFunds = relatedComponents.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
   
   let averageProgressCalculated = 0;
-  if (proj.totalBudget > 0) {
-    averageProgressCalculated = Math.round((aggregateRealisasiFunds / proj.totalBudget) * 100);
+  if (aggregatePaguAllocated > 0) {
+    averageProgressCalculated = Math.round((aggregateRealisasiFunds / aggregatePaguAllocated) * 100);
   }
 
-  // Bind UI Table Statistics
+  // Calculate statistics for badges
+  const overBudgetCount = relatedComponents.filter(i => i.realisasi > i.budget).length;
+  const nearLimitCount = relatedComponents.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
+  const safeCount = relatedComponents.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
+
   document.getElementById('repStatTotalPagu').innerText = formatRp(proj.totalBudget);
   document.getElementById('repStatTotalRealisasi').innerText = formatRp(aggregateRealisasiFunds);
-  
-  const currentSisa = proj.totalBudget - aggregateRealisasiFunds;
-  document.getElementById('repStatSisaSaldo').innerText = formatRp(currentSisa);
-  document.getElementById('repStatSisaSaldo').style.color = currentSisa < 0 ? '#ef4444' : '#10b981';
+  document.getElementById('repStatSisaSaldo').innerText = formatRp(proj.totalBudget - aggregateRealisasiFunds);
+  document.getElementById('repStatSisaSaldo').style.color = (proj.totalBudget - aggregateRealisasiFunds) < 0 ? '#ef4444' : '#10b981';
   document.getElementById('repStatAvgProgress').innerText = `${averageProgressCalculated}%`;
+  document.getElementById('repStatOverBudget').innerText = overBudgetCount;
+  document.getElementById('repStatNearLimit').innerText = nearLimitCount;
+  document.getElementById('repStatSafe').innerText = safeCount;
 
   if (relatedComponents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Belum ada item breakdown teralokasi pada project ini.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada item breakdown teralokasi pada project ini.</td></tr>';
+    if (currentChart) currentChart.destroy();
+    if (currentPieChart) currentPieChart.destroy();
+    if (currentBarChart) currentBarChart.destroy();
     return;
   }
 
-  // Populasi Data Utama Table Report (Bersih tanpa grafik bawaan)
+  // Populate Grid Representation
   tbody.innerHTML = relatedComponents.map(i => {
     const rem = i.budget - i.realisasi;
     const itemPct = i.budget > 0 ? Math.round((i.realisasi / i.budget) * 100) : 0;
@@ -871,107 +897,266 @@ function renderReports() {
       <td>${getBadge(i.realisasi, i.budget)}</td>
     </tr>`;
   }).join('');
+
+  // Create Detailed Charts
+  createDetailedCharts(relatedComponents, proj);
+}
+
+function createDetailedCharts(components, project) {
+  // Destroy existing charts
+  if (currentChart) currentChart.destroy();
+  if (currentPieChart) currentPieChart.destroy();
+  if (currentBarChart) currentBarChart.destroy();
+
+  const chartCanvas = document.getElementById('reportChartCanvas');
+  const pieCanvas = document.getElementById('reportPieChartCanvas');
+  const barCanvas = document.getElementById('reportBarChartCanvas');
+
+  if (!chartCanvas || !pieCanvas || !barCanvas) return;
+
+  const ctx = chartCanvas.getContext('2d');
+  const pieCtx = pieCanvas.getContext('2d');
+  const barCtx = barCanvas.getContext('2d');
+
+  // Sort components by budget for better visualization
+  const sortedComponents = [...components].sort((a, b) => b.budget - a.budget);
+  const labels = sortedComponents.map(c => c.itemName.length > 20 ? c.itemName.substring(0, 17) + '...' : c.itemName);
+  const budgetData = sortedComponents.map(c => c.budget);
+  const realizationData = sortedComponents.map(c => c.realisasi);
+
+  // Bar Chart - Budget vs Realization
+  currentChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Budget (Rp)',
+          data: budgetData,
+          backgroundColor: 'rgba(54, 162, 235, 0.7)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: 'Realization (Rp)',
+          data: realizationData,
+          backgroundColor: 'rgba(255, 99, 132, 0.7)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { size: 12 } }
+        },
+        title: {
+          display: true,
+          text: `Budget vs Realization Comparison - ${project.name}`,
+          font: { size: 14, weight: 'bold' }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += formatRp(context.parsed.y);
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return formatRp(value);
+            }
+          },
+          title: {
+            display: true,
+            text: 'Amount (Rp)',
+            font: { weight: 'bold' }
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Component Name',
+            font: { weight: 'bold' }
+          },
+          ticks: {
+            rotate: 45,
+            maxRotation: 45,
+            minRotation: 45,
+            font: { size: 10 }
+          }
+        }
+      }
+    }
+  });
+
+  // Pie Chart - Budget Distribution
+  const pieLabels = sortedComponents.map(c => c.itemName.length > 15 ? c.itemName.substring(0, 12) + '...' : c.itemName);
+  const pieColors = [
+    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+    '#FF6384', '#C9CBCF', '#4CAF50', '#FF5722', '#9C27B0', '#00BCD4'
+  ];
+  
+  currentPieChart = new Chart(pieCtx, {
+    type: 'pie',
+    data: {
+      labels: pieLabels,
+      datasets: [{
+        data: budgetData,
+        backgroundColor: pieColors.slice(0, budgetData.length),
+        borderWidth: 1,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { font: { size: 10 } }
+        },
+        title: {
+          display: true,
+          text: `Budget Distribution by Component - ${project.name}`,
+          font: { size: 14, weight: 'bold' }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = budgetData.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${formatRp(value)} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Bar Chart - Remaining Budget
+  const remainingData = sortedComponents.map(c => Math.max(0, c.budget - c.realisasi));
+  const overBudgetData = sortedComponents.map(c => Math.max(0, c.realisasi - c.budget));
+  
+  currentBarChart = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Remaining Budget (Rp)',
+          data: remainingData,
+          backgroundColor: 'rgba(75, 192, 192, 0.7)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: 'Over Budget (Rp)',
+          data: overBudgetData,
+          backgroundColor: 'rgba(255, 99, 132, 0.7)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { size: 12 } }
+        },
+        title: {
+          display: true,
+          text: `Budget Health Status - ${project.name}`,
+          font: { size: 14, weight: 'bold' }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += formatRp(context.parsed.y);
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return formatRp(value);
+            }
+          },
+          title: {
+            display: true,
+            text: 'Amount (Rp)',
+            font: { weight: 'bold' }
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Component Name',
+            font: { weight: 'bold' }
+          },
+          ticks: {
+            rotate: 45,
+            maxRotation: 45,
+            minRotation: 45,
+            font: { size: 10 }
+          }
+        }
+      }
+    }
+  });
 }
 
 // Bind Change Event for Report Dropdown Filter Target
 document.getElementById('reportProjectFilterSelect')?.addEventListener('change', renderReports);
 
-// ==================== DOCUMENT PRINT EXPORT DRIVERS (DENGAN GRAFIK BAYANGAN BAGI PDF) ====================
-document.getElementById('printPdfReportBtn')?.addEventListener('click', async () => {
+// ==================== DOCUMENT PRINT EXPORT DRIVERS ====================
+document.getElementById('printPdfReportBtn')?.addEventListener('click', () => {
   const currentFilterVal = document.getElementById('reportProjectFilterSelect').value;
   if (!currentFilterVal) { triggerNotification('Tentukan project target laporan dahulu!', false, 'error'); return; }
   
-  const proj = projects.find(p => p.id === currentFilterVal);
-  if (!proj) return;
-
-  const relatedComponents = rabItems.filter(i => i.projectId === currentFilterVal);
-  if (relatedComponents.length === 0) { triggerNotification('Tidak ada data komponen untuk dicetak.', false, 'error'); return; }
-
-  // 1. MEMBUAT ELEMENT CLONE DAN SHADOW CONTAINER UNTUK MEMBENTUK STRUKTUR PDF YANG MENARIK
-  const originalContainer = document.getElementById('printableReportAreaContainer');
-  const pdfWorkspaceClone = originalContainer.cloneNode(true);
-  
-  // Buat pembungkus sementara agar tidak terlihat di antarmuka sistem menu utama
-  const shadowWrapper = document.createElement('div');
-  shadowWrapper.style.position = 'absolute';
-  shadowWrapper.style.left = '-9999px';
-  shadowWrapper.style.top = '-9999px';
-  shadowWrapper.style.width = '1100px'; // Set standard workspace width
-  shadowWrapper.appendChild(pdfWorkspaceClone);
-  document.body.appendChild(shadowWrapper);
-
-  // 2. EMBED CONTAINER GRAFIK BARU KHUSUS UNTUK HASIL REPORT PDF DI BAWAH TABEL
-  const chartSectionHTML = `
-    <div style="margin-top: 35px; border-top: 2px dashed #cbd5e1; padding-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <div style="background: #ffffff; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h4 style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 15px; text-align: center; font-family: 'Inter', sans-serif;">
-          Kurva Komparasi Budget vs Realisasi Aktual
-        </h4>
-        <div style="height: 260px; position: relative;">
-          <canvas id="pdfShadowLineCurveChart"></canvas>
-        </div>
-      </div>
-      <div style="background: #ffffff; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h4 style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 15px; text-align: center; font-family: 'Inter', sans-serif;">
-          Komposisi Distribusi Biaya Realisasi Proyek
-        </h4>
-        <div style="height: 260px; position: relative;">
-          <canvas id="pdfShadowDoughnutShareChart"></canvas>
-        </div>
-      </div>
-    </div>
-  `;
-  pdfWorkspaceClone.appendChild(document.createRange().createContextualFragment(chartSectionHTML));
-
-  // 3. GENERATE GRAFIK SECARA IN-MEMORY MENGGUNAKAN CHART.JS SEBELUM DI-RENDER KE PDF
-  const labels = relatedComponents.map(c => c.itemName.length > 18 ? c.itemName.substring(0, 16) + '..' : c.itemName);
-  const budgetDataset = relatedComponents.map(c => c.budget);
-  const realisasiDataset = relatedComponents.map(c => c.realisasi);
-
-  // Render Line Curve Chart Bayangan
-  const lineCtx = shadowWrapper.querySelector('#pdfShadowLineCurveChart').getContext('2d');
-  const shadowLineChart = new Chart(lineCtx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'Pagu Anggaran', data: budgetDataset, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.05)', fill: true, tension: 0.3, borderWidth: 2 },
-        { label: 'Realisasi Aktual', data: realisasiDataset, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3, borderWidth: 2 }
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'top' } } }
-  });
-
-  // Render Proportional Doughnut Chart Bayangan
-  const doughnutCtx = shadowWrapper.querySelector('#pdfShadowDoughnutShareChart').getContext('2d');
-  const pieColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#01b6d4'];
-  const shadowDoughnutChart = new Chart(doughnutCtx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{ data: realisasiDataset.map(v => v === 0 ? 0.1 : v), backgroundColor: realisasiDataset.map((_, i) => pieColors[i % pieColors.length]) }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 9 } } } } }
-  });
-
-  // Berikan jeda waktu 300ms agar engine Chart.js selesai menggambar objek secara optimal
-  setTimeout(() => {
-    const config = {
-      margin: [10, 10, 10, 10],
-      filename: `Laporan_Finansial_PDF_${proj.name.replace(/\s+/g, '_')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-    };
-
-    html2pdf().set(config).from(pdfWorkspaceClone).save().then(() => {
-      // Hancurkan instance chart memori & hapus dari DOM setelah proses unduh selesai
-      shadowLineChart.destroy();
-      shadowDoughnutChart.destroy();
-      document.body.removeChild(shadowWrapper);
-      triggerNotification('Laporan komprehensif PDF berhasil dibuat!');
-    });
-  }, 300);
+  const element = document.getElementById('printableReportAreaContainer');
+  const config = {
+    margin: 10,
+    filename: `RAB_Pro_Report_Project_${currentFilterVal}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+  html2pdf().set(config).from(element).save();
 });
 
 // ==================== HIERARCHICAL TREE ENGINE ====================
@@ -985,6 +1170,7 @@ function renderTreeHierarchy() {
   }
 
   let hierarchicalStructureMap = {};
+
   truenasFiles.forEach(file => {
     const associatedProject = projects.find(p => p.id === file.projectId);
     const projectNameString = associatedProject ? associatedProject.name : "Unsorted System Attachments";
