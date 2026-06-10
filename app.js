@@ -845,7 +845,7 @@ function renderReports() {
     
     html += `<tr style="background-color: #f1f5f9;">
       <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
-    </tr>`;
+     </tr>`;
     
     if (items.length === 0) {
       html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
@@ -860,7 +860,7 @@ function renderReports() {
           <td class="text-right">${formatRp(itemRemaining)}</td>
           <td class="text-center">${itemPercentage}%</td>
           <td class="text-center">${getBadge(item.realisasi, item.budget)}</td>
-        </tr>`;
+         </tr>`;
       });
     }
     
@@ -871,7 +871,7 @@ function renderReports() {
       <td class="text-right">${formatRp(remaining)}</td>
       <td class="text-center">${percentage}%</td>
       <td></td>
-    </tr>`;
+     </tr>`;
   });
   
   tbody.innerHTML = html;
@@ -1002,14 +1002,14 @@ async function downloadPDF() {
     projectDetailsHtml += `
       <tr style="background-color: #f1f5f9;">
         <td colspan="6" style="padding: 10px; font-weight: bold;">${escapeHtml(p.name)} (${escapeHtml(p.client)})</td>
-      </tr>
+       </tr>
     `;
     
     if (projectItems.length === 0) {
       projectDetailsHtml += `
         <tr>
           <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
-        </tr>
+         </tr>
       `;
     } else {
       projectItems.forEach(item => {
@@ -1027,7 +1027,7 @@ async function downloadPDF() {
                 ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
               </span>
             </td>
-          </tr>
+           </tr>
         `;
       });
     }
@@ -1040,7 +1040,7 @@ async function downloadPDF() {
         <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
         <td style="padding: 8px; text-align: center;">${percentage}%</td>
         <td style="padding: 8px; text-align: center;"></td>
-      </tr>
+       </tr>
     `;
   });
   
@@ -1058,7 +1058,7 @@ async function downloadPDF() {
           </span>
         </td>
         <td style="padding: 8px;">${c.tanggal || '-'}</td>
-      </tr>
+       </tr>
     `;
   });
   
@@ -1262,7 +1262,7 @@ async function downloadPDF() {
               <th class="text-right">Balance (IDR)</th>
               <th class="text-center">Usage %</th>
               <th class="text-center">Status</th>
-            </tr>
+             </tr>
           </thead>
           <tbody>
             ${projectDetailsHtml}
@@ -1281,7 +1281,7 @@ async function downloadPDF() {
               <th class="text-right">Amount</th>
               <th class="text-center">Status</th>
               <th>Date</th>
-            </tr>
+             </tr>
           </thead>
           <tbody>
             ${claimsHtml}
@@ -1321,37 +1321,94 @@ async function downloadPDF() {
 
 document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
-// ==================== STORAGE SERVER (FILES) ====================
+// ==================== STORAGE SERVER (FILES) WITH PREVIEW ====================
+// File upload handler
+document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fileInputElement = document.getElementById('trueNasFile');
+  const attachedProjectId = document.getElementById('uploadProjectSelect').value;
+
+  if (!attachedProjectId || fileInputElement.files.length === 0) {
+    triggerNotification('Invalid file or project data!', false, 'error');
+    return;
+  }
+
+  const fileObj = fileInputElement.files[0];
+  const resolvedProjectObj = projects.find(p => p.id === attachedProjectId);
+  
+  if (!resolvedProjectObj) {
+    triggerNotification('Project not found!', false, 'error');
+    return;
+  }
+  
+  if (fileObj.size > 10 * 1024 * 1024) {
+    triggerNotification('File size maximum 10 MB!', false, 'error');
+    return;
+  }
+  
+  triggerNotification('Uploading file...', true, 'info');
+  
+  const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}`;
+
+  const dataPayload = new FormData();
+  dataPayload.append('path', serverStoragePath); 
+  dataPayload.append('file', fileObj);
+
+  fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: dataPayload })
+  .then(async response => {
+    if (!response.ok) throw new Error('Server rejected file upload');
+    return response.json();
+  })
+  .then(data => {
+    const pushedFileRef = push(ref(db, 'truenasFiles'));
+    set(pushedFileRef, {
+      projectId: attachedProjectId,
+      projectName: resolvedProjectObj.name,
+      fileName: fileObj.name,
+      fileSize: fileObj.size,
+      uploadedBy: currentUserEmail,
+      timestamp: Date.now(),
+      uploadedAt: new Date().toLocaleString(),
+      fullServerDiskPath: `${serverStoragePath}/${fileObj.name}`
+    }).then(() => {
+      fileInputElement.value = '';
+      document.getElementById('uploadProjectSelect').value = '';
+      triggerNotification('File uploaded successfully to storage!', true);
+    });
+  })
+  .catch(error => {
+    console.error("Upload error:", error);
+    triggerNotification(`Upload failed: ${error.message}`, false, 'error');
+  });
+});
+
+// Delete file function (exposed globally)
 window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
   if(!confirm("Delete this file permanently from storage?")) return;
-  
-  if (fullPath) {
-    fetch(`${API_BASE_URL}/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filePath: fullPath })
-    })
-    .then(async res => {
-      if(!res.ok) throw new Error("Failed to delete physical file");
-      return res.json();
-    })
-    .then(() => {
-      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-        triggerNotification("File permanently deleted from storage.");
-      });
-    })
-    .catch(err => {
-      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-        triggerNotification("Metadata removed from database.", false);
-      });
-    });
-  } else {
-    remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
-      triggerNotification("File record removed from database.");
-    });
-  }
-};
 
+  fetch(`${API_BASE_URL}/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filePath: fullPath })
+  })
+  .then(async res => {
+    if(!res.ok) throw new Error("Failed to delete physical file");
+    return res.json();
+  })
+  .then(() => {
+    remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+      triggerNotification("File permanently deleted from storage.");
+    });
+  })
+  .catch(err => {
+    remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+      triggerNotification("Metadata removed from database.", false);
+    });
+  });
+}
+
+// Render file tree hierarchy with preview functionality
 function renderTreeHierarchy() {
   const treeWrapper = document.getElementById('rootFileTreeDirectory');
   if (!treeWrapper) return;
@@ -1405,83 +1462,7 @@ function renderTreeHierarchy() {
   });
   
   treeWrapper.innerHTML = innerLayoutCodeHtml + `</ul></li>`;
-  
-  if (projects.length > 0 && truenasFiles.length === 0) {
-    const noFilesMsg = document.createElement('div');
-    noFilesMsg.style.padding = '20px';
-    noFilesMsg.style.textAlign = 'center';
-    noFilesMsg.style.color = '#64748b';
-    noFilesMsg.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Belum ada file yang diupload. Silakan upload dokumen melalui menu Upload Document.';
-    if (treeWrapper.querySelectorAll('.file-node').length === 0 && projects.length > 0) {
-      // Add message if no files exist
-    }
-  }
 }
-
-// ==================== UPLOAD DOCUMENT ====================
-document.getElementById('startUploadDocBtn')?.addEventListener('click', () => {
-  const pId = document.getElementById('uploadProjectSelect')?.value;
-  const fileInput = document.getElementById('documentLocalFile');
-  
-  if (!pId) {
-    triggerNotification('Pilih project target terlebih dahulu!', false, 'error');
-    return;
-  }
-  
-  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-    triggerNotification('Pilih file yang akan diupload!', false, 'error');
-    return;
-  }
-  
-  const file = fileInput.files[0];
-  const resolvedProjectObj = projects.find(p => p.id === pId);
-  
-  if (!resolvedProjectObj) {
-    triggerNotification('Project not found!', false, 'error');
-    return;
-  }
-  
-  if (file.size > 10 * 1024 * 1024) {
-    triggerNotification('Ukuran file maksimal 10 MB!', false, 'error');
-    return;
-  }
-  
-  triggerNotification('Mengupload file...', true, 'info');
-  
-  const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}`;
-  
-  const dataPayload = new FormData();
-  dataPayload.append('path', serverStoragePath);
-  dataPayload.append('file', file);
-  
-  fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: dataPayload })
-    .then(async response => {
-      if (!response.ok) throw new Error('Server rejected file upload');
-      return response.json();
-    })
-    .then(data => {
-      const newFileRef = push(ref(db, 'truenasFiles'));
-      set(newFileRef, {
-        projectId: pId,
-        projectName: resolvedProjectObj.name,
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedBy: currentUserEmail,
-        timestamp: Date.now(),
-        uploadedAt: new Date().toLocaleString(),
-        fullServerDiskPath: `${serverStoragePath}/${file.name}`
-      }).then(() => {
-        fileInput.value = '';
-        document.getElementById('uploadProjectSelect').value = '';
-        triggerNotification('File uploaded successfully to storage!', true);
-      });
-    })
-    .catch(error => {
-      console.error("Upload error:", error);
-      triggerNotification(`Upload failed: ${error.message}`, false, 'error');
-    });
-});
 
 // ==================== MODAL CONTROLS ====================
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => {
