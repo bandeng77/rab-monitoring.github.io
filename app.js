@@ -34,8 +34,6 @@ let currentUserUid = "";
 
 // Chart instances
 let mainBarChartInstance = null;
-let systemLineReportChartInstance = null;
-let reportBarChartInstance = null;
 let reportPieChartInstance = null;
 let reportDoughnutChartInstance = null;
 let reportUtilizationChartInstance = null;
@@ -88,16 +86,21 @@ function getBadge(real, budget) {
   return '<span class="badge badge-success">Safe</span>'; 
 }
 
-function createProgressBarMarkup(real, budget) {
+function getProgressColor(percent) {
+  if (percent >= 100) return '#ef4444';
+  if (percent >= 90) return '#f59e0b';
+  return '#10b981';
+}
+
+function createProgressBarMarkup(real, budget, progress = null) {
   let percent = 0;
-  if (budget > 0) {
-    percent = Math.round((real / budget) * 100);
+  if (progress !== null && !isNaN(progress)) {
+    percent = Math.min(Math.max(parseFloat(progress), 0), 100);
+  } else if (budget > 0) {
+    percent = Math.min(Math.round((real / budget) * 100), 100);
   }
-  if (percent > 100) percent = 100;
   
-  let barColor = '#10b981';
-  if (percent >= 90) barColor = '#f59e0b';
-  if (real > budget) barColor = '#ef4444';
+  let barColor = getProgressColor(percent);
 
   return `
     <div class="progress-wrapper">
@@ -121,6 +124,23 @@ function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// ==================== MANUAL PROGRESS UPDATE ====================
+async function updateManualProgress(itemId, progressValue) {
+  try {
+    const progress = Math.min(Math.max(parseFloat(progressValue), 0), 100);
+    await update(ref(db, `rabItems/${itemId}`), {
+      manualProgress: progress,
+      updatedAt: new Date().toLocaleString()
+    });
+    triggerNotification(`Progress updated to ${progress}%`, true);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating progress:", error);
+    triggerNotification("Failed to update progress!", false, 'error');
+    return { success: false };
+  }
 }
 
 // ==================== USER MANAGEMENT FUNCTIONS ====================
@@ -280,7 +300,7 @@ function updateWholeUI() {
   renderMonitoringTable();
   renderReports();
   refreshGraphicCharts();
-  renderReportCharts();
+  renderReportDiagrams();
   populateDropdownMenus();
 }
 
@@ -445,7 +465,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-     </tr>`;
+     </td>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -577,7 +597,8 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
     projectId: currentSelectedProjectId,
     itemName: name,
     budget: budget,
-    realisasi: 0
+    realisasi: 0,
+    manualProgress: 0
   }).then(() => {
     document.getElementById('rabModal').classList.remove('active');
     triggerNotification('RAB item added successfully!');
@@ -676,7 +697,7 @@ function renderClaimView() {
         <td style="font-size:0.8rem;">${summaries}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
-       </tr>`;
+      </tr>`;
     }).join('');
   }
 }
@@ -737,7 +758,7 @@ function renderApprovalList() {
       const r = rabItems.find(rab => rab.id === ci.itemId);
       return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'}</small>`;
     }).join('<br>') : '-';
-    return `<tr>
+    return `<table>
       <td><strong>${p ? p.name : '-'}</strong></td>
       <td style="font-size:0.8rem;">${details}</td>
       <td>${formatRp(c.totalNominal)}</td>
@@ -797,10 +818,9 @@ function renderMonitoringTable() {
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
       <td>${status}</td>
-    </tr>`;
+     </tr>`;
   }).join('');
   
-  // Fix: Attach click event to each row for opening detail modal
   document.querySelectorAll('#monitoringMainGridBody .project-row').forEach(row => {
     row.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;
@@ -822,16 +842,38 @@ function openMonitoringDetail(projectId) {
   
   if (tbody) {
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No components yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No components yet</td></tr>';
     } else {
-      tbody.innerHTML = items.map(i => `<tr>
-        <td><strong>${i.itemName}</strong></td>
-        <td>${formatRp(i.budget)}</td>
-        <td>${formatRp(i.realisasi)}</td>
-        <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
-        <td>${getBadge(i.realisasi, i.budget)}</td>
-        <td>${createProgressBarMarkup(i.realisasi, i.budget)}</td>
-       </tr>`).join('');
+      tbody.innerHTML = items.map(i => {
+        const progressPercent = i.manualProgress !== undefined && i.manualProgress !== null ? i.manualProgress : (i.budget > 0 ? Math.min(Math.round((i.realisasi / i.budget) * 100), 100) : 0);
+        return `<tr>
+          <td><strong>${i.itemName}</strong></td>
+          <td>${formatRp(i.budget)}</td>
+          <td>${formatRp(i.realisasi)}</td>
+          <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
+          <td>${getBadge(i.realisasi, i.budget)}</td>
+          <td>${createProgressBarMarkup(i.realisasi, i.budget, progressPercent)}</td>
+          <td>
+            <div class="manual-progress-group">
+              <input type="number" class="manual-progress-input" id="progress_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
+              <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+      
+      document.querySelectorAll('.progress-update-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const itemId = btn.getAttribute('data-id');
+          const input = document.getElementById(`progress_${itemId}`);
+          const newProgress = parseFloat(input.value);
+          if (!isNaN(newProgress) && newProgress >= 0 && newProgress <= 100) {
+            await updateManualProgress(itemId, newProgress);
+          } else {
+            triggerNotification('Please enter a value between 0 and 100', false, 'error');
+          }
+        });
+      });
     }
   }
   document.getElementById('monitoringDetailsModal').classList.add('active');
@@ -882,7 +924,7 @@ function renderReports() {
       <td class="text-right">${formatRp(totalReal)}</td>
       <td class="text-right">${formatRp(remaining)}</td>
       <td class="text-center">${percentage}%</td>
-      <td></td>
+      <td class="text-center"></td>
      </tr>`;
   });
   
@@ -926,83 +968,14 @@ function refreshGraphicCharts() {
       }
     });
   }
-  
-  const lineCtx = document.getElementById('laporanChart')?.getContext('2d');
-  if (lineCtx) {
-    if (systemLineReportChartInstance) systemLineReportChartInstance.destroy();
-    systemLineReportChartInstance = new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: projects.map(p => p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name),
-        datasets: [
-          { 
-            label: 'Allocation Curve (Budget)', 
-            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.budget, 0) / 1e6), 
-            borderColor: '#8b5cf6', 
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            fill: true, 
-            tension: 0.3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          },
-          { 
-            label: 'Absorption Curve (Realization)', 
-            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.realisasi, 0) / 1e6), 
-            borderColor: '#f97316', 
-            backgroundColor: 'rgba(249, 115, 22, 0.1)',
-            fill: true, 
-            tension: 0.3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }
-        ]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: true,
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: Rp ${ctx.raw.toFixed(2)} Juta`
-            }
-          }
-        }
-      }
-    });
-  }
 }
 
-// ==================== REPORT CHARTS (4 DIAGRAMS) ====================
-function renderReportCharts() {
+// ==================== REPORT DIAGRAMS (Only Diagrams, No Line Charts) ====================
+function renderReportDiagrams() {
   if (projects.length === 0) return;
   
   const projectNames = projects.map(p => p.name.length > 12 ? p.name.substring(0, 10) + '...' : p.name);
   const totalBudgets = projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0));
-  const totalRealizations = projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0));
-  
-  // Bar Chart - Budget vs Realization
-  const barCtx = document.getElementById('reportBarChart')?.getContext('2d');
-  if (barCtx) {
-    if (reportBarChartInstance) reportBarChartInstance.destroy();
-    reportBarChartInstance = new Chart(barCtx, {
-      type: 'bar',
-      data: {
-        labels: projectNames,
-        datasets: [
-          { label: 'Budget (IDR)', data: totalBudgets, backgroundColor: '#3b82f6', borderRadius: 6 },
-          { label: 'Realization (IDR)', data: totalRealizations, backgroundColor: '#10b981', borderRadius: 6 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatRp(ctx.raw)}` } }
-        },
-        scales: { y: { ticks: { callback: (val) => formatRp(val) } } }
-      }
-    });
-  }
   
   // Pie Chart - Budget Distribution
   const pieCtx = document.getElementById('reportPieChart')?.getContext('2d');
@@ -1102,16 +1075,10 @@ async function downloadPDF() {
   const approvedClaims = claims.filter(c => c.status === 'approved').length;
   const rejectedClaims = claims.filter(c => c.status === 'rejected').length;
   
-  const chartCanvas = document.getElementById('laporanChart');
-  let chartImage = '';
-  if (chartCanvas) {
-    chartImage = chartCanvas.toDataURL('image/png');
-  }
-  
-  const barChartCanvas = document.getElementById('budgetChart');
+  const chartCanvas = document.getElementById('budgetChart');
   let barChartImage = '';
-  if (barChartCanvas) {
-    barChartImage = barChartCanvas.toDataURL('image/png');
+  if (chartCanvas) {
+    barChartImage = chartCanvas.toDataURL('image/png');
   }
   
   let projectDetailsHtml = '';
@@ -1125,14 +1092,14 @@ async function downloadPDF() {
     projectDetailsHtml += `
       <tr style="background-color: #f1f5f9;">
         <td colspan="6" style="padding: 10px; font-weight: bold;">${escapeHtml(p.name)} (${escapeHtml(p.client)})</td>
-      </tr>
+       </tr>
     `;
     
     if (projectItems.length === 0) {
       projectDetailsHtml += `
         <tr>
           <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
-        </tr>
+         </tr>
       `;
     } else {
       projectItems.forEach(item => {
@@ -1150,7 +1117,7 @@ async function downloadPDF() {
                 ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
               </span>
             </td>
-          </tr>
+           </tr>
         `;
       });
     }
@@ -1163,7 +1130,7 @@ async function downloadPDF() {
         <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
         <td style="padding: 8px; text-align: center;">${percentage}%</td>
         <td style="padding: 8px; text-align: center;"></td>
-      </tr>
+       </tr>
     `;
   });
   
@@ -1361,15 +1328,6 @@ async function downloadPDF() {
         <div class="section-title">Budget vs Realization Chart</div>
         <div class="chart-container">
           <img src="${barChartImage}" alt="Budget Chart" style="max-width: 100%;">
-        </div>
-      </div>
-      ` : ''}
-      
-      ${chartImage ? `
-      <div class="section">
-        <div class="section-title">Trend Analysis Chart</div>
-        <div class="chart-container">
-          <img src="${chartImage}" alt="Trend Chart" style="max-width: 100%;">
         </div>
       </div>
       ` : ''}
@@ -1658,8 +1616,7 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     
     if (page === 'reports') {
       setTimeout(() => renderReports(), 100);
-      setTimeout(() => refreshGraphicCharts(), 150);
-      setTimeout(() => renderReportCharts(), 200);
+      setTimeout(() => renderReportDiagrams(), 150);
     }
     
     if (page === 'files') {
