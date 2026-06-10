@@ -31,6 +31,7 @@ let currentSelectedProjectId = null;
 let currentRole = ""; 
 let currentUserEmail = "";
 let currentUserUid = "";
+let currentSelectedReportProject = "all";
 
 // Chart instances
 let mainBarChartInstance = null;
@@ -134,6 +135,23 @@ async function updateManualProgress(itemId, progressValue) {
       manualProgress: progress,
       updatedAt: new Date().toLocaleString()
     });
+    
+    // Update the display immediately without closing modal
+    const progressElement = document.querySelector(`#progress_display_${itemId}`);
+    if (progressElement) {
+      const percent = progress;
+      const barColor = getProgressColor(percent);
+      progressElement.querySelector('.progress-bar-fill').style.width = `${percent}%`;
+      progressElement.querySelector('.progress-bar-fill').style.backgroundColor = barColor;
+      progressElement.querySelector('.progress-percent-label').innerText = `${percent}%`;
+    }
+    
+    // Also update the status badge if needed
+    const rabItem = rabItems.find(r => r.id === itemId);
+    if (rabItem) {
+      rabItem.manualProgress = progress;
+    }
+    
     triggerNotification(`Progress updated to ${progress}%`, true);
     return { success: true };
   } catch (error) {
@@ -265,6 +283,7 @@ function initCloudDatabaseListeners() {
     const data = snapshot.val();
     projects = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     updateWholeUI();
+    populateReportProjectSelect();
   });
 
   onValue(ref(db, 'rabItems'), (snapshot) => {
@@ -298,10 +317,23 @@ function updateWholeUI() {
   renderApprovalList();
   renderClaimView();
   renderMonitoringTable();
-  renderReports();
+  renderReportsByProject();
   refreshGraphicCharts();
-  renderReportDiagrams();
+  renderReportDiagramsByProject();
   populateDropdownMenus();
+}
+
+function populateReportProjectSelect() {
+  const reportSelect = document.getElementById('reportProjectSelect');
+  if (reportSelect) {
+    const oldVal = reportSelect.value;
+    reportSelect.innerHTML = '<option value="all">-- Semua Project --</option>' + 
+      projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    if (oldVal && (oldVal === 'all' || projects.find(p => p.id === oldVal))) {
+      reportSelect.value = oldVal;
+    }
+    currentSelectedReportProject = reportSelect.value;
+  }
 }
 
 function populateDropdownMenus() {
@@ -310,14 +342,6 @@ function populateDropdownMenus() {
     const valBackup = upSel.value;
     upSel.innerHTML = '<option value="">-- Select Target Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (valBackup) upSel.value = valBackup;
-  }
-  
-  const repSel = document.getElementById('reportProjectFilterSelect');
-  if (repSel) {
-    const repBackup = repSel.value;
-    repSel.innerHTML = '<option value="">-- Pilih Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (repBackup && projects.find(p => p.id === repBackup)) repSel.value = repBackup;
-    repSel.onchange = () => renderReports();
   }
   
   const filterRAB = document.getElementById('filterProjectRAB');
@@ -465,7 +489,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-     </td>`;
+     </tr>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -549,6 +573,12 @@ async function saveNewUser() {
 document.getElementById('filterProjectRAB')?.addEventListener('change', (e) => {
   currentSelectedProjectId = e.target.value;
   renderRABItemsSubTable();
+});
+
+document.getElementById('reportProjectSelect')?.addEventListener('change', (e) => {
+  currentSelectedReportProject = e.target.value;
+  renderReportsByProject();
+  renderReportDiagramsByProject();
 });
 
 document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
@@ -758,7 +788,7 @@ function renderApprovalList() {
       const r = rabItems.find(rab => rab.id === ci.itemId);
       return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'}</small>`;
     }).join('<br>') : '-';
-    return `<table>
+    return `<tr>
       <td><strong>${p ? p.name : '-'}</strong></td>
       <td style="font-size:0.8rem;">${details}</td>
       <td>${formatRp(c.totalNominal)}</td>
@@ -818,7 +848,7 @@ function renderMonitoringTable() {
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
       <td>${status}</td>
-     </tr>`;
+    </tr>`;
   }).join('');
   
   document.querySelectorAll('#monitoringMainGridBody .project-row').forEach(row => {
@@ -846,29 +876,40 @@ function openMonitoringDetail(projectId) {
     } else {
       tbody.innerHTML = items.map(i => {
         const progressPercent = i.manualProgress !== undefined && i.manualProgress !== null ? i.manualProgress : (i.budget > 0 ? Math.min(Math.round((i.realisasi / i.budget) * 100), 100) : 0);
+        const barColor = getProgressColor(progressPercent);
         return `<tr>
           <td><strong>${i.itemName}</strong></td>
           <td>${formatRp(i.budget)}</td>
           <td>${formatRp(i.realisasi)}</td>
           <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
           <td>${getBadge(i.realisasi, i.budget)}</td>
-          <td>${createProgressBarMarkup(i.realisasi, i.budget, progressPercent)}</td>
+          <td>
+            <div class="progress-wrapper" id="progress_display_${i.id}">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${progressPercent}%; background-color: ${barColor};"></div>
+              </div>
+              <span class="progress-percent-label">${progressPercent}%</span>
+            </div>
+          </td>
           <td>
             <div class="manual-progress-group">
-              <input type="number" class="manual-progress-input" id="progress_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
+              <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
               <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
             </div>
           </td>
         </tr>`;
       }).join('');
       
+      // Attach event listeners to buttons
       document.querySelectorAll('.progress-update-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const itemId = btn.getAttribute('data-id');
-          const input = document.getElementById(`progress_${itemId}`);
+          const input = document.getElementById(`progress_input_${itemId}`);
           const newProgress = parseFloat(input.value);
           if (!isNaN(newProgress) && newProgress >= 0 && newProgress <= 100) {
             await updateManualProgress(itemId, newProgress);
+            // Also update the input field to reflect saved value
+            input.value = newProgress;
           } else {
             triggerNotification('Please enter a value between 0 and 100', false, 'error');
           }
@@ -879,19 +920,27 @@ function openMonitoringDetail(projectId) {
   document.getElementById('monitoringDetailsModal').classList.add('active');
 }
 
-// ==================== REPORTS ====================
-function renderReports() {
+// ==================== REPORTS PER PROJECT ====================
+function renderReportsByProject() {
   const tbody = document.getElementById('reportsTableGridBody');
   if (!tbody) return;
   
-  if (projects.length === 0) {
+  let filteredProjects = projects;
+  let filteredRabItems = rabItems;
+  
+  if (currentSelectedReportProject !== 'all') {
+    filteredProjects = projects.filter(p => p.id === currentSelectedReportProject);
+    filteredRabItems = rabItems.filter(i => i.projectId === currentSelectedReportProject);
+  }
+  
+  if (filteredProjects.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No projects available</td></tr>';
     return;
   }
   
   let html = '';
-  projects.forEach(p => {
-    const items = rabItems.filter(i => i.projectId === p.id);
+  filteredProjects.forEach(p => {
+    const items = filteredRabItems.filter(i => i.projectId === p.id);
     const totalBudget = items.reduce((sum, i) => sum + i.budget, 0);
     const totalReal = items.reduce((sum, i) => sum + i.realisasi, 0);
     const remaining = totalBudget - totalReal;
@@ -914,7 +963,7 @@ function renderReports() {
           <td class="text-right">${formatRp(itemRemaining)}</td>
           <td class="text-center">${itemPercentage}%</td>
           <td class="text-center">${getBadge(item.realisasi, item.budget)}</td>
-         </tr>`;
+        </tr>`;
       });
     }
     
@@ -925,7 +974,7 @@ function renderReports() {
       <td class="text-right">${formatRp(remaining)}</td>
       <td class="text-center">${percentage}%</td>
       <td class="text-center"></td>
-     </tr>`;
+    </tr>`;
   });
   
   tbody.innerHTML = html;
@@ -970,12 +1019,28 @@ function refreshGraphicCharts() {
   }
 }
 
-// ==================== REPORT DIAGRAMS (Only Diagrams, No Line Charts) ====================
-function renderReportDiagrams() {
-  if (projects.length === 0) return;
+// ==================== REPORT DIAGRAMS PER PROJECT ====================
+function renderReportDiagramsByProject() {
+  let filteredProjects = projects;
+  let filteredRabItems = rabItems;
   
-  const projectNames = projects.map(p => p.name.length > 12 ? p.name.substring(0, 10) + '...' : p.name);
-  const totalBudgets = projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0));
+  if (currentSelectedReportProject !== 'all') {
+    filteredProjects = projects.filter(p => p.id === currentSelectedReportProject);
+    filteredRabItems = rabItems.filter(i => i.projectId === currentSelectedReportProject);
+  }
+  
+  if (filteredProjects.length === 0) {
+    // Clear charts if no data
+    if (reportPieChartInstance) reportPieChartInstance.destroy();
+    if (reportDoughnutChartInstance) reportDoughnutChartInstance.destroy();
+    if (reportUtilizationChartInstance) reportUtilizationChartInstance.destroy();
+    return;
+  }
+  
+  const projectNames = filteredProjects.map(p => p.name.length > 12 ? p.name.substring(0, 10) + '...' : p.name);
+  const totalBudgets = filteredProjects.map(p => 
+    filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0)
+  );
   
   // Pie Chart - Budget Distribution
   const pieCtx = document.getElementById('reportPieChart')?.getContext('2d');
@@ -985,7 +1050,10 @@ function renderReportDiagrams() {
       type: 'pie',
       data: {
         labels: projectNames,
-        datasets: [{ data: totalBudgets, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'] }]
+        datasets: [{ 
+          data: totalBudgets, 
+          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'] 
+        }]
       },
       options: { 
         responsive: true, 
@@ -993,7 +1061,11 @@ function renderReportDiagrams() {
         plugins: { 
           tooltip: { 
             callbacks: { 
-              label: (ctx) => `${ctx.label}: ${formatRp(ctx.raw)} (${((ctx.raw / totalBudgets.reduce((a,b)=>a+b,0)) * 100).toFixed(1)}%)` 
+              label: (ctx) => {
+                const total = totalBudgets.reduce((a,b) => a + b, 0);
+                const percentage = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                return `${ctx.label}: ${formatRp(ctx.raw)} (${percentage}%)`;
+              } 
             } 
           } 
         } 
@@ -1001,10 +1073,12 @@ function renderReportDiagrams() {
     });
   }
   
-  // Doughnut Chart - Project Health
-  const overBudget = rabItems.filter(i => i.realisasi > i.budget).length;
-  const nearLimit = rabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
-  const safe = rabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
+  // Doughnut Chart - Project Health (based on filtered items)
+  const filteredItems = filteredRabItems;
+  const overBudget = filteredItems.filter(i => i.realisasi > i.budget).length;
+  const nearLimit = filteredItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
+  const safe = filteredItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
+  const noBudget = filteredItems.filter(i => i.budget === 0).length;
   
   const doughnutCtx = document.getElementById('reportDoughnutChart')?.getContext('2d');
   if (doughnutCtx) {
@@ -1020,9 +1094,9 @@ function renderReportDiagrams() {
   }
   
   // Horizontal Bar Chart - Budget Utilization
-  const utilization = projects.map(p => {
-    const budget = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0);
-    const real = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0);
+  const utilization = filteredProjects.map(p => {
+    const budget = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0);
+    const real = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0);
     return budget > 0 ? Math.min(Math.round((real / budget) * 100), 100) : 0;
   });
   
@@ -1067,13 +1141,23 @@ async function downloadPDF() {
     day: 'numeric'
   });
   
-  const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
-  const totalRealization = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
-  const totalProjects = projects.length;
-  const overBudgetItems = rabItems.filter(i => i.realisasi > i.budget).length;
-  const pendingClaims = claims.filter(c => c.status === 'pending').length;
-  const approvedClaims = claims.filter(c => c.status === 'approved').length;
-  const rejectedClaims = claims.filter(c => c.status === 'rejected').length;
+  let filteredProjects = projects;
+  let filteredRabItems = rabItems;
+  let filteredClaims = claims;
+  
+  if (currentSelectedReportProject !== 'all') {
+    filteredProjects = projects.filter(p => p.id === currentSelectedReportProject);
+    filteredRabItems = rabItems.filter(i => i.projectId === currentSelectedReportProject);
+    filteredClaims = claims.filter(c => c.projectId === currentSelectedReportProject);
+  }
+  
+  const totalBudget = filteredProjects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+  const totalRealization = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
+  const totalProjects = filteredProjects.length;
+  const overBudgetItems = filteredRabItems.filter(i => i.realisasi > i.budget).length;
+  const pendingClaims = filteredClaims.filter(c => c.status === 'pending').length;
+  const approvedClaims = filteredClaims.filter(c => c.status === 'approved').length;
+  const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
   
   const chartCanvas = document.getElementById('budgetChart');
   let barChartImage = '';
@@ -1082,8 +1166,8 @@ async function downloadPDF() {
   }
   
   let projectDetailsHtml = '';
-  projects.forEach(p => {
-    const projectItems = rabItems.filter(i => i.projectId === p.id);
+  filteredProjects.forEach(p => {
+    const projectItems = filteredRabItems.filter(i => i.projectId === p.id);
     const projectBudget = projectItems.reduce((sum, i) => sum + i.budget, 0);
     const projectRealization = projectItems.reduce((sum, i) => sum + i.realisasi, 0);
     const projectBalance = projectBudget - projectRealization;
@@ -1099,7 +1183,7 @@ async function downloadPDF() {
       projectDetailsHtml += `
         <tr>
           <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
-         </tr>
+        </tr>
       `;
     } else {
       projectItems.forEach(item => {
@@ -1117,7 +1201,7 @@ async function downloadPDF() {
                 ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
               </span>
             </td>
-           </tr>
+          </td>
         `;
       });
     }
@@ -1130,34 +1214,38 @@ async function downloadPDF() {
         <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
         <td style="padding: 8px; text-align: center;">${percentage}%</td>
         <td style="padding: 8px; text-align: center;"></td>
-       </tr>
+      </tr>
     `;
   });
   
   let claimsHtml = '';
-  claims.forEach(c => {
-    const p = projects.find(pr => pr.id === c.projectId);
+  filteredClaims.forEach(c => {
+    const p = filteredProjects.find(pr => pr.id === c.projectId);
     claimsHtml += `
       <tr>
         <td style="padding: 8px;">${p ? escapeHtml(p.name) : 'Unknown'}</td>
-        <td style="padding: 8px;">${c.vendor || '-'}</td>
+        <td style="padding: 8px;">${c.items && c.items[0] ? c.items[0].vendor || '-' : '-'}</td>
         <td style="padding: 8px; text-align: right;">${formatRp(c.totalNominal)}</td>
         <td style="padding: 8px; text-align: center;">
           <span style="padding: 2px 8px; border-radius: 12px; ${c.status === 'approved' ? 'background: #d1fae5; color: #065f46;' : (c.status === 'rejected' ? 'background: #fee2e2; color: #991b1b;' : 'background: #fed7aa; color: #9a3412;')}">
             ${c.status.toUpperCase()}
           </span>
         </td>
-        <td style="padding: 8px;">${c.tanggal || '-'}</td>
+        <td style="padding: 8px;">${c.items && c.items[0] ? c.items[0].tanggal || '-' : '-'}</td>
       </tr>
     `;
   });
+  
+  const reportTitle = currentSelectedReportProject !== 'all' 
+    ? `RAB Report - ${filteredProjects[0]?.name || 'Project'}`
+    : 'RAB Financial Report - All Projects';
   
   const reportHTML = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>RAB Financial Report - ${currentDate}</title>
+      <title>${reportTitle} - ${currentDate}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1276,7 +1364,7 @@ async function downloadPDF() {
     </head>
     <body>
       <div class="header">
-        <h1>RAB MONITORING REPORT</h1>
+        <h1>${reportTitle}</h1>
         <h2>Financial Report & Budget Tracking</h2>
         <p>Generated on: ${currentDate}</p>
       </div>
@@ -1319,11 +1407,11 @@ async function downloadPDF() {
         </div>
         <div class="summary-card">
           <h3>Total RAB Items</h3>
-          <div class="value">${rabItems.length}</div>
+          <div class="value">${filteredRabItems.length}</div>
         </div>
       </div>
       
-      ${barChartImage ? `
+      ${barChartImage && currentSelectedReportProject === 'all' ? `
       <div class="section">
         <div class="section-title">Budget vs Realization Chart</div>
         <div class="chart-container">
@@ -1353,7 +1441,7 @@ async function downloadPDF() {
       
       <div class="section">
         <div class="section-title">Claim History</div>
-        ${claims.length > 0 ? `
+        ${claimsHtml ? `
         <table>
           <thead>
             <tr>
@@ -1381,7 +1469,7 @@ async function downloadPDF() {
   
   const opt = {
     margin: [0.5, 0.5, 0.5, 0.5],
-    filename: `RAB_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+    filename: `${reportTitle.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, letterRendering: true, useCORS: true },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
@@ -1615,8 +1703,8 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     }
     
     if (page === 'reports') {
-      setTimeout(() => renderReports(), 100);
-      setTimeout(() => renderReportDiagrams(), 150);
+      setTimeout(() => renderReportsByProject(), 100);
+      setTimeout(() => renderReportDiagramsByProject(), 150);
     }
     
     if (page === 'files') {
