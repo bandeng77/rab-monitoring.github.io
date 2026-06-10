@@ -33,9 +33,8 @@ let currentUserEmail = "";
 let currentUserUid = "";
 
 // Chart instances
-let comparisonChart = null;
-let pieChart = null;
-let healthChart = null;
+let mainBarChartInstance = null;
+let systemLineReportChartInstance = null;
 
 const rolePermissions = {
   "Administrator": ['dashboard', 'master-project', 'claim-request', 'approval-budget', 'monitoring', 'reports', 'upload-document', 'files', 'user-management'],
@@ -75,6 +74,10 @@ function formatRp(val) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0); 
 }
 
+function formatNumber(val) {
+  return new Intl.NumberFormat('id-ID').format(val || 0);
+}
+
 function getBadge(real, budget) { 
   if (real > budget) return '<span class="badge badge-danger">Over Budget</span>'; 
   if (budget > 0 && (real / budget) >= 0.9) return '<span class="badge badge-warning">Near Limit</span>'; 
@@ -102,6 +105,20 @@ function createProgressBarMarkup(real, budget) {
   `;
 }
 
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
 // ==================== USER MANAGEMENT FUNCTIONS ====================
 async function createNewUser(email, password, role) {
   try {
@@ -118,6 +135,7 @@ async function createNewUser(email, password, role) {
     triggerNotification(`User ${email} successfully created with role ${role}!`, true);
     return { success: true, uid: user.uid };
   } catch (error) {
+    console.error("Error creating user:", error);
     let errorMessage = "Failed to create user: ";
     if (error.code === 'auth/email-already-in-use') {
       errorMessage += "Email already registered!";
@@ -143,6 +161,7 @@ async function updateUserRole(uid, newRole) {
     triggerNotification(`User role updated to ${newRole}!`, true);
     return { success: true };
   } catch (error) {
+    console.error("Error updating user role:", error);
     triggerNotification("Failed to update user role!", false, 'error');
     return { success: false };
   }
@@ -154,6 +173,7 @@ async function resetUserPassword(email) {
     triggerNotification(`Password reset email sent to ${email}.`, true, 'info');
     return { success: true };
   } catch (error) {
+    console.error("Error resetting password:", error);
     triggerNotification("Failed to reset password: " + error.message, false, 'error');
     return { success: false };
   }
@@ -170,6 +190,7 @@ async function deleteUserAccount(uid, email) {
     triggerNotification(`User ${email} has been removed from database.`, true, 'info');
     return { success: true };
   } catch (error) {
+    console.error("Error deleting user:", error);
     triggerNotification("Failed to delete user!", false, 'error');
     return { success: false };
   }
@@ -237,7 +258,6 @@ function initCloudDatabaseListeners() {
   onValue(ref(db, 'truenasFiles'), (snapshot) => {
     const data = snapshot.val();
     truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    console.log("Files loaded:", truenasFiles.length);
     renderTreeHierarchy();
   });
 
@@ -255,8 +275,8 @@ function updateWholeUI() {
   renderClaimView();
   renderMonitoringTable();
   renderReports();
+  refreshGraphicCharts();
   populateDropdownMenus();
-  renderTreeHierarchy();
 }
 
 function populateDropdownMenus() {
@@ -264,7 +284,7 @@ function populateDropdownMenus() {
   if (upSel) {
     const valBackup = upSel.value;
     upSel.innerHTML = '<option value="">-- Select Target Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (valBackup && projects.find(p => p.id === valBackup)) upSel.value = valBackup;
+    if (valBackup) upSel.value = valBackup;
   }
   
   const repSel = document.getElementById('reportProjectFilterSelect');
@@ -363,7 +383,7 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<td><td colspan="5" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
     return;
   }
   
@@ -420,7 +440,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-    </table>`;
+    </tr>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -500,7 +520,7 @@ async function saveNewUser() {
   }
 }
 
-// ==================== EVENT LISTENERS SETUP ====================
+// ==================== EVENT LISTENERS ====================
 document.getElementById('filterProjectRAB')?.addEventListener('change', (e) => {
   currentSelectedProjectId = e.target.value;
   renderRABItemsSubTable();
@@ -720,7 +740,7 @@ function renderApprovalList() {
       <td class="action-buttons">
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
         <button class="btn-appr-no" data-id="${c.id}" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times"></i> Reject</button>
-      </td>
+       </td>
     </tr>`;
   }).join('');
   
@@ -799,320 +819,603 @@ function openMonitoringDetail(projectId) {
         <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
         <td>${getBadge(i.realisasi, i.budget)}</td>
         <td>${createProgressBarMarkup(i.realisasi, i.budget)}</td>
-      </tr>`).join('');
+       </tr>`).join('');
     }
   }
   document.getElementById('monitoringDetailsModal').classList.add('active');
 }
 
-// ==================== REPORTS WITH DETAILED CHARTS ====================
-function destroyCharts() {
-  if (comparisonChart) { comparisonChart.destroy(); comparisonChart = null; }
-  if (pieChart) { pieChart.destroy(); pieChart = null; }
-  if (healthChart) { healthChart.destroy(); healthChart = null; }
-}
-
+// ==================== REPORTS ====================
 function renderReports() {
-  const filterSelect = document.getElementById('reportProjectFilterSelect');
-  if (!filterSelect) return;
-  
-  const projectId = filterSelect.value;
   const tbody = document.getElementById('reportsTableGridBody');
-  const containerTitle = document.getElementById('reportContainerProjectTitle');
-  const statTotalPagu = document.getElementById('repStatTotalPagu');
-  const statTotalRealisasi = document.getElementById('repStatTotalRealisasi');
-  const statSisaSaldo = document.getElementById('repStatSisaSaldo');
-  const statAvgProgress = document.getElementById('repStatAvgProgress');
-  const statOverBudget = document.getElementById('repStatOverBudget');
-  const statNearLimit = document.getElementById('repStatNearLimit');
-  const statSafe = document.getElementById('repStatSafe');
+  if (!tbody) return;
   
-  if (!projectId) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Pilih proyek terlebih dahulu</td></tr>';
-    if (containerTitle) containerTitle.innerHTML = '<i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek';
-    if (statTotalPagu) statTotalPagu.innerText = "Rp 0";
-    if (statTotalRealisasi) statTotalRealisasi.innerText = "Rp 0";
-    if (statSisaSaldo) statSisaSaldo.innerText = "Rp 0";
-    if (statAvgProgress) statAvgProgress.innerText = "0%";
-    if (statOverBudget) statOverBudget.innerText = "0";
-    if (statNearLimit) statNearLimit.innerText = "0";
-    if (statSafe) statSafe.innerText = "0";
-    destroyCharts();
+  if (projects.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No projects available</td></tr>';
     return;
   }
   
-  const proj = projects.find(p => p.id === projectId);
-  if (!proj) return;
-  
-  if (containerTitle) {
-    containerTitle.innerHTML = `<i class="fas fa-briefcase"></i> Analisis Finansial: <span style="color:#2563eb;">${proj.name}</span> <small>(${proj.client})</small>`;
-  }
-  
-  const components = rabItems.filter(i => i.projectId === projectId);
-  const totalReal = components.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
-  const avgProgress = proj.totalBudget > 0 ? Math.round((totalReal / proj.totalBudget) * 100) : 0;
-  const overBudgetCount = components.filter(i => i.realisasi > i.budget).length;
-  const nearLimitCount = components.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
-  const safeCount = components.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
-  
-  if (statTotalPagu) statTotalPagu.innerText = formatRp(proj.totalBudget);
-  if (statTotalRealisasi) statTotalRealisasi.innerText = formatRp(totalReal);
-  if (statSisaSaldo) {
-    statSisaSaldo.innerText = formatRp(proj.totalBudget - totalReal);
-    statSisaSaldo.style.color = (proj.totalBudget - totalReal) < 0 ? '#ef4444' : '#10b981';
-  }
-  if (statAvgProgress) statAvgProgress.innerText = `${avgProgress}%`;
-  if (statOverBudget) statOverBudget.innerText = overBudgetCount;
-  if (statNearLimit) statNearLimit.innerText = nearLimitCount;
-  if (statSafe) statSafe.innerText = safeCount;
-  
-  if (components.length === 0) {
-    if (tbody) tbody.innerHTML = '<td><td colspan="6" style="text-align:center;">Belum ada komponen RAB pada proyek ini</td></tr>';
-    destroyCharts();
-    return;
-  }
-  
-  if (tbody) {
-    tbody.innerHTML = components.map(c => {
-      const remaining = c.budget - c.realisasi;
-      const percent = c.budget > 0 ? Math.round((c.realisasi / c.budget) * 100) : 0;
-      return `<td>
-        <td><strong>${c.itemName}</strong></td>
-        <td>${formatRp(c.budget)}</td>
-        <td>${formatRp(c.realisasi)}</td>
-        <td style="color:${remaining < 0 ? '#ef4444' : '#10b981'}">${formatRp(remaining)}</td>
-        <td><div class="progress-wrapper"><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${percent}%; background-color: ${percent >= 90 ? '#f59e0b' : (percent >= 100 ? '#ef4444' : '#10b981')};"></div></div><span>${percent}%</span></div></td>
-        <td>${getBadge(c.realisasi, c.budget)}</td>
-      </tr>`;
-    }).join('');
-  }
-  
-  createDetailedCharts(components, proj);
-}
-
-function createDetailedCharts(components, project) {
-  destroyCharts();
-  
-  const comparisonCanvas = document.getElementById('reportComparisonChartCanvas');
-  const pieCanvas = document.getElementById('reportPieChartCanvas');
-  const healthCanvas = document.getElementById('reportHealthChartCanvas');
-  
-  if (!comparisonCanvas || !pieCanvas || !healthCanvas) {
-    console.error("Canvas elements not found");
-    return;
-  }
-  
-  const sorted = [...components].sort((a, b) => b.budget - a.budget);
-  const labels = sorted.map(c => c.itemName.length > 20 ? c.itemName.substring(0, 17) + '...' : c.itemName);
-  const budgetData = sorted.map(c => c.budget);
-  const realizationData = sorted.map(c => c.realisasi);
-  const remainingData = sorted.map(c => Math.max(0, c.budget - c.realisasi));
-  const overData = sorted.map(c => Math.max(0, c.realisasi - c.budget));
-  
-  const pieColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#4CAF50'];
-  
-  const ctx1 = comparisonCanvas.getContext('2d');
-  comparisonChart = new Chart(ctx1, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'Budget', data: budgetData, backgroundColor: 'rgba(54, 162, 235, 0.8)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1, borderRadius: 4 },
-        { label: 'Realisasi', data: realizationData, backgroundColor: 'rgba(255, 99, 132, 0.8)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1, borderRadius: 4 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: `Budget vs Realisasi - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: { callbacks: { label: (ctx) => { let label = ctx.dataset.label || ''; let value = ctx.parsed.y; let comp = sorted[ctx.dataIndex]; let pct = ''; if (ctx.dataset.label === 'Realisasi' && comp.budget > 0) { pct = ` (${Math.round((value / comp.budget) * 100)}% dari Budget)`; } return `${label}: ${formatRp(value)}${pct}`; } } }
-      },
-      scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } }, x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } } }
-    }
-  });
-  
-  const ctx2 = pieCanvas.getContext('2d');
-  pieChart = new Chart(ctx2, {
-    type: 'pie',
-    data: { labels: labels, datasets: [{ data: budgetData, backgroundColor: pieColors.slice(0, budgetData.length), borderWidth: 2, borderColor: '#fff' }] },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: {
-        legend: { position: 'right' },
-        title: { display: true, text: `Distribusi Budget - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: { callbacks: { label: (ctx) => { const total = budgetData.reduce((a, b) => a + b, 0); const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0; return `${ctx.label}: ${formatRp(ctx.parsed)} (${pct}%)`; } } }
-      }
-    }
-  });
-  
-  const ctx3 = healthCanvas.getContext('2d');
-  healthChart = new Chart(ctx3, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'Sisa Budget', data: remainingData, backgroundColor: 'rgba(75, 192, 192, 0.8)', borderColor: 'rgba(75, 192, 192, 1)', borderWidth: 1, borderRadius: 4 },
-        { label: 'Over Budget', data: overData, backgroundColor: 'rgba(255, 99, 132, 0.8)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1, borderRadius: 4 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: `Status Kesehatan Budget - ${project.name}`, font: { size: 13, weight: 'bold' } },
-        tooltip: { callbacks: { label: (ctx) => { let label = ctx.dataset.label || ''; let value = ctx.parsed.y; let comp = sorted[ctx.dataIndex]; let info = ''; if (ctx.dataset.label === 'Sisa Budget' && comp.budget > 0) { info = ` (${((value / comp.budget) * 100).toFixed(1)}% tersisa)`; } else if (ctx.dataset.label === 'Over Budget' && value > 0 && comp.budget > 0) { info = ` (Melebihi ${((value / comp.budget) * 100).toFixed(1)}%)`; } return `${label}: ${formatRp(value)}${info}`; } } }
-      },
-      scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatRp(v) }, title: { display: true, text: 'Jumlah (Rp)' } }, x: { ticks: { rotate: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } }, title: { display: true, text: 'Komponen' } } }
-    }
-  });
-}
-
-// ==================== EXPORT EXCEL ====================
-document.getElementById('exportExcelReportBtn')?.addEventListener('click', () => {
-  const projectId = document.getElementById('reportProjectFilterSelect')?.value;
-  if (!projectId) { triggerNotification('Pilih proyek terlebih dahulu!', false, 'error'); return; }
-  
-  const project = projects.find(p => p.id === projectId);
-  if (!project) return;
-  
-  const components = rabItems.filter(i => i.projectId === projectId);
-  const data = components.map(c => ({
-    'Komponen': c.itemName,
-    'Budget': c.budget,
-    'Realisasi': c.realisasi,
-    'Sisa': c.budget - c.realisasi,
-    'Persentase': c.budget > 0 ? `${Math.round((c.realisasi / c.budget) * 100)}%` : '0%'
-  }));
-  
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Report_${project.name}`);
-  XLSX.writeFile(wb, `RAB_Report_${project.name}.xlsx`);
-  triggerNotification('Excel exported successfully!');
-});
-
-// ==================== PDF EXPORT ====================
-document.getElementById('printPdfReportBtn')?.addEventListener('click', async () => {
-  const projectId = document.getElementById('reportProjectFilterSelect')?.value;
-  if (!projectId) { triggerNotification('Pilih proyek terlebih dahulu!', false, 'error'); return; }
-  
-  const element = document.getElementById('printableReportAreaContainer');
-  if (!element) return;
-  
-  triggerNotification('Generating PDF...', true, 'info');
-  const opt = {
-    margin: [0.5, 0.5, 0.5, 0.5],
-    filename: `RAB_Report_${projectId}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-  };
-  
-  try {
-    await html2pdf().set(opt).from(element).save();
-    triggerNotification('PDF saved successfully!');
-  } catch (err) {
-    console.error(err);
-    triggerNotification('PDF generation failed!', false, 'error');
-  }
-});
-
-// ==================== FILE TREE (STORAGE SERVER) - DIPERBAIKI ====================
-function renderTreeHierarchy() {
-  const root = document.getElementById('rootFileTreeDirectory');
-  if (!root) {
-    console.log("rootFileTreeDirectory element not found");
-    return;
-  }
-  
-  console.log("Rendering file tree, files count:", truenasFiles.length);
-  
-  if (!truenasFiles || truenasFiles.length === 0) {
-    root.innerHTML = '<li style="color:#64748b; padding:20px; text-align:center;"><i class="fas fa-folder-open"></i> Belum ada dokumen yang diupload. Silakan upload dokumen melalui menu Upload Document.</li>';
-    return;
-  }
-  
-  const map = {};
-  truenasFiles.forEach(file => {
-    const associatedProject = projects.find(p => p.id === file.projectId);
-    const projectName = associatedProject ? associatedProject.name : "Unsorted Attachments";
-    if (!map[projectName]) map[projectName] = [];
-    map[projectName].push(file);
-  });
-  
-  let html = '<li class="root-node"><i class="fas fa-database"></i> Cloud Storage Root <span style="font-size:0.7rem; color:#64748b;">(Network Attached Storage)</span></li>';
-  
-  for (const [folderName, files] of Object.entries(map)) {
-    html += `<li style="padding-left: 16px; margin-top: 12px;">
-      <div class="folder-node" style="cursor: pointer; padding: 8px 12px; background: #f1f5f9; border-radius: 12px; margin: 4px 0;">
-        <i class="fas fa-folder-open" style="color: #eab308;"></i> 
-        <strong>${folderName}</strong>
-        <span class="badge badge-info" style="margin-left: 10px; font-size: 0.7rem;">${files.length} files</span>
-      </div>
-      <ul style="list-style: none; padding-left: 20px; margin-top: 6px;">`;
+  let html = '';
+  projects.forEach(p => {
+    const items = rabItems.filter(i => i.projectId === p.id);
+    const totalBudget = items.reduce((sum, i) => sum + i.budget, 0);
+    const totalReal = items.reduce((sum, i) => sum + i.realisasi, 0);
+    const remaining = totalBudget - totalReal;
+    const percentage = totalBudget > 0 ? ((totalReal / totalBudget) * 100).toFixed(1) : 0;
     
-    files.forEach(file => {
-      const dateStr = file.timestamp ? new Date(file.timestamp).toLocaleDateString('id-ID') : '-';
-      html += `<li class="file-node" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: white; border-radius: 12px; margin: 6px 0; border: 1px solid #e2e8f0;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <i class="fas fa-file-alt" style="color: #3b82f6;"></i>
-          <div>
-            <div style="font-weight: 600;">${escapeHtml(file.fileName)}</div>
-            <div style="font-size: 0.7rem; color: #64748b;">
-              <i class="fas fa-user"></i> ${file.uploadedBy || 'System'} | 
-              <i class="fas fa-calendar"></i> ${dateStr} |
-              ${file.fileSize ? `<i class="fas fa-database"></i> ${formatFileSize(file.fileSize)}` : ''}
-            </div>
-          </div>
-        </div>
-        <div class="action-links" style="display: flex; gap: 12px;">
-          <a href="${API_BASE_URL}/preview/${file.id}" target="_blank" class="preview-link" style="color: #2563eb; text-decoration: none;">
-            <i class="fas fa-eye"></i> Preview
-          </a>
-          ${currentRole === 'Administrator' ? 
-            `<button class="delete-file-btn btn-delete-file" data-id="${file.id}" style="background: #fee2e2; border: none; padding: 6px 12px; border-radius: 8px; color: #dc2626; cursor: pointer;">
-              <i class="fas fa-trash"></i> Delete
-            </button>` : ''
+    html += `<tr style="background-color: #f1f5f9;">
+      <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
+    </tr>`;
+    
+    if (items.length === 0) {
+      html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
+    } else {
+      items.forEach(item => {
+        const itemRemaining = item.budget - item.realisasi;
+        const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
+        html += `<tr>
+          <td>${item.itemName}</td>
+          <td class="text-right">${formatRp(item.budget)}</td>
+          <td class="text-right">${formatRp(item.realisasi)}</td>
+          <td class="text-right">${formatRp(itemRemaining)}</td>
+          <td class="text-center">${itemPercentage}%</td>
+          <td class="text-center">${getBadge(item.realisasi, item.budget)}</td>
+        </tr>`;
+      });
+    }
+    
+    html += `<tr style="background-color: #f8fafc; font-weight: bold;">
+      <td>TOTAL for ${p.name}</td>
+      <td class="text-right">${formatRp(totalBudget)}</td>
+      <td class="text-right">${formatRp(totalReal)}</td>
+      <td class="text-right">${formatRp(remaining)}</td>
+      <td class="text-center">${percentage}%</td>
+      <td></td>
+    </tr>`;
+  });
+  
+  tbody.innerHTML = html;
+}
+
+// ==================== GRAPHIC CHARTS ====================
+function refreshGraphicCharts() {
+  const barCtx = document.getElementById('budgetChart')?.getContext('2d');
+  if (barCtx) {
+    if (mainBarChartInstance) mainBarChartInstance.destroy();
+    mainBarChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: projects.map(p => p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name),
+        datasets: [
+          { 
+            label: 'Total Budget (Juta Rp)', 
+            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.budget, 0) / 1e6), 
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+          },
+          { 
+            label: 'Claim Realization (Juta Rp)', 
+            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.realisasi, 0) / 1e6), 
+            backgroundColor: '#10b981',
+            borderRadius: 4
           }
-        </div>
-      </li>`;
-    });
-    
-    html += `</ul></li>`;
-  }
-  
-  root.innerHTML = html;
-  
-  document.querySelectorAll('.delete-file-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const fileId = btn.dataset.id;
-      if (confirm('Hapus file ini secara permanen dari storage?')) {
-        try {
-          await remove(ref(db, `truenasFiles/${fileId}`));
-          triggerNotification('File berhasil dihapus!', true, 'success');
-        } catch (error) {
-          triggerNotification('Gagal menghapus file!', false, 'error');
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: Rp ${ctx.raw.toFixed(2)} Juta`
+            }
+          }
         }
       }
     });
+  }
+  
+  const lineCtx = document.getElementById('laporanChart')?.getContext('2d');
+  if (lineCtx) {
+    if (systemLineReportChartInstance) systemLineReportChartInstance.destroy();
+    systemLineReportChartInstance = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: projects.map(p => p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name),
+        datasets: [
+          { 
+            label: 'Allocation Curve (Budget)', 
+            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.budget, 0) / 1e6), 
+            borderColor: '#8b5cf6', 
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            fill: true, 
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          { 
+            label: 'Absorption Curve (Realization)', 
+            data: projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((s,i) => s + i.realisasi, 0) / 1e6), 
+            borderColor: '#f97316', 
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            fill: true, 
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: Rp ${ctx.raw.toFixed(2)} Juta`
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ==================== PDF DOWNLOAD ====================
+async function downloadPDF() {
+  triggerNotification('Generating PDF report...', true, 'info');
+  
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+  const totalRealization = rabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
+  const totalProjects = projects.length;
+  const overBudgetItems = rabItems.filter(i => i.realisasi > i.budget).length;
+  const pendingClaims = claims.filter(c => c.status === 'pending').length;
+  const approvedClaims = claims.filter(c => c.status === 'approved').length;
+  const rejectedClaims = claims.filter(c => c.status === 'rejected').length;
+  
+  const chartCanvas = document.getElementById('laporanChart');
+  let chartImage = '';
+  if (chartCanvas) {
+    chartImage = chartCanvas.toDataURL('image/png');
+  }
+  
+  const barChartCanvas = document.getElementById('budgetChart');
+  let barChartImage = '';
+  if (barChartCanvas) {
+    barChartImage = barChartCanvas.toDataURL('image/png');
+  }
+  
+  let projectDetailsHtml = '';
+  projects.forEach(p => {
+    const projectItems = rabItems.filter(i => i.projectId === p.id);
+    const projectBudget = projectItems.reduce((sum, i) => sum + i.budget, 0);
+    const projectRealization = projectItems.reduce((sum, i) => sum + i.realisasi, 0);
+    const projectBalance = projectBudget - projectRealization;
+    const percentage = projectBudget > 0 ? ((projectRealization / projectBudget) * 100).toFixed(1) : 0;
+    
+    projectDetailsHtml += `
+      <tr style="background-color: #f1f5f9;">
+        <td colspan="6" style="padding: 10px; font-weight: bold;">${escapeHtml(p.name)} (${escapeHtml(p.client)})</td>
+      </tr>
+    `;
+    
+    if (projectItems.length === 0) {
+      projectDetailsHtml += `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
+        </tr>
+      `;
+    } else {
+      projectItems.forEach(item => {
+        const itemBalance = item.budget - item.realisasi;
+        const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
+        projectDetailsHtml += `
+          <tr>
+            <td style="padding: 8px;">${escapeHtml(item.itemName)}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(item.budget)}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(item.realisasi)}</td>
+            <td style="padding: 8px; text-align: right;">${formatRp(itemBalance)}</td>
+            <td style="padding: 8px; text-align: center;">${itemPercentage}%</td>
+            <td style="padding: 8px; text-align: center;">
+              <span style="padding: 2px 8px; border-radius: 12px; ${item.realisasi > item.budget ? 'background: #fee2e2; color: #991b1b;' : (itemPercentage >= 90 ? 'background: #fed7aa; color: #9a3412;' : 'background: #d1fae5; color: #065f46;')}">
+                ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+    }
+    
+    projectDetailsHtml += `
+      <tr style="background-color: #f8fafc; font-weight: bold;">
+        <td style="padding: 8px;">TOTAL for ${escapeHtml(p.name)}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectBudget)}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectRealization)}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
+        <td style="padding: 8px; text-align: center;">${percentage}%</td>
+        <td style="padding: 8px; text-align: center;"></td>
+      </tr>
+    `;
+  });
+  
+  let claimsHtml = '';
+  claims.forEach(c => {
+    const p = projects.find(pr => pr.id === c.projectId);
+    claimsHtml += `
+      <tr>
+        <td style="padding: 8px;">${p ? escapeHtml(p.name) : 'Unknown'}</td>
+        <td style="padding: 8px;">${c.vendor || '-'}</td>
+        <td style="padding: 8px; text-align: right;">${formatRp(c.totalNominal)}</td>
+        <td style="padding: 8px; text-align: center;">
+          <span style="padding: 2px 8px; border-radius: 12px; ${c.status === 'approved' ? 'background: #d1fae5; color: #065f46;' : (c.status === 'rejected' ? 'background: #fee2e2; color: #991b1b;' : 'background: #fed7aa; color: #9a3412;')}">
+            ${c.status.toUpperCase()}
+          </span>
+        </td>
+        <td style="padding: 8px;">${c.tanggal || '-'}</td>
+      </tr>
+    `;
+  });
+  
+  const reportHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>RAB Financial Report - ${currentDate}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+          padding: 40px;
+          margin: 0;
+          color: #000000;
+          background: white;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 1px solid #cccccc;
+          padding-bottom: 20px;
+        }
+        .header h1 {
+          color: #000000;
+          margin: 0;
+          font-size: 28px;
+          font-weight: 700;
+        }
+        .header h2 {
+          color: #333333;
+          margin: 10px 0 0;
+          font-size: 16px;
+          font-weight: 500;
+        }
+        .header p {
+          color: #666666;
+          margin: 10px 0 0;
+          font-size: 12px;
+        }
+        .summary-cards {
+          display: flex;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+        }
+        .summary-card {
+          flex: 1;
+          background: #f8fafc;
+          padding: 20px;
+          border-radius: 12px;
+          text-align: center;
+          border: 1px solid #e2e8f0;
+        }
+        .summary-card h3 {
+          margin: 0 0 10px;
+          font-size: 11px;
+          color: #666666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 600;
+        }
+        .summary-card .value {
+          margin: 0;
+          font-size: 22px;
+          font-weight: bold;
+          color: #000000;
+        }
+        .section {
+          margin-bottom: 30px;
+          page-break-inside: avoid;
+        }
+        .section-title {
+          font-size: 18px;
+          font-weight: 700;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #cccccc;
+          color: #000000;
+        }
+        .chart-container {
+          text-align: center;
+          margin: 20px 0;
+          padding: 20px;
+          background: #fafafa;
+          border-radius: 12px;
+        }
+        .chart-container img {
+          max-width: 100%;
+          height: auto;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          font-size: 11px;
+        }
+        th, td {
+          border: 1px solid #cccccc;
+          padding: 10px;
+          text-align: left;
+        }
+        th {
+          background: #f5f5f5;
+          font-weight: 700;
+          color: #000000;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .text-center {
+          text-align: center;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 10px;
+          color: #999999;
+          border-top: 1px solid #cccccc;
+          padding-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>RAB MONITORING REPORT</h1>
+        <h2>Financial Report & Budget Tracking</h2>
+        <p>Generated on: ${currentDate}</p>
+      </div>
+      
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Total Projects</h3>
+          <div class="value">${totalProjects}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total Budget</h3>
+          <div class="value">${formatRp(totalBudget)}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total Realization</h3>
+          <div class="value">${formatRp(totalRealization)}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Remaining Budget</h3>
+          <div class="value">${formatRp(totalBudget - totalRealization)}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Over Budget Items</h3>
+          <div class="value">${overBudgetItems}</div>
+        </div>
+      </div>
+      
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Pending Claims</h3>
+          <div class="value">${pendingClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Approved Claims</h3>
+          <div class="value">${approvedClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Rejected Claims</h3>
+          <div class="value">${rejectedClaims}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total RAB Items</h3>
+          <div class="value">${rabItems.length}</div>
+        </div>
+      </div>
+      
+      ${barChartImage ? `
+      <div class="section">
+        <div class="section-title">Budget vs Realization Chart</div>
+        <div class="chart-container">
+          <img src="${barChartImage}" alt="Budget Chart" style="max-width: 100%;">
+        </div>
+      </div>
+      ` : ''}
+      
+      ${chartImage ? `
+      <div class="section">
+        <div class="section-title">Trend Analysis Chart</div>
+        <div class="chart-container">
+          <img src="${chartImage}" alt="Trend Chart" style="max-width: 100%;">
+        </div>
+      </div>
+      ` : ''}
+      
+      <div class="section">
+        <div class="section-title">Detailed Project Breakdown</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th class="text-right">Budget (IDR)</th>
+              <th class="text-right">Realization (IDR)</th>
+              <th class="text-right">Balance (IDR)</th>
+              <th class="text-center">Usage %</th>
+              <th class="text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${projectDetailsHtml}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Claim History</div>
+        ${claims.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Vendor</th>
+              <th class="text-right">Amount</th>
+              <th class="text-center">Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${claimsHtml}
+          </tbody>
+        </table>
+        ` : '<p style="text-align: center; padding: 20px; color: #666666;">No claims data available.</p>'}
+      </div>
+      
+      <div class="footer">
+        <p>Report generated by RAB Monitoring System</p>
+        <p>This is an automated system-generated report</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  const opt = {
+    margin: [0.5, 0.5, 0.5, 0.5],
+    filename: `RAB_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+  };
+  
+  const element = document.createElement('div');
+  element.innerHTML = reportHTML;
+  document.body.appendChild(element);
+  
+  html2pdf().set(opt).from(element).save().then(() => {
+    document.body.removeChild(element);
+    triggerNotification('PDF report generated successfully!', true);
+  }).catch(err => {
+    document.body.removeChild(element);
+    triggerNotification('Error generating PDF: ' + err.message, false, 'error');
   });
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
-function formatFileSize(bytes) {
-  if (!bytes) return '0 KB';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / 1048576).toFixed(1) + ' MB';
+// ==================== STORAGE SERVER (FILES) ====================
+window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
+  if(!confirm("Delete this file permanently from storage?")) return;
+  
+  if (fullPath) {
+    fetch(`${API_BASE_URL}/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath: fullPath })
+    })
+    .then(async res => {
+      if(!res.ok) throw new Error("Failed to delete physical file");
+      return res.json();
+    })
+    .then(() => {
+      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+        triggerNotification("File permanently deleted from storage.");
+      });
+    })
+    .catch(err => {
+      remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+        triggerNotification("Metadata removed from database.", false);
+      });
+    });
+  } else {
+    remove(ref(db, `truenasFiles/${firebaseKey}`)).then(() => {
+      triggerNotification("File record removed from database.");
+    });
+  }
+};
+
+function renderTreeHierarchy() {
+  const treeWrapper = document.getElementById('rootFileTreeDirectory');
+  if (!treeWrapper) return;
+  
+  if (projects.length === 0) {
+    treeWrapper.innerHTML = '<li><i class="fas fa-info-circle"></i> No projects available.</li>';
+    return;
+  }
+  
+  let innerLayoutCodeHtml = `<li><span class="root-node"><i class="fas fa-database"></i> Document Storage</span><ul class="nested-tree" style="list-style:none; padding-left:20px;">`;
+  
+  projects.forEach(p => {
+    innerLayoutCodeHtml += `<li style="margin: 10px 0;"><span class="folder-node"><i class="fas fa-folder-open"></i> ${escapeHtml(p.name)}</span><ul class="nested-tree" style="list-style:none; padding-left:25px;">`;
+    
+    const projectFiles = truenasFiles.filter(f => f.projectId === p.id);
+    if (projectFiles.length === 0) {
+      innerLayoutCodeHtml += '<li class="file-node" style="color:#94a3b8; font-style:italic; padding: 5px 0;">No files</li>';
+    } else {
+      projectFiles.forEach(f => {
+        const safeUrl = `${API_BASE_URL}/unduh-dokumen/${encodeURIComponent(p.name.replace(/[^a-zA-Z0-9_-]/g, '_'))}/${encodeURIComponent(f.fileName)}`;
+        const fileSize = formatFileSize(f.fileSize);
+        const uploadDate = f.timestamp ? new Date(f.timestamp).toLocaleDateString('id-ID') : (f.uploadedAt || '-');
+        
+        innerLayoutCodeHtml += `<li class="file-node" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f8fafc; border-radius: 8px; margin: 5px 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-file-alt" style="color: #3b82f6;"></i>
+            <div>
+              <div style="font-weight: 500;">${escapeHtml(f.fileName)}</div>
+              <div style="font-size: 0.7rem; color: #64748b;">
+                <i class="fas fa-user"></i> ${escapeHtml(f.uploadedBy || 'System')} | 
+                <i class="fas fa-calendar"></i> ${uploadDate} |
+                <i class="fas fa-database"></i> ${fileSize}
+              </div>
+            </div>
+          </div>
+          <div class="action-links" style="display: flex; gap: 12px;">
+            <a href="${safeUrl}" target="_blank" class="preview-link" style="color: #2563eb; text-decoration: none;">
+              <i class="fas fa-eye"></i> Preview
+            </a>
+            ${currentRole === 'Administrator' ? 
+              `<button onclick="deleteTrueNasFileRecord('${f.id}', '${f.fullServerDiskPath || ''}')" class="delete-file-btn" style="background: #fee2e2; border: none; padding: 4px 10px; border-radius: 6px; color: #dc2626; cursor: pointer;">
+                <i class="fas fa-trash"></i> Delete
+              </button>` : ''
+            }
+          </div>
+        </li>`;
+      });
+    }
+    
+    innerLayoutCodeHtml += `</ul></li>`;
+  });
+  
+  treeWrapper.innerHTML = innerLayoutCodeHtml + `</ul></li>`;
+  
+  if (projects.length > 0 && truenasFiles.length === 0) {
+    const noFilesMsg = document.createElement('div');
+    noFilesMsg.style.padding = '20px';
+    noFilesMsg.style.textAlign = 'center';
+    noFilesMsg.style.color = '#64748b';
+    noFilesMsg.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Belum ada file yang diupload. Silakan upload dokumen melalui menu Upload Document.';
+    if (treeWrapper.querySelectorAll('.file-node').length === 0 && projects.length > 0) {
+      // Add message if no files exist
+    }
+  }
 }
 
 // ==================== UPLOAD DOCUMENT ====================
@@ -1131,6 +1434,12 @@ document.getElementById('startUploadDocBtn')?.addEventListener('click', () => {
   }
   
   const file = fileInput.files[0];
+  const resolvedProjectObj = projects.find(p => p.id === pId);
+  
+  if (!resolvedProjectObj) {
+    triggerNotification('Project not found!', false, 'error');
+    return;
+  }
   
   if (file.size > 10 * 1024 * 1024) {
     triggerNotification('Ukuran file maksimal 10 MB!', false, 'error');
@@ -1139,21 +1448,39 @@ document.getElementById('startUploadDocBtn')?.addEventListener('click', () => {
   
   triggerNotification('Mengupload file...', true, 'info');
   
-  push(ref(db, 'truenasFiles'), {
-    projectId: pId,
-    fileName: file.name,
-    fileSize: file.size,
-    uploadedBy: currentUserEmail,
-    timestamp: Date.now(),
-    fileType: file.type
-  }).then(() => {
-    fileInput.value = '';
-    document.getElementById('uploadProjectSelect').value = '';
-    triggerNotification('File berhasil diupload ke storage!', true, 'success');
-  }).catch((error) => {
-    console.error("Upload error:", error);
-    triggerNotification('Gagal mengupload file!', false, 'error');
-  });
+  const safeProjectDirName = resolvedProjectObj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const serverStoragePath = `/mnt/EXTERNAL-4TB/Data/speakup/apps/rab/${safeProjectDirName}`;
+  
+  const dataPayload = new FormData();
+  dataPayload.append('path', serverStoragePath);
+  dataPayload.append('file', file);
+  
+  fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: dataPayload })
+    .then(async response => {
+      if (!response.ok) throw new Error('Server rejected file upload');
+      return response.json();
+    })
+    .then(data => {
+      const newFileRef = push(ref(db, 'truenasFiles'));
+      set(newFileRef, {
+        projectId: pId,
+        projectName: resolvedProjectObj.name,
+        fileName: file.name,
+        fileSize: file.size,
+        uploadedBy: currentUserEmail,
+        timestamp: Date.now(),
+        uploadedAt: new Date().toLocaleString(),
+        fullServerDiskPath: `${serverStoragePath}/${file.name}`
+      }).then(() => {
+        fileInput.value = '';
+        document.getElementById('uploadProjectSelect').value = '';
+        triggerNotification('File uploaded successfully to storage!', true);
+      });
+    })
+    .catch(error => {
+      console.error("Upload error:", error);
+      triggerNotification(`Upload failed: ${error.message}`, false, 'error');
+    });
 });
 
 // ==================== MODAL CONTROLS ====================
@@ -1229,7 +1556,8 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     }
     
     if (page === 'reports') {
-      setTimeout(() => renderReports(), 200);
+      setTimeout(() => renderReports(), 100);
+      setTimeout(() => refreshGraphicCharts(), 150);
     }
     
     if (page === 'files') {
@@ -1262,6 +1590,21 @@ onAuthStateChanged(auth, (user) => {
         enforceRoleVisibility();
         initCloudDatabaseListeners();
         hideLoadingScreen();
+      } else {
+        set(ref(db, `users/${user.uid}`), {
+          email: user.email,
+          role: "Project Manager",
+          createdAt: new Date().toLocaleDateString('id-ID')
+        }).then(() => {
+          currentRole = "Project Manager";
+          const emailLabel = document.getElementById('sidebarUserEmail');
+          const roleLabel = document.getElementById('sidebarUserRole');
+          if (emailLabel) emailLabel.innerText = user.email;
+          if (roleLabel) roleLabel.innerText = currentRole;
+          enforceRoleVisibility();
+          initCloudDatabaseListeners();
+          hideLoadingScreen();
+        });
       }
     });
   } else {
