@@ -35,6 +35,10 @@ let currentUserUid = "";
 // Chart instances
 let mainBarChartInstance = null;
 let systemLineReportChartInstance = null;
+let reportBarChartInstance = null;
+let reportPieChartInstance = null;
+let reportDoughnutChartInstance = null;
+let reportUtilizationChartInstance = null;
 
 const rolePermissions = {
   "Administrator": ['dashboard', 'master-project', 'claim-request', 'approval-budget', 'monitoring', 'reports', 'upload-document', 'files', 'user-management'],
@@ -276,6 +280,7 @@ function updateWholeUI() {
   renderMonitoringTable();
   renderReports();
   refreshGraphicCharts();
+  renderReportCharts();
   populateDropdownMenus();
 }
 
@@ -400,7 +405,7 @@ function renderRABItemsSubTable() {
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
       <td><button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
-    </tr>
+     </tr>
   `).join('');
   
   document.querySelectorAll('.btn-del-rab-sub').forEach(btn => {
@@ -440,7 +445,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-    </tr>`;
+     </tr>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -671,7 +676,7 @@ function renderClaimView() {
         <td style="font-size:0.8rem;">${summaries}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
-      </tr>`;
+       </tr>`;
     }).join('');
   }
 }
@@ -740,8 +745,8 @@ function renderApprovalList() {
       <td class="action-buttons">
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
         <button class="btn-appr-no" data-id="${c.id}" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times"></i> Reject</button>
-       </td>
-    </tr>`;
+        </td>
+     </tr>`;
   }).join('');
   
   document.querySelectorAll('.btn-appr-ok').forEach(btn => {
@@ -786,8 +791,8 @@ function renderMonitoringTable() {
     if (spent > p.totalBudget) status = '<span class="badge badge-danger">Critical</span>';
     else if (p.totalBudget > 0 && (spent / p.totalBudget) >= 0.88) status = '<span class="badge badge-warning">Attention</span>';
     
-    return `<tr class="project-row" data-id="${p.id}">
-      <td><a class="project-name-link" href="#"><i class="fas fa-folder"></i> ${p.name}</a></td>
+    return `<tr class="project-row" data-id="${p.id}" style="cursor:pointer;">
+      <td><i class="fas fa-folder"></i> ${p.name}</td>
       <td>${p.client}</td>
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
@@ -795,8 +800,15 @@ function renderMonitoringTable() {
     </tr>`;
   }).join('');
   
-  document.querySelectorAll('.project-row').forEach(row => {
-    row.addEventListener('click', () => openMonitoringDetail(row.dataset.id));
+  // Fix: Attach click event to each row for opening detail modal
+  document.querySelectorAll('#monitoringMainGridBody .project-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const projectId = row.getAttribute('data-id');
+      if (projectId) {
+        openMonitoringDetail(projectId);
+      }
+    });
   });
 }
 
@@ -960,6 +972,117 @@ function refreshGraphicCharts() {
   }
 }
 
+// ==================== REPORT CHARTS (4 DIAGRAMS) ====================
+function renderReportCharts() {
+  if (projects.length === 0) return;
+  
+  const projectNames = projects.map(p => p.name.length > 12 ? p.name.substring(0, 10) + '...' : p.name);
+  const totalBudgets = projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0));
+  const totalRealizations = projects.map(p => rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0));
+  
+  // Bar Chart - Budget vs Realization
+  const barCtx = document.getElementById('reportBarChart')?.getContext('2d');
+  if (barCtx) {
+    if (reportBarChartInstance) reportBarChartInstance.destroy();
+    reportBarChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: projectNames,
+        datasets: [
+          { label: 'Budget (IDR)', data: totalBudgets, backgroundColor: '#3b82f6', borderRadius: 6 },
+          { label: 'Realization (IDR)', data: totalRealizations, backgroundColor: '#10b981', borderRadius: 6 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatRp(ctx.raw)}` } }
+        },
+        scales: { y: { ticks: { callback: (val) => formatRp(val) } } }
+      }
+    });
+  }
+  
+  // Pie Chart - Budget Distribution
+  const pieCtx = document.getElementById('reportPieChart')?.getContext('2d');
+  if (pieCtx) {
+    if (reportPieChartInstance) reportPieChartInstance.destroy();
+    reportPieChartInstance = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: projectNames,
+        datasets: [{ data: totalBudgets, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'] }]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true, 
+        plugins: { 
+          tooltip: { 
+            callbacks: { 
+              label: (ctx) => `${ctx.label}: ${formatRp(ctx.raw)} (${((ctx.raw / totalBudgets.reduce((a,b)=>a+b,0)) * 100).toFixed(1)}%)` 
+            } 
+          } 
+        } 
+      }
+    });
+  }
+  
+  // Doughnut Chart - Project Health
+  const overBudget = rabItems.filter(i => i.realisasi > i.budget).length;
+  const nearLimit = rabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
+  const safe = rabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
+  
+  const doughnutCtx = document.getElementById('reportDoughnutChart')?.getContext('2d');
+  if (doughnutCtx) {
+    if (reportDoughnutChartInstance) reportDoughnutChartInstance.destroy();
+    reportDoughnutChartInstance = new Chart(doughnutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Over Budget', 'Near Limit', 'Safe'],
+        datasets: [{ data: [overBudget, nearLimit, safe], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'] }]
+      },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+  
+  // Horizontal Bar Chart - Budget Utilization
+  const utilization = projects.map(p => {
+    const budget = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0);
+    const real = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0);
+    return budget > 0 ? Math.min(Math.round((real / budget) * 100), 100) : 0;
+  });
+  
+  const utilCtx = document.getElementById('reportUtilizationChart')?.getContext('2d');
+  if (utilCtx) {
+    if (reportUtilizationChartInstance) reportUtilizationChartInstance.destroy();
+    reportUtilizationChartInstance = new Chart(utilCtx, {
+      type: 'bar',
+      data: {
+        labels: projectNames,
+        datasets: [{ 
+          label: 'Budget Utilization (%)', 
+          data: utilization, 
+          backgroundColor: (ctx) => {
+            const val = ctx.raw;
+            if (val >= 100) return '#ef4444';
+            if (val >= 90) return '#f59e0b';
+            return '#10b981';
+          }, 
+          borderRadius: 6 
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: { x: { max: 100, ticks: { callback: (val) => val + '%' } } },
+        plugins: { tooltip: { callbacks: { label: (ctx) => `Utilization: ${ctx.raw}%` } } }
+      }
+    });
+  }
+}
+
 // ==================== PDF DOWNLOAD ====================
 async function downloadPDF() {
   triggerNotification('Generating PDF report...', true, 'info');
@@ -1002,14 +1125,14 @@ async function downloadPDF() {
     projectDetailsHtml += `
       <tr style="background-color: #f1f5f9;">
         <td colspan="6" style="padding: 10px; font-weight: bold;">${escapeHtml(p.name)} (${escapeHtml(p.client)})</td>
-       </tr>
+      </tr>
     `;
     
     if (projectItems.length === 0) {
       projectDetailsHtml += `
         <tr>
           <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
-         </tr>
+        </tr>
       `;
     } else {
       projectItems.forEach(item => {
@@ -1027,7 +1150,7 @@ async function downloadPDF() {
                 ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
               </span>
             </td>
-           </tr>
+          </tr>
         `;
       });
     }
@@ -1040,7 +1163,7 @@ async function downloadPDF() {
         <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
         <td style="padding: 8px; text-align: center;">${percentage}%</td>
         <td style="padding: 8px; text-align: center;"></td>
-       </tr>
+      </tr>
     `;
   });
   
@@ -1058,7 +1181,7 @@ async function downloadPDF() {
           </span>
         </td>
         <td style="padding: 8px;">${c.tanggal || '-'}</td>
-       </tr>
+      </tr>
     `;
   });
   
@@ -1262,7 +1385,7 @@ async function downloadPDF() {
               <th class="text-right">Balance (IDR)</th>
               <th class="text-center">Usage %</th>
               <th class="text-center">Status</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             ${projectDetailsHtml}
@@ -1281,7 +1404,7 @@ async function downloadPDF() {
               <th class="text-right">Amount</th>
               <th class="text-center">Status</th>
               <th>Date</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             ${claimsHtml}
@@ -1321,8 +1444,7 @@ async function downloadPDF() {
 
 document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
-// ==================== STORAGE SERVER (FILES) WITH PREVIEW ====================
-// File upload handler
+// ==================== STORAGE SERVER (FILES) ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const fileInputElement = document.getElementById('trueNasFile');
@@ -1383,7 +1505,6 @@ document.getElementById('trueNasUploadForm')?.addEventListener('submit', functio
   });
 });
 
-// Delete file function (exposed globally)
 window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
   if(!confirm("Delete this file permanently from storage?")) return;
 
@@ -1408,7 +1529,6 @@ window.deleteTrueNasFileRecord = function(firebaseKey, fullPath) {
   });
 }
 
-// Render file tree hierarchy with preview functionality
 function renderTreeHierarchy() {
   const treeWrapper = document.getElementById('rootFileTreeDirectory');
   if (!treeWrapper) return;
@@ -1539,6 +1659,7 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     if (page === 'reports') {
       setTimeout(() => renderReports(), 100);
       setTimeout(() => refreshGraphicCharts(), 150);
+      setTimeout(() => renderReportCharts(), 200);
     }
     
     if (page === 'files') {
