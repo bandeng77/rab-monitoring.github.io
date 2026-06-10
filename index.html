@@ -209,7 +209,7 @@
     /* Project Row */
     .project-row { cursor: pointer; transition: all 0.2s; }
     .project-row:hover { background: #eef2ff; transform: scale(1.005); }
-    .project-name-link { color: #2563eb; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .project-name-link { color: #2563eb; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
     /* Multi Item Container */
     .multi-item-container { background: #f8fafc; border-radius: 24px; padding: 20px; margin-top: 20px; }
@@ -241,14 +241,14 @@
     .file-node .delete-file-btn:hover { background: #fecaca; transform: scale(1.02); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
-    /* Modals & Popups */
+    /* Modals */
     .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index: 1000; padding: 20px; }
     .modal-overlay.active { display: flex; }
-    .modal-container { background: white; padding: 32px; border-radius: 36px; width: 100%; max-width: 650px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+    .modal-container { background: white; padding: 32px; border-radius: 36px; width: 100%; max-width: 1000px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
     .modal-container h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #0f172a; }
     .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
-    /* Custom Notification Popup */
+    /* Notification */
     .notify-popup { position: fixed; bottom: 24px; right: 24px; background: white; color: #1e293b; padding: 16px 24px; border-radius: 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transform: translateY(150%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 99999; border-left: 5px solid #3b82f6; font-weight: 500; }
     .notify-popup.active { transform: translateY(0); }
     .notify-popup.success { border-left-color: #10b981; }
@@ -258,32 +258,45 @@
     .notify-popup.info { border-left-color: #f59e0b; }
     .notify-popup.info i { color: #f59e0b; }
 
-    /* Visual Utilities */
+    /* Utility */
     .hidden-section { display: none !important; }
+    .page { animation: fadeUp 0.3s; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
     .action-buttons button { padding: 6px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: none; }
     .btn-edit { background: #dbeafe; color: #1e40af; }
     .btn-reset { background: #fef3c7; color: #92400e; }
     .btn-delete { background: #fee2e2; color: #991b1b; }
 
-    /* Report Layout */
-    .report-select-box { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); flex-wrap: wrap; }
-    .report-select-box select { padding: 10px 16px; border-radius: 16px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; min-width: 250px; }
-    .report-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .report-stat-card { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: center; }
-    .report-stat-card h4 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
-    .report-stat-card p { font-size: 1.25rem; font-weight: 700; color: #1e293b; }
-    .graphic-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 24px; }
-    .chart-box { background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 400px; }
+    /* Report Charts Grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .chart-card h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     canvas { max-width: 100%; height: auto; max-height: 320px; width: 100% !important; }
-    
-    @media (max-width: 768px) {
-      .sidebar { width: 80px; padding: 20px 10px; }
-      .sidebar h2, .user-profile-box, .sidebar ul li span, .btn-logout-sidebar span { display: none; }
-      .sidebar ul li { justify-content: center; padding: 12px; }
-      .sidebar ul li i { font-size: 1.2rem; margin: 0; }
-      .main { margin-left: 80px; width: calc(100% - 80px); padding: 20px; }
-      .graphic-grid-container { grid-template-columns: 1fr; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar { width: 100%; position: relative; height: auto; }
+      .main { margin-left: 0; width: 100%; }
+      .chart-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -298,7 +311,7 @@
     <div class="sidebar">
       <h2>RAB PRO</h2>
       
-      <div class="user-profile-box" id="userProfileNode">
+      <div class="user-profile-box">
         <div class="user-email" id="sidebarUserEmail">loading...</div>
         <div class="user-role" id="sidebarUserRole">...</div>
       </div>
@@ -325,21 +338,19 @@
       </div>
 
       <!-- Dashboard Page -->
-      <div id="dashboardPage">
+      <div id="dashboardPage" class="page">
         <div class="cards" id="cardsContainer"></div>
-
         <div class="section">
-          <h2><i class="fas fa-chart-line"></i> Top Budget Distribution Overview</h2>
+          <h2><i class="fas fa-chart-line"></i> Quick Monitoring</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>Project Name</th><th>Budget Component Item</th><th>Pagu Budget Allocation</th><th>Realization Expense</th><th>Financial Status</th></tr>
+                <tr><th>Project</th><th>Item Component</th><th>Budget</th><th>Actual Realization</th><th>Status</th></tr>
               </thead>
               <tbody id="monitoringBody"></tbody>
             </table>
           </div>
         </div>
-
         <div class="section">
           <h2><i class="fas fa-chart-column"></i> Budget vs Realization Chart</h2>
           <canvas id="budgetChart" height="120"></canvas>
@@ -347,92 +358,66 @@
       </div>
 
       <!-- Master Project Page -->
-      <div id="masterProjectPage" class="hidden-section">
+      <div id="masterProjectPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-plus-circle"></i> Project Creation Terminal</h2>
-          <button class="btn btn-success" id="openProjectModalBtn"><i class="fas fa-folder-plus"></i> Initialize New Project</button>
-        </div>
-
-        <div class="section">
-          <h2><i class="fas fa-folder-open"></i> Existing Cloud Master Projects</h2>
-          <div style="overflow-x:auto;">
+          <h2><i class="fas fa-database"></i> Master Project Data</h2>
+          <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Add Project</button>
+          <div style="overflow-x:auto; margin-top:20px;">
             <table>
               <thead>
-                <tr><th>Project Title</th><th>Client Name</th><th>Total Pagu Budget</th><th>Unallocated Pagu</th><th>Actions</th></tr>
+                <tr><th>Project Name</th><th>Client</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Action</th></tr>
               </thead>
               <tbody id="masterProjectBody"></tbody>
             </table>
           </div>
         </div>
-
+        
         <div class="section">
-          <h2><i class="fas fa-tags"></i> Breakdowns & Component Items Allocation</h2>
-          <div class="form-group" style="max-width:400px; margin-bottom:20px;">
-            <label>Select Master Project Target</label>
-            <select id="filterProjectRAB">
-              <option value="">-- Filter Master Project --</option>
-            </select>
-          </div>
-
-          <button class="btn btn-primary" id="openRABModalBtn" style="margin-bottom:15px;"><i class="fas fa-plus-circle"></i> Allocate RAB Component Item</button>
-          
-          <div style="overflow-x:auto;">
-            <table>
-              <thead>
-                <tr><th>Component Name</th><th>Allocated Budget</th><th>Current Realization</th><th>Remaining Budget Balance</th><th>Action</th></tr>
-              </thead>
-              <tbody id="rabItemsMasterBody">
-                <tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
+          <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
+          <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Add RAB Item</button>
+          <table>
+            <thead>
+              <tr><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
+            </thead>
+            <tbody id="rabItemsMasterBody"></tbody>
+          </table>
         </div>
       </div>
 
       <!-- Claim Request Page -->
-      <div id="claimRequestPage" class="hidden-section">
+      <div id="claimRequestPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-paper-plane"></i> Form Pengajuan Klaim Anggaran</h2>
-          
+          <h2><i class="fas fa-hand-holding-usd"></i> Submit Multi-Item Claim</h2>
           <div class="form-group">
-            <label>Target Project Entity</label>
-            <select id="claimProjectSelect">
-              <option value="">-- Select Project --</option>
-            </select>
+            <label><i class="fas fa-building"></i> Target Project</label>
+            <select id="claimProjectSelect"></select>
           </div>
-
-          <div class="form-group">
-            <label>Daftar Pengeluaran & Rincian Transaksi</label>
-            <div class="multi-item-container">
-              <div id="itemList"></div>
-              <button class="btn btn-outline" id="addItemBtn" style="margin-top:10px;"><i class="fas fa-plus"></i> Add Item Row</button>
-            </div>
+          <div id="multiItemContainer" class="multi-item-container">
+            <div id="itemList"></div>
+            <button type="button" class="btn btn-outline" id="addItemBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Add Item Row</button>
           </div>
-
-          <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; border-radius:18px; margin-top:15px;" id="submitClaimMainBtn"><i class="fas fa-cloud-upload-alt"></i> Submit Expense Claim</button>
+          <button class="btn btn-success" id="submitClaimMainBtn" style="margin-top:15px;"><i class="fas fa-paper-plane"></i> Submit Claim</button>
         </div>
-
         <div class="section">
-          <h2><i class="fas fa-history"></i> Log & Status Pengajuan Terakhir</h2>
-          <div style="overflow-x:auto;">
-            <table>
-              <thead>
-                <tr><th>Project Target</th><th>Rincian Item & Transaksi</th><th>Total Claims</th><th>Status</th></tr>
-              </thead>
-              <tbody id="historyClaimBody"></tbody>
-            </table>
-          </div>
+          <h2><i class="fas fa-history"></i> Claim History Log</h2>
+          </table>
+            <thead>
+              <tr><th>Project Name</th><th>Items</th><th>Total Amount</th><th>Status</th></tr>
+            </thead>
+            <tbody id="historyClaimBody"></tbody>
+          </table>
         </div>
       </div>
 
       <!-- Approval Budget Page -->
-      <div id="approvalBudgetPage" class="hidden-section">
+      <div id="approvalBudgetPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-user-shield"></i> Financial Authorization Bureau</h2>
+          <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>Project Target</th><th>Rincian Komponen & Transaksi</th><th>Total Amount</th><th>Status Workflow</th><th>Action Commands</th></tr>
+                <tr><th>Project</th><th>Item Details</th><th>Total Amount</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody id="approvalTableBody"></tbody>
             </table>
@@ -441,13 +426,13 @@
       </div>
 
       <!-- Monitoring Page -->
-      <div id="monitoringPage" class="hidden-section">
+      <div id="monitoringPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-desktop"></i> Realtime Realization Analytics Terminal</h2>
+          <h2><i class="fas fa-chart-bar"></i> Project Financial Metrics</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>Project Name</th><th>Client</th><th>Total Allocated Pagu</th><th>Total Realized Funds</th><th>Overall Health Status</th></tr>
+                <tr><th>Project Name</th><th>Client</th><th>Allocated Budget</th><th>Used Realization</th><th>Status</th></tr>
               </thead>
               <tbody id="monitoringMainGridBody"></tbody>
             </table>
@@ -456,19 +441,37 @@
       </div>
 
       <!-- Reports Page -->
-      <div id="reportsPage" class="hidden-section">
+      <div id="reportsPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-file-invoice-dollar"></i> Project Performance & Financial Report Viewer</h2>
+          <h2><i class="fas fa-chart-pie"></i> Financial Dashboard & Analytics</h2>
           
-          <div class="report-select-box">
-            <i class="fas fa-filter" style="color:#3b82f6;"></i>
-            <select id="reportProjectFilterSelect">
-              <option value="">-- Pilih Project --</option>
-            </select>
-            <button class="btn btn-danger" id="downloadPDFBtn"><i class="fas fa-file-pdf"></i> Download PDF Report</button>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3><i class="fas fa-chart-bar"></i> Budget vs Realization per Project</h3>
+              <canvas id="reportBarChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3><i class="fas fa-chart-pie"></i> Budget Distribution per Project</h3>
+              <canvas id="reportPieChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3><i class="fas fa-chart-line"></i> Project Health Status</h3>
+              <canvas id="reportDoughnutChart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3><i class="fas fa-percent"></i> Budget Utilization Rate</h3>
+              <canvas id="reportUtilizationChart"></canvas>
+            </div>
           </div>
+          
+          <button class="btn btn-danger" id="downloadPDFBtn" style="margin-top:10px;"><i class="fas fa-file-pdf"></i> Download PDF Report</button>
         </div>
-
+        
+        <div class="section">
+          <h2><i class="fas fa-chart-line"></i> Trend Analysis Chart</h2>
+          <canvas id="laporanChart" height="120"></canvas>
+        </div>
+        
         <div class="section">
           <h2><i class="fas fa-list-ol"></i> Rincian Audit Komponen RAB Terkait</h2>
           <div style="overflow-x:auto;">
@@ -476,43 +479,35 @@
               <thead>
                 <tr><th>Item Name</th><th class="text-right">Budget</th><th class="text-right">Realization</th><th class="text-right">Balance</th><th class="text-center">Usage %</th><th class="text-center">Status</th></tr>
               </thead>
-              <tbody id="reportsTableGridBody">
-                <tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan data</td></tr>
-              </tbody>
+              <tbody id="reportsTableGridBody"></tbody>
             </table>
           </div>
-        </div>
-        
-        <div class="section">
-          <h2><i class="fas fa-chart-line"></i> Trend Analysis Chart</h2>
-          <canvas id="laporanChart" height="120"></canvas>
         </div>
       </div>
 
       <!-- Upload Document Page -->
-      <div id="uploadDocumentPage" class="hidden-section">
+      <div id="uploadDocumentPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-cloud-upload-alt"></i> Document Storage Integration Panel</h2>
+          <h2><i class="fas fa-cloud-upload-alt"></i> Upload Document to Storage</h2>
           <form id="trueNasUploadForm">
             <div class="form-group">
-              <label>Associate Document to Project</label>
-              <select id="uploadProjectSelect">
-                <option value="">-- Select Target Project --</option>
-              </select>
+              <label>Associated Project</label>
+              <select id="uploadProjectSelect" required></select>
             </div>
             <div class="form-group">
-              <label>Select Local File</label>
-              <input type="file" id="trueNasFile" />
+              <label>Select Document File</label>
+              <input type="file" id="trueNasFile" required />
+              <div class="password-hint">* Maximum file size: 10 MB</div>
             </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-arrow-circle-up"></i> Sync File to Server</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload File</button>
           </form>
         </div>
       </div>
 
       <!-- Files Page (Explorer) -->
-      <div id="filesPage" class="hidden-section">
+      <div id="filesPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-server"></i> Cloud Storage Hierarchy File Explorer</h2>
+          <h2><i class="fas fa-folder-tree"></i> File Explorer - Document Management</h2>
           <div style="background:#fff; padding:24px; border-radius:24px; border:1px solid #e2e8f0; min-height:350px;">
             <ul class="file-tree" id="rootFileTreeDirectory"></ul>
           </div>
@@ -520,18 +515,20 @@
       </div>
 
       <!-- User Management Page -->
-      <div id="userManagementPage" class="hidden-section">
+      <div id="userManagementPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-user-plus"></i> Identity Access Management (IAM)</h2>
-          <button class="btn btn-primary" id="openAddUserModalBtn"><i class="fas fa-user-plus"></i> Register System Identity User</button>
-        </div>
-
-        <div class="section">
-          <h2><i class="fas fa-users"></i> Authenticated Infrastructure Accounts</h2>
-          <div style="overflow-x:auto;">
-            <table>
+          <h2><i class="fas fa-users"></i> User Management & System Access</h2>
+          <button class="btn btn-primary" id="openAddUserModalBtn"><i class="fas fa-user-plus"></i> Add New User</button>
+          <div style="overflow-x:auto; margin-top:20px;">
+            <table style="width:100%;">
               <thead>
-                <tr><th>Account Identity Email</th><th>System Access Level Role</th><th>Unique UID Token</th><th>Enrollment Date</th><th>Management Command Controls</th></tr>
+                <tr>
+                  <th>User Email</th>
+                  <th>Access Role</th>
+                  <th>UID</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody id="userTableBody"></tbody>
             </table>
@@ -543,64 +540,38 @@
     <!-- Project Modal -->
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
-        <h3><i class="fas fa-folder-plus"></i> Initialize Project Identity</h3>
-        <div class="form-group">
-          <label>Project Technical Title</label>
-          <input type="text" id="modalProjectName" placeholder="e.g., Migrasi Core Network Data Center" />
-        </div>
-        <div class="form-group">
-          <label>Client Organization Corporate Name</label>
-          <input type="text" id="modalClientName" placeholder="e.g., PT Telekomunikasi Utama Tbk" />
-        </div>
-        <div class="form-group">
-          <label>Total Allocated Global Pagu Funding (IDR)</label>
-          <input type="number" id="modalBudget" placeholder="e.g., 500000000" />
-        </div>
-        <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeProjectModalBtn">Cancel</button>
-          <button class="btn btn-success" id="saveProjectBtn">Commit Project</button>
-        </div>
+        <h3><i class="fas fa-folder-plus"></i> Add New Project</h3>
+        <div class="form-group"><label>Project Name</label><input type="text" id="modalProjectName" placeholder="Example: Fiber Optic Infrastructure"></div>
+        <div class="form-group"><label>Client Name</label><input type="text" id="modalClientName" placeholder="Example: PT Bank Nasional"></div>
+        <div class="form-group"><label>Budget Ceiling (IDR)</label><input type="number" id="modalBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeProjectModalBtn">Cancel</button><button class="btn btn-primary" id="saveProjectBtn">Save Project</button></div>
       </div>
     </div>
 
     <!-- RAB Modal -->
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
-        <h3><i class="fas fa-tags"></i> Allocate RAB Budget Breakdowns</h3>
-        <div class="form-group">
-          <label>Target Active Project Context</label>
-          <input type="text" id="rabModalProjectName" readonly style="background:#f1f5f9; color:#475569;" />
-        </div>
-        <div class="form-group">
-          <label>Component Expenditure Structural Name</label>
-          <input type="text" id="rabItemName" placeholder="e.g., Pembelian Server Rackmount 2U" />
-        </div>
-        <div class="form-group">
-          <label>Allocated Ceiling Budget Capacity (IDR)</label>
-          <input type="number" id="rabBudget" placeholder="e.g., 75000000" />
-        </div>
-        <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeRabModalBtn">Dismiss</button>
-          <button class="btn btn-primary" id="saveRabBtn">Deploy RAB Item</button>
-        </div>
+        <h3><i class="fas fa-plus-circle"></i> Add RAB Component</h3>
+        <div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div>
+        <div class="form-group"><label>Component Item Name</label><input type="text" id="rabItemName" placeholder="Example: Edge Switch Layer 3"></div>
+        <div class="form-group"><label>Budget Amount (IDR)</label><input type="number" id="rabBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Cancel</button><button class="btn btn-primary" id="saveRabBtn">Save Item</button></div>
       </div>
     </div>
 
     <!-- Monitoring Details Modal -->
     <div id="monitoringDetailsModal" class="modal-overlay">
-      <div class="modal-container" style="max-width: 900px;">
-        <h3><i class="fas fa-chart-pie"></i> Detailed Breakdown Performance: <span id="modalDetailsProjectName" style="color:#2563eb;">-</span></h3>
-        <div style="overflow-x:auto; margin-top:15px; max-height:50vh;">
-          <tr>
+      <div class="modal-container" style="max-width: 1000px;">
+        <h3><i class="fas fa-chart-pie"></i> RAB Components - <span id="modalDetailsProjectName"></span></h3>
+        <div style="overflow-x:auto;">
+          <table>
             <thead>
-              <tr><th>Component Name</th><th>Budget</th><th>Realization</th><th>Remaining</th><th>Status</th><th>Progress</th></tr>
+              <tr><th>Item Name</th><th>Budget</th><th>Realization</th><th>Balance</th><th>Status</th><th>Progress</th></tr>
             </thead>
             <tbody id="modalDetailsComponentsTableGridBody"></tbody>
           </table>
         </div>
-        <div class="modal-buttons">
-          <button class="btn btn-outline" id="closeMonitoringDetailsModalBtn">Close Analytics</button>
-        </div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeMonitoringDetailsModalBtn">Close</button></div>
       </div>
     </div>
 
@@ -608,45 +579,21 @@
     <div id="userModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 500px;">
         <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="modalUserEmail" placeholder="user@company.com">
-        </div>
-        <div class="form-group" id="passwordFieldGroup">
-          <label>Password</label>
-          <input type="password" id="modalUserPassword" placeholder="Min 6 characters">
-        </div>
-        <div class="form-group">
-          <label>Role</label>
-          <select id="modalRole">
-            <option value="Administrator">Administrator</option>
-            <option value="Finance">Finance</option>
-            <option value="Project Manager">Project Manager</option>
-          </select>
-        </div>
-        <input type="hidden" id="editUserId">
-        <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeUserModalBtn">Cancel</button>
-          <button class="btn btn-primary" id="saveUserBtn">Save</button>
-        </div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="modalUserEmail" placeholder="user@company.com" required></div>
+        <div class="form-group" id="passwordFieldGroup"><label>Password</label><input type="password" id="modalUserPassword" placeholder="Minimum 6 characters"><div class="password-hint">* Leave empty to use default password: "password123"</div></div>
+        <div class="form-group"><label>Access Role</label><select id="modalRole"><option value="Administrator">Administrator (Full Access)</option><option value="Finance">Finance (Financial & Approval)</option><option value="Project Manager">Project Manager (Project Management)</option></select></div>
+        <input type="hidden" id="editUserId" value="">
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeUserModalBtn">Cancel</button><button class="btn btn-primary" id="saveUserBtn">Save User</button></div>
       </div>
     </div>
 
     <!-- Reset Password Modal -->
     <div id="resetPasswordModal" class="modal-overlay">
-      <div class="modal-container">
-        <h3><i class="fas fa-key"></i> Reset Password</h3>
-        <div class="form-group">
-          <label>User Email</label>
-          <input type="text" id="resetUserEmail" readonly>
-        </div>
-        <div class="info-box">
-          <i class="fas fa-envelope"></i> Reset email will be sent
-        </div>
-        <div class="modal-buttons">
-          <button class="btn btn-danger" id="closeResetModalBtn">Cancel</button>
-          <button class="btn btn-warning" id="confirmResetPasswordBtn">Send</button>
-        </div>
+      <div class="modal-container" style="max-width: 450px;">
+        <h3><i class="fas fa-key"></i> Reset User Password</h3>
+        <div class="form-group"><label>User Email</label><input type="text" id="resetUserEmail" readonly style="background:#f1f5f9;"></div>
+        <div class="info-box" style="margin-bottom: 16px;"><i class="fas fa-envelope"></i> Password reset email will be sent to the above address.</div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeResetModalBtn">Cancel</button><button class="btn btn-warning" id="confirmResetPasswordBtn">Send Reset Email</button></div>
       </div>
     </div>
   </div>
