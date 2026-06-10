@@ -87,6 +87,12 @@ function getBadge(real, budget) {
   return '<span class="badge badge-success">Safe</span>'; 
 }
 
+function getBadgeText(real, budget) {
+  if (real > budget) return 'Over Budget';
+  if (budget > 0 && (real / budget) >= 0.9) return 'Near Limit';
+  return 'Safe';
+}
+
 function getProgressColor(percent) {
   if (percent >= 100) return '#ef4444';
   if (percent >= 90) return '#f59e0b';
@@ -127,6 +133,16 @@ function formatFileSize(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID');
+  } catch {
+    return dateString;
+  }
+}
+
 // ==================== MANUAL PROGRESS UPDATE ====================
 async function updateManualProgress(itemId, progressValue) {
   try {
@@ -136,7 +152,6 @@ async function updateManualProgress(itemId, progressValue) {
       updatedAt: new Date().toLocaleString()
     });
     
-    // Update the display immediately without closing modal
     const progressElement = document.querySelector(`#progress_display_${itemId}`);
     if (progressElement) {
       const percent = progress;
@@ -146,7 +161,6 @@ async function updateManualProgress(itemId, progressValue) {
       progressElement.querySelector('.progress-percent-label').innerText = `${percent}%`;
     }
     
-    // Also update the status badge if needed
     const rabItem = rabItems.find(r => r.id === itemId);
     if (rabItem) {
       rabItem.manualProgress = progress;
@@ -398,7 +412,7 @@ function renderMasterProject() {
     tbody.innerHTML = projects.map(p => {
       const totalAllocated = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
       const remaining = p.totalBudget - totalAllocated;
-      return `<tr>
+      return `<table>
         <td><strong>${p.name}</strong></td>
         <td>${p.client}</td>
         <td>${formatRp(p.totalBudget)}</td>
@@ -489,7 +503,7 @@ function renderUsersTable() {
           ` : '<span class="badge badge-secondary">Your Account</span>'}
         ` : '<span class="badge badge-secondary">Admin Only</span>'}
         </td>
-     </tr>`;
+     </table>`;
   }).join('');
   
   if (currentRole === 'Administrator') {
@@ -890,17 +904,16 @@ function openMonitoringDetail(projectId) {
               </div>
               <span class="progress-percent-label">${progressPercent}%</span>
             </div>
-          </td>
+           </td>
           <td>
             <div class="manual-progress-group">
               <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
               <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
             </div>
-          </td>
+           </td>
         </tr>`;
       }).join('');
       
-      // Attach event listeners to buttons
       document.querySelectorAll('.progress-update-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const itemId = btn.getAttribute('data-id');
@@ -908,7 +921,6 @@ function openMonitoringDetail(projectId) {
           const newProgress = parseFloat(input.value);
           if (!isNaN(newProgress) && newProgress >= 0 && newProgress <= 100) {
             await updateManualProgress(itemId, newProgress);
-            // Also update the input field to reflect saved value
             input.value = newProgress;
           } else {
             triggerNotification('Please enter a value between 0 and 100', false, 'error');
@@ -948,7 +960,7 @@ function renderReportsByProject() {
     
     html += `<tr style="background-color: #f1f5f9;">
       <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
-     </tr>`;
+    </tr>`;
     
     if (items.length === 0) {
       html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
@@ -1030,7 +1042,6 @@ function renderReportDiagramsByProject() {
   }
   
   if (filteredProjects.length === 0) {
-    // Clear charts if no data
     if (reportPieChartInstance) reportPieChartInstance.destroy();
     if (reportDoughnutChartInstance) reportDoughnutChartInstance.destroy();
     if (reportUtilizationChartInstance) reportUtilizationChartInstance.destroy();
@@ -1042,7 +1053,7 @@ function renderReportDiagramsByProject() {
     filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0)
   );
   
-  // Pie Chart - Budget Distribution
+  // Pie Chart
   const pieCtx = document.getElementById('reportPieChart')?.getContext('2d');
   if (pieCtx) {
     if (reportPieChartInstance) reportPieChartInstance.destroy();
@@ -1073,12 +1084,11 @@ function renderReportDiagramsByProject() {
     });
   }
   
-  // Doughnut Chart - Project Health (based on filtered items)
+  // Doughnut Chart
   const filteredItems = filteredRabItems;
   const overBudget = filteredItems.filter(i => i.realisasi > i.budget).length;
   const nearLimit = filteredItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
   const safe = filteredItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
-  const noBudget = filteredItems.filter(i => i.budget === 0).length;
   
   const doughnutCtx = document.getElementById('reportDoughnutChart')?.getContext('2d');
   if (doughnutCtx) {
@@ -1093,7 +1103,7 @@ function renderReportDiagramsByProject() {
     });
   }
   
-  // Horizontal Bar Chart - Budget Utilization
+  // Horizontal Bar Chart - Utilization
   const utilization = filteredProjects.map(p => {
     const budget = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0);
     const real = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0);
@@ -1130,7 +1140,7 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD ====================
+// ==================== PDF DOWNLOAD - LENGKAP DAN DETAIL ====================
 async function downloadPDF() {
   triggerNotification('Generating PDF report...', true, 'info');
   
@@ -1140,6 +1150,8 @@ async function downloadPDF() {
     month: 'long',
     day: 'numeric'
   });
+  
+  const currentTime = new Date().toLocaleTimeString('id-ID');
   
   let filteredProjects = projects;
   let filteredRabItems = rabItems;
@@ -1151,94 +1163,220 @@ async function downloadPDF() {
     filteredClaims = claims.filter(c => c.projectId === currentSelectedReportProject);
   }
   
+  // Summary Statistics
   const totalBudget = filteredProjects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+  const totalRabBudget = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
   const totalRealization = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
   const totalProjects = filteredProjects.length;
+  const totalRabItems = filteredRabItems.length;
   const overBudgetItems = filteredRabItems.filter(i => i.realisasi > i.budget).length;
+  const nearLimitItems = filteredRabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
+  const safeItems = filteredRabItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) < 0.9 && i.realisasi <= i.budget).length;
   const pendingClaims = filteredClaims.filter(c => c.status === 'pending').length;
   const approvedClaims = filteredClaims.filter(c => c.status === 'approved').length;
   const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
+  const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
   
-  const chartCanvas = document.getElementById('budgetChart');
+  // Get chart images
+  const barChartCanvas = document.getElementById('budgetChart');
   let barChartImage = '';
-  if (chartCanvas) {
-    barChartImage = chartCanvas.toDataURL('image/png');
+  if (barChartCanvas && currentSelectedReportProject === 'all') {
+    barChartImage = barChartCanvas.toDataURL('image/png');
   }
   
+  const pieChartCanvas = document.getElementById('reportPieChart');
+  let pieChartImage = '';
+  if (pieChartCanvas) {
+    pieChartImage = pieChartCanvas.toDataURL('image/png');
+  }
+  
+  const doughnutChartCanvas = document.getElementById('reportDoughnutChart');
+  let doughnutChartImage = '';
+  if (doughnutChartCanvas) {
+    doughnutChartImage = doughnutChartCanvas.toDataURL('image/png');
+  }
+  
+  const utilizationChartCanvas = document.getElementById('reportUtilizationChart');
+  let utilizationChartImage = '';
+  if (utilizationChartCanvas) {
+    utilizationChartImage = utilizationChartCanvas.toDataURL('image/png');
+  }
+  
+  // Build detailed project breakdown HTML
   let projectDetailsHtml = '';
+  let grandTotalBudget = 0;
+  let grandTotalRealization = 0;
+  
   filteredProjects.forEach(p => {
     const projectItems = filteredRabItems.filter(i => i.projectId === p.id);
     const projectBudget = projectItems.reduce((sum, i) => sum + i.budget, 0);
     const projectRealization = projectItems.reduce((sum, i) => sum + i.realisasi, 0);
     const projectBalance = projectBudget - projectRealization;
     const percentage = projectBudget > 0 ? ((projectRealization / projectBudget) * 100).toFixed(1) : 0;
+    const status = projectRealization > p.totalBudget ? 'Critical' : (percentage >= 88 ? 'Attention' : 'Healthy');
+    
+    grandTotalBudget += projectBudget;
+    grandTotalRealization += projectRealization;
     
     projectDetailsHtml += `
-      <tr style="background-color: #f1f5f9;">
-        <td colspan="6" style="padding: 10px; font-weight: bold;">${escapeHtml(p.name)} (${escapeHtml(p.client)})</td>
-       </tr>
+      <div style="margin-bottom: 30px; page-break-inside: avoid;">
+        <div style="background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+              <h3 style="margin: 0 0 5px 0; font-size: 18px;">📁 ${escapeHtml(p.name)}</h3>
+              <p style="margin: 0; opacity: 0.9; font-size: 12px;">Client: ${escapeHtml(p.client)} | Status: ${status}</p>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 14px; font-weight: bold;">Initial Budget: ${formatRp(p.totalBudget)}</div>
+              <div style="font-size: 12px; opacity: 0.9;">Remaining: ${formatRp(p.totalBudget - projectRealization)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px;">
+          <div style="background: #f0fdf4; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #166534;">Total Budget</div>
+            <div style="font-size: 14px; font-weight: bold; color: #166534;">${formatRp(projectBudget)}</div>
+          </div>
+          <div style="background: #eff6ff; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #1e40af;">Realization</div>
+            <div style="font-size: 14px; font-weight: bold; color: #1e40af;">${formatRp(projectRealization)}</div>
+          </div>
+          <div style="background: #fef3c7; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #92400e;">Balance</div>
+            <div style="font-size: 14px; font-weight: bold; color: #92400e;">${formatRp(projectBalance)}</div>
+          </div>
+          <div style="background: ${percentage >= 90 ? '#fee2e2' : (percentage >= 70 ? '#fef3c7' : '#f0fdf4')}; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #475569;">Utilization</div>
+            <div style="font-size: 14px; font-weight: bold;">${percentage}%</div>
+          </div>
+        </div>
     `;
     
     if (projectItems.length === 0) {
-      projectDetailsHtml += `
-        <tr>
-          <td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td>
-        </tr>
-      `;
+      projectDetailsHtml += `<div style="text-align: center; padding: 20px; color: #666; background: #f8fafc; border-radius: 8px;">No RAB items for this project</div>`;
     } else {
+      projectDetailsHtml += `
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px;">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Item Name</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0;">Budget (IDR)</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0;">Realization (IDR)</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0;">Balance (IDR)</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Usage %</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
       projectItems.forEach(item => {
         const itemBalance = item.budget - item.realisasi;
         const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
+        const statusText = getBadgeText(item.realisasi, item.budget);
+        const statusColor = item.realisasi > item.budget ? '#991b1b' : (itemPercentage >= 90 ? '#9a3412' : '#065f46');
+        const statusBg = item.realisasi > item.budget ? '#fee2e2' : (itemPercentage >= 90 ? '#fed7aa' : '#d1fae5');
+        
         projectDetailsHtml += `
           <tr>
-            <td style="padding: 8px;">${escapeHtml(item.itemName)}</td>
-            <td style="padding: 8px; text-align: right;">${formatRp(item.budget)}</td>
-            <td style="padding: 8px; text-align: right;">${formatRp(item.realisasi)}</td>
-            <td style="padding: 8px; text-align: right;">${formatRp(itemBalance)}</td>
-            <td style="padding: 8px; text-align: center;">${itemPercentage}%</td>
-            <td style="padding: 8px; text-align: center;">
-              <span style="padding: 2px 8px; border-radius: 12px; ${item.realisasi > item.budget ? 'background: #fee2e2; color: #991b1b;' : (itemPercentage >= 90 ? 'background: #fed7aa; color: #9a3412;' : 'background: #d1fae5; color: #065f46;')}">
-                ${item.realisasi > item.budget ? 'Over Budget' : (itemPercentage >= 90 ? 'Near Limit' : 'Safe')}
-              </span>
+            <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(item.itemName)}</td>
+            <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">${formatRp(item.budget)}</td>
+            <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">${formatRp(item.realisasi)}</td>
+            <td style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; color: ${itemBalance < 0 ? '#dc2626' : '#059669'};">${formatRp(itemBalance)}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">${itemPercentage}%</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #e2e8f0;">
+              <span style="padding: 4px 12px; border-radius: 20px; background: ${statusBg}; color: ${statusColor}; font-size: 10px; font-weight: bold;">${statusText}</span>
             </td>
-          </td>
+          </tr>
         `;
       });
+      
+      projectDetailsHtml += `
+          </tbody>
+        </table>
+      `;
     }
     
+    // Progress bar for project
+    const progressPercent = Math.min(Math.round((projectRealization / p.totalBudget) * 100), 100);
+    const progressColor = progressPercent >= 100 ? '#ef4444' : (progressPercent >= 90 ? '#f59e0b' : '#10b981');
+    
     projectDetailsHtml += `
-      <tr style="background-color: #f8fafc; font-weight: bold;">
-        <td style="padding: 8px;">TOTAL for ${escapeHtml(p.name)}</td>
-        <td style="padding: 8px; text-align: right;">${formatRp(projectBudget)}</td>
-        <td style="padding: 8px; text-align: right;">${formatRp(projectRealization)}</td>
-        <td style="padding: 8px; text-align: right;">${formatRp(projectBalance)}</td>
-        <td style="padding: 8px; text-align: center;">${percentage}%</td>
-        <td style="padding: 8px; text-align: center;"></td>
-      </tr>
+        <div style="margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
+            <span>Project Progress</span>
+            <span>${progressPercent}%</span>
+          </div>
+          <div style="height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+            <div style="height: 100%; width: ${progressPercent}%; background: ${progressColor}; border-radius: 10px;"></div>
+          </div>
+        </div>
+      </div>
     `;
   });
   
+  // Build claims history HTML
   let claimsHtml = '';
-  filteredClaims.forEach(c => {
-    const p = filteredProjects.find(pr => pr.id === c.projectId);
-    claimsHtml += `
-      <tr>
-        <td style="padding: 8px;">${p ? escapeHtml(p.name) : 'Unknown'}</td>
-        <td style="padding: 8px;">${c.items && c.items[0] ? c.items[0].vendor || '-' : '-'}</td>
-        <td style="padding: 8px; text-align: right;">${formatRp(c.totalNominal)}</td>
-        <td style="padding: 8px; text-align: center;">
-          <span style="padding: 2px 8px; border-radius: 12px; ${c.status === 'approved' ? 'background: #d1fae5; color: #065f46;' : (c.status === 'rejected' ? 'background: #fee2e2; color: #991b1b;' : 'background: #fed7aa; color: #9a3412;')}">
-            ${c.status.toUpperCase()}
-          </span>
-        </td>
-        <td style="padding: 8px;">${c.items && c.items[0] ? c.items[0].tanggal || '-' : '-'}</td>
-      </tr>
-    `;
-  });
+  if (filteredClaims.length > 0) {
+    filteredClaims.forEach(c => {
+      const p = filteredProjects.find(pr => pr.id === c.projectId);
+      const statusColor = c.status === 'approved' ? '#065f46' : (c.status === 'rejected' ? '#991b1b' : '#9a3412');
+      const statusBg = c.status === 'approved' ? '#d1fae5' : (c.status === 'rejected' ? '#fee2e2' : '#fed7aa');
+      
+      claimsHtml += `
+        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 12px; page-break-inside: avoid;">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px;">
+            <div>
+              <strong style="font-size: 13px;">📋 ${p ? escapeHtml(p.name) : 'Unknown Project'}</strong>
+              <span style="margin-left: 10px; padding: 2px 8px; border-radius: 12px; background: ${statusBg}; color: ${statusColor}; font-size: 10px; font-weight: bold;">${c.status.toUpperCase()}</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b;">Total: ${formatRp(c.totalNominal)}</div>
+          </div>
+          <div style="font-size: 11px; color: #475569; margin-bottom: 8px;">
+            Submitted: ${formatDate(c.timestamp)} | Claim ID: ${c.id.substring(0, 8)}...
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0;">Item</th>
+                <th style="padding: 6px; text-align: right; border: 1px solid #e2e8f0;">Amount</th>
+                <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0;">Vendor</th>
+                <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0;">Date</th>
+                <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      if (c.items && c.items.length > 0) {
+        c.items.forEach(item => {
+          const rab = filteredRabItems.find(r => r.id === item.itemId);
+          claimsHtml += `
+            <tr>
+              <td style="padding: 6px; border: 1px solid #e2e8f0;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
+              <td style="padding: 6px; text-align: right; border: 1px solid #e2e8f0;">${formatRp(item.nominal)}</td>
+              <td style="padding: 6px; border: 1px solid #e2e8f0;">${escapeHtml(item.vendor || '-')}</td>
+              <td style="padding: 6px; border: 1px solid #e2e8f0;">${item.tanggal || '-'}</td>
+              <td style="padding: 6px; border: 1px solid #e2e8f0;">${escapeHtml(item.desc || '-')}</td>
+            </tr>
+          `;
+        });
+      }
+      
+      claimsHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    });
+  } else {
+    claimsHtml = '<div style="text-align: center; padding: 30px; color: #666; background: #f8fafc; border-radius: 12px;">No claims data available for the selected project(s).</div>';
+  }
   
-  const reportTitle = currentSelectedReportProject !== 'all' 
-    ? `RAB Report - ${filteredProjects[0]?.name || 'Project'}`
-    : 'RAB Financial Report - All Projects';
+  const reportTitle = currentSelectedReportProject !== 'all' && filteredProjects.length === 1
+    ? `RAB Report - ${filteredProjects[0].name}`
+    : (currentSelectedReportProject !== 'all' ? `RAB Report - Selected Projects (${filteredProjects.length} Projects)` : 'RAB Financial Report - All Projects');
   
   const reportHTML = `
     <!DOCTYPE html>
@@ -1250,129 +1388,138 @@ async function downloadPDF() {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
           font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-          padding: 40px;
+          padding: 30px;
           margin: 0;
-          color: #000000;
+          color: #1e293b;
           background: white;
         }
         .header {
           text-align: center;
           margin-bottom: 30px;
-          border-bottom: 1px solid #cccccc;
+          border-bottom: 2px solid #3b82f6;
           padding-bottom: 20px;
         }
         .header h1 {
-          color: #000000;
+          color: #1e293b;
           margin: 0;
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 700;
         }
         .header h2 {
-          color: #333333;
-          margin: 10px 0 0;
-          font-size: 16px;
+          color: #64748b;
+          margin: 8px 0 0;
+          font-size: 14px;
           font-weight: 500;
         }
         .header p {
-          color: #666666;
-          margin: 10px 0 0;
-          font-size: 12px;
+          color: #94a3b8;
+          margin: 8px 0 0;
+          font-size: 11px;
         }
         .summary-cards {
           display: flex;
           justify-content: space-between;
-          gap: 15px;
-          margin-bottom: 30px;
+          gap: 12px;
+          margin-bottom: 25px;
           flex-wrap: wrap;
         }
         .summary-card {
           flex: 1;
-          background: #f8fafc;
-          padding: 20px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          padding: 15px;
           border-radius: 12px;
           text-align: center;
           border: 1px solid #e2e8f0;
+          min-width: 120px;
         }
         .summary-card h3 {
-          margin: 0 0 10px;
-          font-size: 11px;
-          color: #666666;
+          margin: 0 0 8px;
+          font-size: 10px;
+          color: #64748b;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           font-weight: 600;
         }
         .summary-card .value {
           margin: 0;
-          font-size: 22px;
+          font-size: 18px;
           font-weight: bold;
-          color: #000000;
+          color: #1e293b;
         }
         .section {
-          margin-bottom: 30px;
+          margin-bottom: 25px;
           page-break-inside: avoid;
         }
         .section-title {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
-          margin-bottom: 15px;
-          padding-bottom: 10px;
-          border-bottom: 1px solid #cccccc;
-          color: #000000;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e2e8f0;
+          color: #1e293b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
         .chart-container {
           text-align: center;
-          margin: 20px 0;
-          padding: 20px;
+          margin: 15px 0;
+          padding: 15px;
           background: #fafafa;
           border-radius: 12px;
         }
         .chart-container img {
           max-width: 100%;
           height: auto;
+          max-height: 300px;
         }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 15px;
-          font-size: 11px;
+        .chart-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 15px;
+          margin-bottom: 20px;
         }
-        th, td {
-          border: 1px solid #cccccc;
-          padding: 10px;
-          text-align: left;
-        }
-        th {
-          background: #f5f5f5;
-          font-weight: 700;
-          color: #000000;
-        }
-        .text-right {
-          text-align: right;
-        }
-        .text-center {
+        .chart-card {
+          background: #fafafa;
+          border-radius: 12px;
+          padding: 15px;
           text-align: center;
+        }
+        .chart-card h4 {
+          margin-bottom: 10px;
+          font-size: 12px;
+          color: #475569;
         }
         .footer {
-          margin-top: 40px;
+          margin-top: 30px;
           text-align: center;
-          font-size: 10px;
-          color: #999999;
-          border-top: 1px solid #cccccc;
-          padding-top: 20px;
+          font-size: 9px;
+          color: #94a3b8;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 15px;
+        }
+        @media print {
+          body { padding: 20px; }
+          .section { page-break-inside: avoid; }
         }
       </style>
     </head>
     <body>
       <div class="header">
         <h1>${reportTitle}</h1>
-        <h2>Financial Report & Budget Tracking</h2>
-        <p>Generated on: ${currentDate}</p>
+        <h2>Financial Report & Budget Tracking System</h2>
+        <p>Generated on: ${currentDate} at ${currentTime} | User: ${escapeHtml(currentUserEmail)}</p>
       </div>
       
+      <!-- Summary Statistics -->
       <div class="summary-cards">
         <div class="summary-card">
           <h3>Total Projects</h3>
           <div class="value">${totalProjects}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Total RAB Items</h3>
+          <div class="value">${totalRabItems}</div>
         </div>
         <div class="summary-card">
           <h3>Total Budget</h3>
@@ -1382,86 +1529,103 @@ async function downloadPDF() {
           <h3>Total Realization</h3>
           <div class="value">${formatRp(totalRealization)}</div>
         </div>
+      </div>
+      
+      <div class="summary-cards">
         <div class="summary-card">
           <h3>Remaining Budget</h3>
-          <div class="value">${formatRp(totalBudget - totalRealization)}</div>
+          <div class="value" style="color: #059669;">${formatRp(totalBudget - totalRealization)}</div>
         </div>
         <div class="summary-card">
           <h3>Over Budget Items</h3>
-          <div class="value">${overBudgetItems}</div>
+          <div class="value" style="color: #dc2626;">${overBudgetItems}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Near Limit Items</h3>
+          <div class="value" style="color: #d97706;">${nearLimitItems}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Safe Items</h3>
+          <div class="value" style="color: #059669;">${safeItems}</div>
         </div>
       </div>
       
       <div class="summary-cards">
         <div class="summary-card">
           <h3>Pending Claims</h3>
-          <div class="value">${pendingClaims}</div>
+          <div class="value" style="color: #d97706;">${pendingClaims}</div>
         </div>
         <div class="summary-card">
           <h3>Approved Claims</h3>
-          <div class="value">${approvedClaims}</div>
+          <div class="value" style="color: #059669;">${approvedClaims}</div>
         </div>
         <div class="summary-card">
           <h3>Rejected Claims</h3>
-          <div class="value">${rejectedClaims}</div>
+          <div class="value" style="color: #dc2626;">${rejectedClaims}</div>
         </div>
         <div class="summary-card">
-          <h3>Total RAB Items</h3>
-          <div class="value">${filteredRabItems.length}</div>
+          <h3>Total Claims Value</h3>
+          <div class="value">${formatRp(totalClaimsAmount)}</div>
         </div>
       </div>
       
-      ${barChartImage && currentSelectedReportProject === 'all' ? `
+      <!-- Charts Section -->
+      ${(pieChartImage || doughnutChartImage || utilizationChartImage) ? `
       <div class="section">
-        <div class="section-title">Budget vs Realization Chart</div>
-        <div class="chart-container">
-          <img src="${barChartImage}" alt="Budget Chart" style="max-width: 100%;">
+        <div class="section-title">📊 Financial Diagrams</div>
+        <div class="chart-grid">
+          ${pieChartImage ? `
+          <div class="chart-card">
+            <h4>Budget Distribution</h4>
+            <img src="${pieChartImage}" alt="Pie Chart">
+          </div>
+          ` : ''}
+          ${doughnutChartImage ? `
+          <div class="chart-card">
+            <h4>Project Health Status</h4>
+            <img src="${doughnutChartImage}" alt="Doughnut Chart">
+          </div>
+          ` : ''}
+          ${utilizationChartImage ? `
+          <div class="chart-card">
+            <h4>Budget Utilization Rate</h4>
+            <img src="${utilizationChartImage}" alt="Utilization Chart">
+          </div>
+          ` : ''}
         </div>
       </div>
       ` : ''}
       
+      ${barChartImage ? `
       <div class="section">
-        <div class="section-title">Detailed Project Breakdown</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Item Name</th>
-              <th class="text-right">Budget (IDR)</th>
-              <th class="text-right">Realization (IDR)</th>
-              <th class="text-right">Balance (IDR)</th>
-              <th class="text-center">Usage %</th>
-              <th class="text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${projectDetailsHtml}
-          </tbody>
-        </table>
+        <div class="section-title">📈 Budget vs Realization Overview</div>
+        <div class="chart-container">
+          <img src="${barChartImage}" alt="Budget Chart">
+        </div>
+      </div>
+      ` : ''}
+      
+      <!-- Detailed Project Breakdown -->
+      <div class="section">
+        <div class="section-title">📋 Detailed Project Breakdown</div>
+        ${projectDetailsHtml}
+        <div style="margin-top: 20px; background: #f1f5f9; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; font-weight: bold;">
+          <span>GRAND TOTAL</span>
+          <span>Budget: ${formatRp(grandTotalBudget)}</span>
+          <span>Realization: ${formatRp(grandTotalRealization)}</span>
+          <span>Balance: ${formatRp(grandTotalBudget - grandTotalRealization)}</span>
+        </div>
       </div>
       
+      <!-- Claims History -->
       <div class="section">
-        <div class="section-title">Claim History</div>
-        ${claimsHtml ? `
-        <table>
-          <thead>
-            <tr>
-              <th>Project</th>
-              <th>Vendor</th>
-              <th class="text-right">Amount</th>
-              <th class="text-center">Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${claimsHtml}
-          </tbody>
-        </table>
-        ` : '<p style="text-align: center; padding: 20px; color: #666666;">No claims data available.</p>'}
+        <div class="section-title">📝 Claim History</div>
+        ${claimsHtml}
       </div>
       
       <div class="footer">
         <p>Report generated by RAB Monitoring System</p>
-        <p>This is an automated system-generated report</p>
+        <p>This is an automated system-generated report. For any inquiries, please contact the system administrator.</p>
       </div>
     </body>
     </html>
@@ -1484,6 +1648,7 @@ async function downloadPDF() {
     triggerNotification('PDF report generated successfully!', true);
   }).catch(err => {
     document.body.removeChild(element);
+    console.error("PDF Error:", err);
     triggerNotification('Error generating PDF: ' + err.message, false, 'error');
   });
 }
