@@ -190,10 +190,10 @@
     .manual-progress-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .manual-progress-input {
-      width: 80px;
+      width: 70px;
       padding: 6px 8px;
       border-radius: 12px;
       border: 1px solid #cbd5e1;
@@ -208,6 +208,11 @@
       border-radius: 20px;
       font-size: 0.7rem;
       cursor: pointer;
+      transition: 0.2s;
+    }
+    .progress-update-btn:hover {
+      background: #2563eb;
+      transform: scale(1.02);
     }
 
     /* Sections */
@@ -217,7 +222,7 @@
     /* Tables */
     .info-box { background: #eef2ff; padding: 16px; border-radius: 24px; margin-bottom: 16px; font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-    th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
+    th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; vertical-align: middle; }
     th { background: #f1f5f9; font-weight: 700; color: #334155; }
     .text-right { text-align: right; }
     .text-center { text-align: center; }
@@ -246,7 +251,6 @@
     .form-group { margin-bottom: 18px; }
     .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: #334155; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border-radius: 16px; border: 1px solid #cbd5e1; outline: none; background: #fff; font-size: 0.9rem; }
-    .form-group textarea { resize: vertical; min-height: 80px; }
 
     /* File Tree */
     .file-tree { list-style-type: none; padding-left: 5px; }
@@ -291,7 +295,7 @@
     .btn-reset { background: #fef3c7; color: #92400e; }
     .btn-delete { background: #fee2e2; color: #991b1b; }
 
-    /* Report Charts Grid - Only Diagrams, No Charts */
+    /* Report Diagrams Grid */
     .diagram-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -463,14 +467,21 @@
         </div>
       </div>
 
-      <!-- Reports Page - Only Diagrams, No Charts -->
+      <!-- Reports Page - Per Project Selection -->
       <div id="reportsPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-chart-pie"></i> Financial Dashboard & Analytics</h2>
           
-          <div class="diagram-grid">
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label><i class="fas fa-project-diagram"></i> Pilih Project untuk Report</label>
+            <select id="reportProjectSelect" style="padding: 12px; border-radius: 28px; width: 100%; border: 1px solid #cbd5e1;">
+              <option value="all">-- Semua Project --</option>
+            </select>
+          </div>
+          
+          <div class="diagram-grid" id="reportDiagramsContainer">
             <div class="diagram-card">
-              <h3><i class="fas fa-chart-pie"></i> Budget Distribution per Project</h3>
+              <h3><i class="fas fa-chart-pie"></i> Budget Distribution</h3>
               <canvas id="reportPieChart"></canvas>
             </div>
             <div class="diagram-card">
