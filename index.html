@@ -160,6 +160,32 @@
     .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
     .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+    /* Progress Bar */
+    .progress-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 120px;
+    }
+    .progress-bar-container {
+      flex: 1;
+      height: 8px;
+      background-color: #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+    .progress-percent-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #475569;
+      min-width: 40px;
+    }
+
     /* Sections */
     .section { background: rgba(255,255,255,0.92); padding: 28px 32px; border-radius: 36px; margin-bottom: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); }
     .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1f2a48; }
@@ -169,6 +195,8 @@
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; }
     th { background: #f1f5f9; font-weight: 700; color: #334155; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
 
     /* Badges */
     .badge { padding: 5px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; display: inline-block; text-transform: uppercase; }
@@ -209,7 +237,9 @@
     .file-node .action-links { margin-left: auto; display: flex; align-items: center; gap: 14px; }
     .file-node .preview-link { color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
     .file-node .preview-link:hover { text-decoration: underline; }
-    .file-node .delete-file-btn { color: #ef4444; background: transparent; border: none; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+    .file-node .delete-file-btn { background: #fee2e2; border: none; padding: 4px 10px; border-radius: 6px; color: #dc2626; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; transition: all 0.2s; }
+    .file-node .delete-file-btn:hover { background: #fecaca; transform: scale(1.02); }
+    .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
     /* Modals & Popups */
     .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index: 1000; padding: 20px; }
@@ -228,30 +258,23 @@
     .notify-popup.info { border-left-color: #f59e0b; }
     .notify-popup.info i { color: #f59e0b; }
 
-    /* Visual Utilities & Progress Bar */
+    /* Visual Utilities */
     .hidden-section { display: none !important; }
-    .graphic-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 24px; }
-    .chart-box { background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 400px; }
     .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
     .action-buttons button { padding: 6px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: none; }
     .btn-edit { background: #dbeafe; color: #1e40af; }
     .btn-reset { background: #fef3c7; color: #92400e; }
     .btn-delete { background: #fee2e2; color: #991b1b; }
 
-    /* Progress Visual Styles */
-    .progress-wrapper { display: flex; align-items: center; gap: 12px; min-width: 180px; }
-    .progress-bar-container { background: #e2e8f0; border-radius: 10px; width: 100px; height: 10px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; width: 0%; }
-    .progress-percent-label { font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
-
-    /* Report Layout Utilities */
+    /* Report Layout */
     .report-select-box { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); flex-wrap: wrap; }
     .report-select-box select { padding: 10px 16px; border-radius: 16px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem; min-width: 250px; }
     .report-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .report-stat-card { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: center; }
     .report-stat-card h4 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
     .report-stat-card p { font-size: 1.25rem; font-weight: 700; color: #1e293b; }
-    
+    .graphic-grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 24px; }
+    .chart-box { background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 400px; }
     canvas { max-width: 100%; height: auto; max-height: 320px; width: 100% !important; }
     
     @media (max-width: 768px) {
@@ -282,14 +305,14 @@
 
       <ul id="sidebarMenu">
         <li class="active" data-page="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></li>
-        <li data-page="master-project" class="restricted"><i class="fas fa-folder-open"></i> <span>Master Project</span></li>
-        <li data-page="claim-request" class="restricted"><i class="fas fa-receipt"></i> <span>Claim Request</span></li>
-        <li data-page="approval-budget" class="restricted"><i class="fas fa-file-invoice-dollar"></i> <span>Approval Budget</span></li>
-        <li data-page="monitoring" class="restricted"><i class="fas fa-desktop"></i> <span>Monitoring</span></li>
-        <li data-page="reports" class="restricted"><i class="fas fa-file-alt"></i> <span>Reports</span></li>
-        <li data-page="upload-document" class="restricted"><i class="fas fa-cloud-upload-alt"></i> <span>Upload Document</span></li>
-        <li data-page="files" class="restricted"><i class="fas fa-server"></i> <span>Storage Server</span></li>
-        <li data-page="user-management" class="restricted"><i class="fas fa-users-cog"></i> <span>User Management</span></li>
+        <li data-page="master-project"><i class="fas fa-folder-open"></i> <span>Master Project</span></li>
+        <li data-page="claim-request"><i class="fas fa-receipt"></i> <span>Claim Request</span></li>
+        <li data-page="approval-budget"><i class="fas fa-file-invoice-dollar"></i> <span>Approval Budget</span></li>
+        <li data-page="monitoring"><i class="fas fa-desktop"></i> <span>Monitoring</span></li>
+        <li data-page="reports"><i class="fas fa-file-alt"></i> <span>Reports</span></li>
+        <li data-page="upload-document"><i class="fas fa-cloud-upload-alt"></i> <span>Upload Document</span></li>
+        <li data-page="files"><i class="fas fa-server"></i> <span>Storage Server</span></li>
+        <li data-page="user-management"><i class="fas fa-users-cog"></i> <span>User Management</span></li>
       </ul>
 
       <button class="btn-logout-sidebar" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></button>
@@ -301,34 +324,32 @@
         <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
       </div>
 
+      <!-- Dashboard Page -->
       <div id="dashboardPage">
-        <div class="cards" id="cardsContainer">
-        </div>
+        <div class="cards" id="cardsContainer"></div>
 
         <div class="section">
           <h2><i class="fas fa-chart-line"></i> Top Budget Distribution Overview</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Project Name</th>
-                  <th>Budget Component Item</th>
-                  <th>Pagu Budget Allocation</th>
-                  <th>Realization Expense</th>
-                  <th>Financial Status</th>
-                </tr>
+                <tr><th>Project Name</th><th>Budget Component Item</th><th>Pagu Budget Allocation</th><th>Realization Expense</th><th>Financial Status</th></tr>
               </thead>
-              <tbody id="monitoringBody">
-              </tbody>
+              <tbody id="monitoringBody"></tbody>
             </table>
           </div>
         </div>
+
+        <div class="section">
+          <h2><i class="fas fa-chart-column"></i> Budget vs Realization Chart</h2>
+          <canvas id="budgetChart" height="120"></canvas>
+        </div>
       </div>
 
+      <!-- Master Project Page -->
       <div id="masterProjectPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-plus-circle"></i> Project Creation Terminal</h2>
-          <p style="color:#64748b; font-size:0.85rem; margin-bottom:16px;">Tambahkan entitas Master Project baru ke dalam ekosistem database cloud.</p>
           <button class="btn btn-success" id="openProjectModalBtn"><i class="fas fa-folder-plus"></i> Initialize New Project</button>
         </div>
 
@@ -337,16 +358,9 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Project Title</th>
-                  <th>Client Name</th>
-                  <th>Total Pagu Budget</th>
-                  <th>Unallocated Pagu</th>
-                  <th>Actions</th>
-                </tr>
+                <tr><th>Project Title</th><th>Client Name</th><th>Total Pagu Budget</th><th>Unallocated Pagu</th><th>Actions</th></tr>
               </thead>
-              <tbody id="masterProjectBody">
-              </tbody>
+              <tbody id="masterProjectBody"></tbody>
             </table>
           </div>
         </div>
@@ -365,13 +379,7 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Component Name</th>
-                  <th>Allocated Budget</th>
-                  <th>Current Realization</th>
-                  <th>Remaining Budget Balance</th>
-                  <th>Action</th>
-                </tr>
+                <tr><th>Component Name</th><th>Allocated Budget</th><th>Current Realization</th><th>Remaining Budget Balance</th><th>Action</th></tr>
               </thead>
               <tbody id="rabItemsMasterBody">
                 <tr><td colspan="5" style="text-align:center; color:#64748b;">Please select a project filter first.</td></tr>
@@ -381,13 +389,11 @@
         </div>
       </div>
 
+      <!-- Claim Request Page -->
       <div id="claimRequestPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-paper-plane"></i> Form Pengajuan Klaim Anggaran</h2>
-          <div class="info-box">
-            <i class="fas fa-info-circle"></i> Pengisian Vendor, Tanggal Transaksi, dan Notes kini diinput secara spesifik untuk masing-masing item RAB terpilih.
-          </div>
-
+          
           <div class="form-group">
             <label>Target Project Entity</label>
             <select id="claimProjectSelect">
@@ -398,8 +404,7 @@
           <div class="form-group">
             <label>Daftar Pengeluaran & Rincian Transaksi</label>
             <div class="multi-item-container">
-              <div id="itemList">
-              </div>
+              <div id="itemList"></div>
               <button class="btn btn-outline" id="addItemBtn" style="margin-top:10px;"><i class="fas fa-plus"></i> Add Item Row</button>
             </div>
           </div>
@@ -412,183 +417,112 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Project Target</th>
-                  <th>Rincian Item & Vendor Transaksi</th>
-                  <th>Total Claims</th>
-                  <th>Status</th>
-                </tr>
+                <tr><th>Project Target</th><th>Rincian Item & Transaksi</th><th>Total Claims</th><th>Status</th></tr>
               </thead>
-              <tbody id="historyClaimBody">
-              </tbody>
+              <tbody id="historyClaimBody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- Approval Budget Page -->
       <div id="approvalBudgetPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-user-shield"></i> Financial Authorization Bureau</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Project Target</th>
-                  <th>Rincian Komponen & Transaksi</th>
-                  <th>Total Amount</th>
-                  <th>Status Workflow</th>
-                  <th>Action Commands</th>
-                </tr>
+                <tr><th>Project Target</th><th>Rincian Komponen & Transaksi</th><th>Total Amount</th><th>Status Workflow</th><th>Action Commands</th></tr>
               </thead>
-              <tbody id="approvalTableBody">
-              </tbody>
+              <tbody id="approvalTableBody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- Monitoring Page -->
       <div id="monitoringPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-desktop"></i> Realtime Realization Analytics Terminal</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Project Name</th>
-                  <th>Client</th>
-                  <th>Total Allocated Pagu</th>
-                  <th>Total Realized Funds</th>
-                  <th>Overall Health Status</th>
-                </tr>
+                <tr><th>Project Name</th><th>Client</th><th>Total Allocated Pagu</th><th>Total Realized Funds</th><th>Overall Health Status</th></tr>
               </thead>
-              <tbody id="monitoringMainGridBody">
-              </tbody>
+              <tbody id="monitoringMainGridBody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- Reports Page -->
       <div id="reportsPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-file-invoice-dollar"></i> Project Performance & Financial Report Viewer</h2>
-          <p style="color:#64748b; font-size:0.85rem; margin-bottom:16px;">Pilih proyek tertentu untuk melihat analisis performa anggaran dengan diagram batang dan pie chart.</p>
           
           <div class="report-select-box">
             <i class="fas fa-filter" style="color:#3b82f6;"></i>
             <select id="reportProjectFilterSelect">
-              <option value="">-- Pilih Project Mandiri --</option>
+              <option value="">-- Pilih Project --</option>
             </select>
-            <button class="btn btn-success" id="exportExcelReportBtn"><i class="fas fa-file-excel"></i> Export Excel</button>
-            <button class="btn btn-danger" id="printPdfReportBtn"><i class="fas fa-file-pdf"></i> Save PDF Report</button>
+            <button class="btn btn-danger" id="downloadPDFBtn"><i class="fas fa-file-pdf"></i> Download PDF Report</button>
           </div>
         </div>
 
-        <div id="printableReportAreaContainer">
-          <div class="section">
-            <h2 id="reportContainerProjectTitle"><i class="fas fa-briefcase"></i> Ringkasan Eksekutif Finansial Proyek</h2>
-            
-            <div class="report-stats-grid">
-              <div class="report-stat-card">
-                <h4>Total Alokasi Pagu</h4>
-                <p id="repStatTotalPagu">Rp 0</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Total Realisasi Dana</h4>
-                <p id="repStatTotalRealisasi">Rp 0</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Sisa Efisiensi Anggaran</h4>
-                <p id="repStatSisaSaldo" style="color:#10b981;">Rp 0</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Rata-Rata Progress</h4>
-                <p id="repStatAvgProgress">0%</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Over Budget</h4>
-                <p id="repStatOverBudget" style="color:#ef4444;">0</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Near Limit</h4>
-                <p id="repStatNearLimit" style="color:#f59e0b;">0</p>
-              </div>
-              <div class="report-stat-card">
-                <h4>Safe</h4>
-                <p id="repStatSafe" style="color:#10b981;">0</p>
-              </div>
-            </div>
-
-            <div class="graphic-grid-container">
-              <div class="chart-box">
-                <h4 style="font-size:0.85rem; color:#1e293b; margin-bottom:12px;"><i class="fas fa-chart-bar"></i> Perbandingan Budget vs Realisasi</h4>
-                <canvas id="reportComparisonChartCanvas"></canvas>
-              </div>
-              <div class="chart-box">
-                <h4 style="font-size:0.85rem; color:#1e293b; margin-bottom:12px;"><i class="fas fa-chart-pie"></i> Distribusi Budget per Komponen</h4>
-                <canvas id="reportPieChartCanvas"></canvas>
-              </div>
-            </div>
-            
-            <div class="chart-box" style="margin-top: 20px;">
-              <h4 style="font-size:0.85rem; color:#1e293b; margin-bottom:12px;"><i class="fas fa-chart-bar"></i> Status Kesehatan Budget (Sisa vs Over)</h4>
-              <canvas id="reportHealthChartCanvas"></canvas>
-            </div>
+        <div class="section">
+          <h2><i class="fas fa-list-ol"></i> Rincian Audit Komponen RAB Terkait</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>Item Name</th><th class="text-right">Budget</th><th class="text-right">Realization</th><th class="text-right">Balance</th><th class="text-center">Usage %</th><th class="text-center">Status</th></tr>
+              </thead>
+              <tbody id="reportsTableGridBody">
+                <tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan data</td></tr>
+              </tbody>
+            </table>
           </div>
-
-          <div class="section">
-            <h2><i class="fas fa-list-ol"></i> Rincian Audit Komponen RAB Terkait</h2>
-            <div style="overflow-x:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nama Komponen RAB</th>
-                    <th>Pagu Anggaran</th>
-                    <th>Realisasi Klaim</th>
-                    <th>Sisa Saldo Efisiensi</th>
-                    <th>Persentase Progress</th>
-                    <th>Status Kesehatan</th>
-                  </tr>
-                </thead>
-                <tbody id="reportsTableGridBody">
-                  <tr><td colspan="6" style="text-align:center; color:#64748b;">Silakan pilih proyek di atas untuk menampilkan data</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+        </div>
+        
+        <div class="section">
+          <h2><i class="fas fa-chart-line"></i> Trend Analysis Chart</h2>
+          <canvas id="laporanChart" height="120"></canvas>
         </div>
       </div>
 
+      <!-- Upload Document Page -->
       <div id="uploadDocumentPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-cloud-upload-alt"></i> Document Storage Integration Panel</h2>
-          <div class="form-group">
-            <label>Associate Document to Project</label>
-            <select id="uploadProjectSelect">
-              <option value="">-- Select Target Project --</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Select Local File</label>
-            <input type="file" id="documentLocalFile" />
-          </div>
-          <button class="btn btn-primary" id="startUploadDocBtn"><i class="fas fa-arrow-circle-up"></i> Sync File to Server</button>
+          <form id="trueNasUploadForm">
+            <div class="form-group">
+              <label>Associate Document to Project</label>
+              <select id="uploadProjectSelect">
+                <option value="">-- Select Target Project --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Select Local File</label>
+              <input type="file" id="trueNasFile" />
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-arrow-circle-up"></i> Sync File to Server</button>
+          </form>
         </div>
       </div>
 
+      <!-- Files Page (Explorer) -->
       <div id="filesPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-server"></i> Cloud Storage Hierarchy File Explorer</h2>
           <div style="background:#fff; padding:24px; border-radius:24px; border:1px solid #e2e8f0; min-height:350px;">
-             <ul class="file-tree" id="rootFileTreeDirectory">
-             </ul>
+            <ul class="file-tree" id="rootFileTreeDirectory"></ul>
           </div>
         </div>
       </div>
 
+      <!-- User Management Page -->
       <div id="userManagementPage" class="hidden-section">
         <div class="section">
           <h2><i class="fas fa-user-plus"></i> Identity Access Management (IAM)</h2>
-          <p style="color:#64748b; font-size:0.85rem; margin-bottom:16px;">Daftarkan akun karyawan baru atau konfigurasi hak akses administratif sistem.</p>
           <button class="btn btn-primary" id="openAddUserModalBtn"><i class="fas fa-user-plus"></i> Register System Identity User</button>
         </div>
 
@@ -597,22 +531,16 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Account Identity Email</th>
-                  <th>System Access Level Role</th>
-                  <th>Unique UID Token</th>
-                  <th>Enrollment Date</th>
-                  <th>Management Command Controls</th>
-                </tr>
+                <tr><th>Account Identity Email</th><th>System Access Level Role</th><th>Unique UID Token</th><th>Enrollment Date</th><th>Management Command Controls</th></tr>
               </thead>
-              <tbody id="userTableBody">
-              </tbody>
+              <tbody id="userTableBody"></tbody>
             </table>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Project Modal -->
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-folder-plus"></i> Initialize Project Identity</h3>
@@ -635,6 +563,7 @@
       </div>
     </div>
 
+    <!-- RAB Modal -->
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-tags"></i> Allocate RAB Budget Breakdowns</h3>
@@ -657,23 +586,16 @@
       </div>
     </div>
 
+    <!-- Monitoring Details Modal -->
     <div id="monitoringDetailsModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 900px;">
         <h3><i class="fas fa-chart-pie"></i> Detailed Breakdown Performance: <span id="modalDetailsProjectName" style="color:#2563eb;">-</span></h3>
         <div style="overflow-x:auto; margin-top:15px; max-height:50vh;">
-          <table>
+          <tr>
             <thead>
-              <tr>
-                <th>Component Name</th>
-                <th>Budget</th>
-                <th>Realization</th>
-                <th>Remaining</th>
-                <th>Status</th>
-                <th>Progress</th>
-              </tr>
+              <tr><th>Component Name</th><th>Budget</th><th>Realization</th><th>Remaining</th><th>Status</th><th>Progress</th></tr>
             </thead>
-            <tbody id="modalDetailsComponentsTableGridBody">
-            </tbody>
+            <tbody id="modalDetailsComponentsTableGridBody"></tbody>
           </table>
         </div>
         <div class="modal-buttons">
@@ -682,6 +604,7 @@
       </div>
     </div>
 
+    <!-- User Management Modal -->
     <div id="userModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 500px;">
         <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
@@ -709,6 +632,7 @@
       </div>
     </div>
 
+    <!-- Reset Password Modal -->
     <div id="resetPasswordModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-key"></i> Reset Password</h3>
