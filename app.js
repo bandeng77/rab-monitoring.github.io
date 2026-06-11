@@ -14,7 +14,6 @@ const firebaseConfig = {
   appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
@@ -106,9 +105,7 @@ function createProgressBarMarkup(real, budget, progress = null) {
   } else if (budget > 0) {
     percent = Math.min(Math.round((real / budget) * 100), 100);
   }
-  
   let barColor = getProgressColor(percent);
-
   return `
     <div class="progress-wrapper">
       <div class="progress-bar-container">
@@ -815,7 +812,7 @@ function renderApprovalList() {
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
         <button class="btn-appr-no" data-id="${c.id}" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times"></i> Reject</button>
         </td>
-     </table>`;
+     </tr>`;
   }).join('');
   
   document.querySelectorAll('.btn-appr-ok').forEach(btn => {
@@ -866,7 +863,7 @@ function renderMonitoringTable() {
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
       <td>${status}</td>
-    </tr>`;
+    <tr>`;
   }).join('');
   
   document.querySelectorAll('#monitoringMainGridBody .project-row').forEach(row => {
@@ -908,13 +905,13 @@ function openMonitoringDetail(projectId) {
               </div>
               <span class="progress-percent-label">${progressPercent}%</span>
             </div>
-            </td>
+             </td>
           <td>
             <div class="manual-progress-group">
               <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
               <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
             </div>
-            </td>
+             </td>
         </tr>`;
       }).join('');
       
@@ -964,7 +961,7 @@ function renderReportsByProject() {
     
     html += `<tr style="background-color: #f1f5f9;">
       <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
-     </tr>`;
+     </td>`;
     
     if (items.length === 0) {
       html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
@@ -979,7 +976,7 @@ function renderReportsByProject() {
           <td class="text-right">${formatRp(itemRemaining)}</td>
           <td class="text-center">${itemPercentage}%</td>
           <td class="text-center">${getBadge(item.realisasi, item.budget)}</td>
-         </tr>`;
+        </tr>`;
       });
     }
     
@@ -990,7 +987,7 @@ function renderReportsByProject() {
       <td class="text-right">${formatRp(remaining)}</td>
       <td class="text-center">${percentage}%</td>
       <td class="text-center"></td>
-     </tr>`;
+    </tr>`;
   });
   
   tbody.innerHTML = html;
@@ -1057,7 +1054,6 @@ function renderReportDiagramsByProject() {
     filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0)
   );
   
-  // Pie Chart
   const pieCtx = document.getElementById('reportPieChart')?.getContext('2d');
   if (pieCtx) {
     if (reportPieChartInstance) reportPieChartInstance.destroy();
@@ -1088,7 +1084,6 @@ function renderReportDiagramsByProject() {
     });
   }
   
-  // Doughnut Chart
   const filteredItems = filteredRabItems;
   const overBudget = filteredItems.filter(i => i.realisasi > i.budget).length;
   const nearLimit = filteredItems.filter(i => i.budget > 0 && (i.realisasi / i.budget) >= 0.9 && i.realisasi <= i.budget).length;
@@ -1107,7 +1102,6 @@ function renderReportDiagramsByProject() {
     });
   }
   
-  // Horizontal Bar Chart - Utilization
   const utilization = filteredProjects.map(p => {
     const budget = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.budget, 0);
     const real = filteredRabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + i.realisasi, 0);
@@ -1144,11 +1138,10 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD - FIXED VERSION ====================
+// ==================== PDF DOWNLOAD - RAPIH VERSION ====================
 async function downloadPDF() {
   triggerNotification('Membuat PDF report... Mohon tunggu', true, 'info');
   
-  // Show loading indicator
   const downloadBtn = document.getElementById('downloadPDFBtn');
   const originalBtnText = downloadBtn?.innerHTML;
   if (downloadBtn) {
@@ -1157,7 +1150,7 @@ async function downloadPDF() {
   }
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const currentDate = new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
@@ -1178,7 +1171,6 @@ async function downloadPDF() {
       filteredClaims = claims.filter(c => c.projectId === currentSelectedReportProject);
     }
     
-    // If no data, show message
     if (filteredProjects.length === 0) {
       triggerNotification('Tidak ada data untuk project yang dipilih!', false, 'error');
       if (downloadBtn) {
@@ -1188,8 +1180,7 @@ async function downloadPDF() {
       return;
     }
     
-    // Calculate summary statistics
-    const totalBudget = filteredProjects.reduce((sum, p) => sum + (parseFloat(p.totalBudget) || 0), 0);
+    const totalBudget = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
     const totalRealization = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
     const totalProjects = filteredProjects.length;
     const totalRabItemsCount = filteredRabItems.length;
@@ -1201,7 +1192,6 @@ async function downloadPDF() {
     const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
     const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
     
-    // Build project details HTML - PURE HTML WITHOUT CANVAS
     let projectDetailsHtml = '';
     let grandTotalBudget = 0;
     let grandTotalRealization = 0;
@@ -1212,62 +1202,58 @@ async function downloadPDF() {
       const projectRealization = projectItems.reduce((sum, i) => sum + i.realisasi, 0);
       const projectBalance = projectBudget - projectRealization;
       const percentage = projectBudget > 0 ? ((projectRealization / projectBudget) * 100).toFixed(1) : 0;
-      const projectProgress = p.totalBudget > 0 ? Math.min(Math.round((projectRealization / p.totalBudget) * 100), 100) : 0;
-      const statusText = projectRealization > p.totalBudget ? 'Critical' : (percentage >= 88 ? 'Attention' : 'Healthy');
-      const statusColor = projectRealization > p.totalBudget ? '#dc2626' : (percentage >= 88 ? '#d97706' : '#059669');
       
       grandTotalBudget += projectBudget;
       grandTotalRealization += projectRealization;
       
       projectDetailsHtml += `
-        <div style="margin-bottom: 25px; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; page-break-inside: avoid;">
-          <div style="padding: 14px 18px; background: #f8fafc; border-bottom: 2px solid #3b82f6;">
+        <div style="margin-bottom: 20px; border: 1px solid #d1d5db; border-radius: 8px; page-break-inside: avoid;">
+          <div style="padding: 12px 16px; background: #f3f4f6; border-bottom: 1px solid #d1d5db;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
               <div>
-                <h3 style="margin: 0 0 4px 0; font-size: 15px; color: #1e293b;">📁 ${escapeHtml(p.name)}</h3>
-                <p style="margin: 0; font-size: 11px; color: #64748b;">Client: ${escapeHtml(p.client)} | Status: <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span></p>
+                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #111827;">${escapeHtml(p.name)}</h3>
+                <p style="margin: 0; font-size: 10px; color: #4b5563;">Client: ${escapeHtml(p.client)}</p>
               </div>
               <div style="text-align: right;">
-                <div style="font-size: 12px; font-weight: bold; color: #1e293b;">Initial Budget: ${formatRp(p.totalBudget)}</div>
-                <div style="font-size: 11px; color: #64748b;">Remaining: ${formatRp(p.totalBudget - projectRealization)}</div>
+                <div style="font-size: 11px; color: #374151;">Initial Budget: ${formatRp(p.totalBudget)}</div>
+                <div style="font-size: 10px; color: #6b7280;">Remaining: ${formatRp(p.totalBudget - projectRealization)}</div>
               </div>
             </div>
           </div>
           
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #e5e7eb;">
-            <div style="background: #f0fdf4; padding: 10px; text-align: center;">
-              <div style="font-size: 9px; color: #166534;">Total Budget</div>
-              <div style="font-size: 12px; font-weight: bold; color: #166534;">${formatRp(projectBudget)}</div>
+            <div style="background: #f0fdf4; padding: 8px 10px; text-align: center;">
+              <div style="font-size: 8px; color: #166534;">Total Budget</div>
+              <div style="font-size: 11px; font-weight: bold; color: #166534;">${formatRp(projectBudget)}</div>
             </div>
-            <div style="background: #eff6ff; padding: 10px; text-align: center;">
-              <div style="font-size: 9px; color: #1e40af;">Realisasi</div>
-              <div style="font-size: 12px; font-weight: bold; color: #1e40af;">${formatRp(projectRealization)}</div>
+            <div style="background: #eff6ff; padding: 8px 10px; text-align: center;">
+              <div style="font-size: 8px; color: #1e40af;">Realisasi</div>
+              <div style="font-size: 11px; font-weight: bold; color: #1e40af;">${formatRp(projectRealization)}</div>
             </div>
-            <div style="background: #fef3c7; padding: 10px; text-align: center;">
-              <div style="font-size: 9px; color: #92400e;">Sisa</div>
-              <div style="font-size: 12px; font-weight: bold; color: #92400e;">${formatRp(projectBalance)}</div>
+            <div style="background: #fef3c7; padding: 8px 10px; text-align: center;">
+              <div style="font-size: 8px; color: #92400e;">Sisa</div>
+              <div style="font-size: 11px; font-weight: bold; color: #92400e;">${formatRp(projectBalance)}</div>
             </div>
-            <div style="background: ${projectProgress >= 90 ? '#fee2e2' : (projectProgress >= 70 ? '#fef3c7' : '#f0fdf4')}; padding: 10px; text-align: center;">
-              <div style="font-size: 9px; color: #475569;">Utilisasi</div>
-              <div style="font-size: 12px; font-weight: bold;">${percentage}%</div>
+            <div style="background: ${percentage >= 90 ? '#fee2e2' : (percentage >= 70 ? '#fef3c7' : '#f0fdf4')}; padding: 8px 10px; text-align: center;">
+              <div style="font-size: 8px; color: #475569;">Utilisasi</div>
+              <div style="font-size: 11px; font-weight: bold;">${percentage}%</div>
             </div>
           </div>
       `;
       
       if (projectItems.length === 0) {
-        projectDetailsHtml += `<div style="text-align: center; padding: 20px; color: #64748b; background: #ffffff;">Tidak ada item RAB untuk project ini</div>`;
+        projectDetailsHtml += `<div style="text-align: center; padding: 16px; color: #6b7280; background: #ffffff;">Tidak ada item RAB untuk project ini</div>`;
       } else {
         projectDetailsHtml += `
           <div style="overflow-x: auto; background: #ffffff;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
               <thead>
-                <tr style="background: #f1f5f9; border-bottom: 1px solid #e5e7eb;">
-                  <th style="padding: 8px 6px; text-align: left;">Item Name</th>
-                  <th style="padding: 8px 6px; text-align: right;">Budget</th>
-                  <th style="padding: 8px 6px; text-align: right;">Realisasi</th>
-                  <th style="padding: 8px 6px; text-align: right;">Sisa</th>
-                  <th style="padding: 8px 6px; text-align: center;">Usage</th>
-                  <th style="padding: 8px 6px; text-align: center;">Status</th>
+                <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <th style="padding: 6px 8px; text-align: left;">Item Name</th>
+                  <th style="padding: 6px 8px; text-align: right;">Budget</th>
+                  <th style="padding: 6px 8px; text-align: right;">Realisasi</th>
+                  <th style="padding: 6px 8px; text-align: right;">Sisa</th>
+                  <th style="padding: 6px 8px; text-align: center;">Usage</th>
                 </tr>
               </thead>
               <tbody>
@@ -1276,20 +1262,14 @@ async function downloadPDF() {
         for (const item of projectItems) {
           const itemBalance = item.budget - item.realisasi;
           const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
-          const statusText = getBadgeText(item.realisasi, item.budget);
-          const statusBg = item.realisasi > item.budget ? '#fee2e2' : (itemPercentage >= 90 ? '#fed7aa' : '#d1fae5');
-          const statusColor = item.realisasi > item.budget ? '#991b1b' : (itemPercentage >= 90 ? '#9a3412' : '#065f46');
           
           projectDetailsHtml += `
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px; text-align: left;">${escapeHtml(item.itemName)}</td>
-              <td style="padding: 6px; text-align: right;">${formatRp(item.budget)}</td>
-              <td style="padding: 6px; text-align: right;">${formatRp(item.realisasi)}</td>
-              <td style="padding: 6px; text-align: right; color: ${itemBalance < 0 ? '#dc2626' : '#059669'};">${formatRp(itemBalance)}</td>
-              <td style="padding: 6px; text-align: center;">${itemPercentage}%</td>
-              <td style="padding: 6px; text-align: center;">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; background: ${statusBg}; color: ${statusColor}; font-size: 9px; font-weight: bold;">${statusText}</span>
-              </td>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 6px 8px; text-align: left;">${escapeHtml(item.itemName)}</td>
+              <td style="padding: 6px 8px; text-align: right;">${formatRp(item.budget)}</td>
+              <td style="padding: 6px 8px; text-align: right;">${formatRp(item.realisasi)}</td>
+              <td style="padding: 6px 8px; text-align: right; color: ${itemBalance < 0 ? '#dc2626' : '#059669'};">${formatRp(itemBalance)}</td>
+              <td style="padding: 6px 8px; text-align: center;">${itemPercentage}%</td>
             </tr>
           `;
         }
@@ -1301,23 +1281,9 @@ async function downloadPDF() {
         `;
       }
       
-      const progressColor = projectProgress >= 100 ? '#ef4444' : (projectProgress >= 90 ? '#f59e0b' : '#10b981');
-      
-      projectDetailsHtml += `
-          <div style="padding: 10px 16px; background: #f8fafc; border-top: 1px solid #e5e7eb;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 5px;">
-              <span style="color: #475569;">Progress Project</span>
-              <span style="color: #475569; font-weight: bold;">${projectProgress}%</span>
-            </div>
-            <div style="height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
-              <div style="height: 100%; width: ${projectProgress}%; background: ${progressColor}; border-radius: 10px;"></div>
-            </div>
-          </div>
-        </div>
-      `;
+      projectDetailsHtml += `</div>`;
     }
     
-    // Build claims HTML
     let claimsHtml = '';
     if (filteredClaims.length > 0) {
       for (const c of filteredClaims) {
@@ -1326,26 +1292,25 @@ async function downloadPDF() {
         const statusBg = c.status === 'approved' ? '#d1fae5' : (c.status === 'rejected' ? '#fee2e2' : '#fed7aa');
         
         claimsHtml += `
-          <div style="border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 15px; page-break-inside: avoid;">
-            <div style="padding: 10px 15px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; flex-wrap: wrap;">
+          <div style="border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; page-break-inside: avoid;">
+            <div style="padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; flex-wrap: wrap;">
               <div>
-                <strong style="font-size: 12px;">📋 ${p ? escapeHtml(p.name) : 'Unknown Project'}</strong>
-                <span style="margin-left: 10px; display: inline-block; padding: 2px 10px; border-radius: 20px; background: ${statusBg}; color: ${statusColor}; font-size: 9px; font-weight: bold;">${c.status.toUpperCase()}</span>
+                <strong style="font-size: 11px;">${p ? escapeHtml(p.name) : 'Unknown Project'}</strong>
+                <span style="margin-left: 8px; display: inline-block; padding: 2px 8px; border-radius: 12px; background: ${statusBg}; color: ${statusColor}; font-size: 8px; font-weight: bold;">${c.status.toUpperCase()}</span>
               </div>
-              <div style="font-size: 11px; color: #64748b;">Total: ${formatRp(c.totalNominal)}</div>
+              <div style="font-size: 10px; color: #4b5563;">Total: ${formatRp(c.totalNominal)}</div>
             </div>
-            <div style="padding: 0 15px; font-size: 10px; color: #64748b; background: #ffffff; border-bottom: 1px solid #f1f5f9; padding: 6px 15px;">
-              Submitted: ${formatDate(c.timestamp)} | ID: ${c.id.substring(0, 10)}...
+            <div style="padding: 6px 12px; font-size: 9px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f3f4f6;">
+              Submitted: ${formatDate(c.timestamp)}
             </div>
-            <div style="padding: 10px 15px; background: #ffffff;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+            <div style="padding: 8px 12px; background: #ffffff;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
                 <thead>
-                  <tr style="background: #f8fafc;">
-                    <th style="padding: 5px; text-align: left;">Item</th>
-                    <th style="padding: 5px; text-align: right;">Amount</th>
-                    <th style="padding: 5px; text-align: left;">Vendor</th>
-                    <th style="padding: 5px; text-align: left;">Date</th>
-                    <th style="padding: 5px; text-align: left;">Notes</th>
+                  <tr style="background: #f9fafb;">
+                    <th style="padding: 4px 6px; text-align: left;">Item</th>
+                    <th style="padding: 4px 6px; text-align: right;">Amount</th>
+                    <th style="padding: 4px 6px; text-align: left;">Vendor</th>
+                    <th style="padding: 4px 6px; text-align: left;">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1355,12 +1320,11 @@ async function downloadPDF() {
           for (const item of c.items) {
             const rab = filteredRabItems.find(r => r.id === item.itemId);
             claimsHtml += `
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 5px;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
-                <td style="padding: 5px; text-align: right;">${formatRp(item.nominal)}</td>
-                <td style="padding: 5px;">${escapeHtml(item.vendor || '-')}</td>
-                <td style="padding: 5px;">${item.tanggal || '-'}</td>
-                <td style="padding: 5px;">${escapeHtml(item.desc || '-')}</td>
+              <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 4px 6px;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
+                <td style="padding: 4px 6px; text-align: right;">${formatRp(item.nominal)}</td>
+                <td style="padding: 4px 6px;">${escapeHtml(item.vendor || '-')}</td>
+                <td style="padding: 4px 6px;">${item.tanggal || '-'}</td>
               </tr>
             `;
           }
@@ -1374,14 +1338,15 @@ async function downloadPDF() {
         `;
       }
     } else {
-      claimsHtml = '<div style="text-align: center; padding: 25px; color: #64748b; background: #f8fafc; border-radius: 10px;">Tidak ada data klaim untuk project yang dipilih</div>';
+      claimsHtml = '<div style="text-align: center; padding: 16px; color: #6b7280; background: #f9fafb; border-radius: 8px;">Tidak ada data klaim untuk project yang dipilih</div>';
     }
     
-    const reportTitle = currentSelectedReportProject !== 'all' && filteredProjects.length === 1
-      ? `RAB Report - ${filteredProjects[0].name}`
-      : (currentSelectedReportProject !== 'all' ? `RAB Report - Selected Projects (${filteredProjects.length} Projects)` : 'RAB Financial Report - All Projects');
+    const projectNameForTitle = currentSelectedReportProject !== 'all' && filteredProjects.length === 1
+      ? filteredProjects[0].name
+      : (currentSelectedReportProject !== 'all' ? `Selected Projects (${filteredProjects.length})` : 'All Projects');
     
-    // Full HTML for PDF (tanpa canvas/chart yang bermasalah)
+    const reportTitle = `RAB Report - ${projectNameForTitle}`;
+    
     const reportHTML = `
       <!DOCTYPE html>
       <html>
@@ -1391,65 +1356,110 @@ async function downloadPDF() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
             padding: 20px;
-            margin: 0;
-            color: #1e293b;
+            margin: 0 auto;
+            color: #111827;
             background: white;
-            font-size: 12px;
+            font-size: 11px;
+            max-width: 210mm;
           }
           .header {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 2px solid #3b82f6;
+            border-bottom: 2px solid #111827;
             padding-bottom: 12px;
           }
-          .header h1 { font-size: 18px; margin: 0; color: #1e293b; }
-          .header h2 { font-size: 11px; margin: 5px 0 0; color: #64748b; font-weight: normal; }
-          .header p { font-size: 9px; margin: 5px 0 0; color: #94a3b8; }
+          .header h1 { 
+            font-size: 18px; 
+            margin: 0; 
+            color: #111827;
+            font-weight: 700;
+            letter-spacing: 1px;
+          }
+          .header h2 { 
+            font-size: 11px; 
+            margin: 5px 0 0; 
+            color: #4b5563; 
+            font-weight: normal;
+          }
+          .header p { 
+            font-size: 9px; 
+            margin: 5px 0 0; 
+            color: #6b7280; 
+          }
           .summary-cards {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 20px;
           }
           .summary-card {
             flex: 1;
-            min-width: 100px;
-            background: #f8fafc;
-            padding: 10px 8px;
-            border-radius: 10px;
+            min-width: 90px;
+            background: #f9fafb;
+            padding: 8px 6px;
+            border-radius: 6px;
             text-align: center;
             border: 1px solid #e5e7eb;
           }
-          .summary-card h3 { font-size: 8px; margin: 0 0 5px; color: #64748b; text-transform: uppercase; }
-          .summary-card .value { font-size: 13px; font-weight: bold; color: #1e293b; }
-          .section { margin-bottom: 20px; }
+          .summary-card h3 { 
+            font-size: 7px; 
+            margin: 0 0 4px; 
+            color: #6b7280; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .summary-card .value { 
+            font-size: 12px; 
+            font-weight: bold; 
+            color: #111827;
+          }
+          .section { 
+            margin-bottom: 20px; 
+          }
           .section-title {
             font-size: 13px;
             font-weight: bold;
             margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #e5e7eb;
-            color: #1e293b;
+            padding-bottom: 4px;
+            border-bottom: 1.5px solid #111827;
+            color: #111827;
           }
           .footer {
             margin-top: 20px;
             text-align: center;
-            font-size: 8px;
-            color: #94a3b8;
+            font-size: 7px;
+            color: #6b7280;
             border-top: 1px solid #e5e7eb;
-            padding-top: 10px;
+            padding-top: 8px;
           }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+          }
+          th {
+            background: #f3f4f6;
+            font-weight: 600;
+          }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
           @media print {
-            body { padding: 15px; }
+            body { padding: 15px; margin: 0; }
             .section { page-break-inside: avoid; }
+            .summary-cards { page-break-inside: avoid; }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>${reportTitle}</h1>
+          <h1>RAB Report - ${escapeHtml(projectNameForTitle)}</h1>
           <h2>Laporan Monitoring Anggaran & Realisasi</h2>
           <p>Dibuat pada: ${currentDate} pukul ${currentTime} | Oleh: ${escapeHtml(currentUserEmail)}</p>
         </div>
@@ -1459,26 +1469,21 @@ async function downloadPDF() {
           <div class="summary-card"><h3>Total Item RAB</h3><div class="value">${totalRabItemsCount}</div></div>
           <div class="summary-card"><h3>Total Anggaran</h3><div class="value">${formatRp(totalBudget)}</div></div>
           <div class="summary-card"><h3>Total Realisasi</h3><div class="value">${formatRp(totalRealization)}</div></div>
+          <div class="summary-card"><h3>Sisa Anggaran</h3><div class="value" style="color:#059669;">${formatRp(totalBudget - totalRealization)}</div></div>
         </div>
         
         <div class="summary-cards">
-          <div class="summary-card"><h3>Sisa Anggaran</h3><div class="value" style="color:#059669;">${formatRp(totalBudget - totalRealization)}</div></div>
           <div class="summary-card"><h3>Over Budget</h3><div class="value" style="color:#dc2626;">${overBudgetItems}</div></div>
           <div class="summary-card"><h3>Near Limit</h3><div class="value" style="color:#d97706;">${nearLimitItems}</div></div>
           <div class="summary-card"><h3>Safe</h3><div class="value" style="color:#059669;">${safeItems}</div></div>
-        </div>
-        
-        <div class="summary-cards">
           <div class="summary-card"><h3>Klaim Pending</h3><div class="value" style="color:#d97706;">${pendingClaims}</div></div>
-          <div class="summary-card"><h3>Klaim Disetujui</h3><div class="value" style="color:#059669;">${approvedClaims}</div></div>
-          <div class="summary-card"><h3>Klaim Ditolak</h3><div class="value" style="color:#dc2626;">${rejectedClaims}</div></div>
-          <div class="summary-card"><h3>Nilai Klaim</h3><div class="value">${formatRp(totalClaimsAmount)}</div></div>
+          <div class="summary-card"><h3>Klaim Approved</h3><div class="value" style="color:#059669;">${approvedClaims}</div></div>
         </div>
         
         <div class="section">
           <div class="section-title">📋 Detail Breakdown per Project</div>
           ${projectDetailsHtml}
-          <div style="margin-top: 15px; background: #f1f5f9; padding: 10px 15px; border-radius: 10px; display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
+          <div style="margin-top: 12px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; font-weight: bold; font-size: 10px;">
             <span>GRAND TOTAL</span>
             <span>Budget: ${formatRp(grandTotalBudget)}</span>
             <span>Realisasi: ${formatRp(grandTotalRealization)}</span>
@@ -1493,7 +1498,7 @@ async function downloadPDF() {
         
         <div class="footer">
           <p>Laporan ini dibuat secara otomatis oleh Sistem Monitoring RAB</p>
-          <p>© ${new Date().getFullYear()} - RAB Monitoring System</p>
+          <p>&copy; ${new Date().getFullYear()} - RAB Monitoring System</p>
         </div>
       </body>
       </html>
@@ -1502,8 +1507,8 @@ async function downloadPDF() {
     const opt = {
       margin: [0.5, 0.5, 0.5, 0.5],
       filename: `${reportTitle.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, letterRendering: true, useCORS: true, logging: false },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     
@@ -1511,6 +1516,8 @@ async function downloadPDF() {
     element.style.position = 'absolute';
     element.style.left = '-9999px';
     element.style.top = '-9999px';
+    element.style.width = '210mm';
+    element.style.backgroundColor = 'white';
     element.innerHTML = reportHTML;
     document.body.appendChild(element);
     
@@ -1529,8 +1536,6 @@ async function downloadPDF() {
     }
   }
 }
-
-document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
 // ==================== STORAGE SERVER (FILES) ====================
 document.getElementById('trueNasUploadForm')?.addEventListener('submit', function(e) {
@@ -1754,6 +1759,8 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     }
   });
 });
+
+document.getElementById('downloadPDFBtn')?.addEventListener('click', downloadPDF);
 
 // ==================== AUTH INITIALIZATION ====================
 onAuthStateChanged(auth, (user) => {
