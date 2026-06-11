@@ -105,7 +105,9 @@ function createProgressBarMarkup(real, budget, progress = null) {
   } else if (budget > 0) {
     percent = Math.min(Math.round((real / budget) * 100), 100);
   }
+  
   let barColor = getProgressColor(percent);
+
   return `
     <div class="progress-wrapper">
       <div class="progress-bar-container">
@@ -812,7 +814,7 @@ function renderApprovalList() {
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
         <button class="btn-appr-no" data-id="${c.id}" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times"></i> Reject</button>
         </td>
-     </tr>`;
+      </tr>`;
   }).join('');
   
   document.querySelectorAll('.btn-appr-ok').forEach(btn => {
@@ -863,7 +865,7 @@ function renderMonitoringTable() {
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
       <td>${status}</td>
-    <tr>`;
+    </tr>`;
   }).join('');
   
   document.querySelectorAll('#monitoringMainGridBody .project-row').forEach(row => {
@@ -961,7 +963,7 @@ function renderReportsByProject() {
     
     html += `<tr style="background-color: #f1f5f9;">
       <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
-     </td>`;
+     </tr>`;
     
     if (items.length === 0) {
       html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
@@ -1138,19 +1140,20 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD - RAPIH VERSION ====================
+// ==================== PDF DOWNLOAD - FIXED WORKING VERSION ====================
 async function downloadPDF() {
-  triggerNotification('Membuat PDF report... Mohon tunggu', true, 'info');
-  
   const downloadBtn = document.getElementById('downloadPDFBtn');
   const originalBtnText = downloadBtn?.innerHTML;
+  
   if (downloadBtn) {
     downloadBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Generating PDF...';
     downloadBtn.disabled = true;
   }
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    triggerNotification('Membuat PDF report... Mohon tunggu', true, 'info');
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     const currentDate = new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
@@ -1180,6 +1183,7 @@ async function downloadPDF() {
       return;
     }
     
+    // Calculate summary statistics
     const totalBudget = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
     const totalRealization = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
     const totalProjects = filteredProjects.length;
@@ -1192,6 +1196,7 @@ async function downloadPDF() {
     const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
     const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
     
+    // Build project details HTML
     let projectDetailsHtml = '';
     let grandTotalBudget = 0;
     let grandTotalRealization = 0;
@@ -1284,6 +1289,7 @@ async function downloadPDF() {
       projectDetailsHtml += `</div>`;
     }
     
+    // Build claims HTML
     let claimsHtml = '';
     if (filteredClaims.length > 0) {
       for (const c of filteredClaims) {
@@ -1345,185 +1351,106 @@ async function downloadPDF() {
       ? filteredProjects[0].name
       : (currentSelectedReportProject !== 'all' ? `Selected Projects (${filteredProjects.length})` : 'All Projects');
     
-    const reportTitle = `RAB Report - ${projectNameForTitle}`;
+    const reportTitle = `RAB_Report_${projectNameForTitle.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
     
-    const reportHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>${reportTitle}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
-            padding: 20px;
-            margin: 0 auto;
-            color: #111827;
-            background: white;
-            font-size: 11px;
-            max-width: 210mm;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #111827;
-            padding-bottom: 12px;
-          }
-          .header h1 { 
-            font-size: 18px; 
-            margin: 0; 
-            color: #111827;
-            font-weight: 700;
-            letter-spacing: 1px;
-          }
-          .header h2 { 
-            font-size: 11px; 
-            margin: 5px 0 0; 
-            color: #4b5563; 
-            font-weight: normal;
-          }
-          .header p { 
-            font-size: 9px; 
-            margin: 5px 0 0; 
-            color: #6b7280; 
-          }
-          .summary-cards {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 20px;
-          }
-          .summary-card {
-            flex: 1;
-            min-width: 90px;
-            background: #f9fafb;
-            padding: 8px 6px;
-            border-radius: 6px;
-            text-align: center;
-            border: 1px solid #e5e7eb;
-          }
-          .summary-card h3 { 
-            font-size: 7px; 
-            margin: 0 0 4px; 
-            color: #6b7280; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .summary-card .value { 
-            font-size: 12px; 
-            font-weight: bold; 
-            color: #111827;
-          }
-          .section { 
-            margin-bottom: 20px; 
-          }
-          .section-title {
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            padding-bottom: 4px;
-            border-bottom: 1.5px solid #111827;
-            color: #111827;
-          }
-          .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 7px;
-            color: #6b7280;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 8px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            border: 1px solid #e5e7eb;
-            padding: 6px 8px;
-            text-align: left;
-            vertical-align: top;
-          }
-          th {
-            background: #f3f4f6;
-            font-weight: 600;
-          }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-          @media print {
-            body { padding: 15px; margin: 0; }
-            .section { page-break-inside: avoid; }
-            .summary-cards { page-break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>RAB Report - ${escapeHtml(projectNameForTitle)}</h1>
-          <h2>Laporan Monitoring Anggaran & Realisasi</h2>
-          <p>Dibuat pada: ${currentDate} pukul ${currentTime} | Oleh: ${escapeHtml(currentUserEmail)}</p>
+    // Create a temporary div for PDF content
+    const pdfContainer = document.createElement('div');
+    pdfContainer.style.position = 'absolute';
+    pdfContainer.style.left = '-9999px';
+    pdfContainer.style.top = '-9999px';
+    pdfContainer.style.width = '210mm';
+    pdfContainer.style.backgroundColor = 'white';
+    pdfContainer.style.padding = '20px';
+    pdfContainer.style.fontFamily = "'Segoe UI', 'Inter', Arial, sans-serif";
+    
+    pdfContainer.innerHTML = `
+      <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #111827; padding-bottom: 12px;">
+        <h1 style="font-size: 18px; margin: 0; color: #111827; font-weight: 700;">RAB Report - ${escapeHtml(projectNameForTitle)}</h1>
+        <h2 style="font-size: 11px; margin: 5px 0 0; color: #4b5563; font-weight: normal;">Laporan Monitoring Anggaran & Realisasi</h2>
+        <p style="font-size: 9px; margin: 5px 0 0; color: #6b7280;">Dibuat pada: ${currentDate} pukul ${currentTime} | Oleh: ${escapeHtml(currentUserEmail)}</p>
+      </div>
+      
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Total Project</div>
+          <div style="font-size: 12px; font-weight: bold;">${totalProjects}</div>
         </div>
-        
-        <div class="summary-cards">
-          <div class="summary-card"><h3>Total Project</h3><div class="value">${totalProjects}</div></div>
-          <div class="summary-card"><h3>Total Item RAB</h3><div class="value">${totalRabItemsCount}</div></div>
-          <div class="summary-card"><h3>Total Anggaran</h3><div class="value">${formatRp(totalBudget)}</div></div>
-          <div class="summary-card"><h3>Total Realisasi</h3><div class="value">${formatRp(totalRealization)}</div></div>
-          <div class="summary-card"><h3>Sisa Anggaran</h3><div class="value" style="color:#059669;">${formatRp(totalBudget - totalRealization)}</div></div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Total Item RAB</div>
+          <div style="font-size: 12px; font-weight: bold;">${totalRabItemsCount}</div>
         </div>
-        
-        <div class="summary-cards">
-          <div class="summary-card"><h3>Over Budget</h3><div class="value" style="color:#dc2626;">${overBudgetItems}</div></div>
-          <div class="summary-card"><h3>Near Limit</h3><div class="value" style="color:#d97706;">${nearLimitItems}</div></div>
-          <div class="summary-card"><h3>Safe</h3><div class="value" style="color:#059669;">${safeItems}</div></div>
-          <div class="summary-card"><h3>Klaim Pending</h3><div class="value" style="color:#d97706;">${pendingClaims}</div></div>
-          <div class="summary-card"><h3>Klaim Approved</h3><div class="value" style="color:#059669;">${approvedClaims}</div></div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Total Anggaran</div>
+          <div style="font-size: 12px; font-weight: bold;">${formatRp(totalBudget)}</div>
         </div>
-        
-        <div class="section">
-          <div class="section-title">📋 Detail Breakdown per Project</div>
-          ${projectDetailsHtml}
-          <div style="margin-top: 12px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; font-weight: bold; font-size: 10px;">
-            <span>GRAND TOTAL</span>
-            <span>Budget: ${formatRp(grandTotalBudget)}</span>
-            <span>Realisasi: ${formatRp(grandTotalRealization)}</span>
-            <span>Sisa: ${formatRp(grandTotalBudget - grandTotalRealization)}</span>
-          </div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Total Realisasi</div>
+          <div style="font-size: 12px; font-weight: bold;">${formatRp(totalRealization)}</div>
         </div>
-        
-        <div class="section">
-          <div class="section-title">📝 Riwayat Klaim</div>
-          ${claimsHtml}
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Sisa Anggaran</div>
+          <div style="font-size: 12px; font-weight: bold; color: #059669;">${formatRp(totalBudget - totalRealization)}</div>
         </div>
-        
-        <div class="footer">
-          <p>Laporan ini dibuat secara otomatis oleh Sistem Monitoring RAB</p>
-          <p>&copy; ${new Date().getFullYear()} - RAB Monitoring System</p>
+      </div>
+      
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Over Budget</div>
+          <div style="font-size: 12px; font-weight: bold; color: #dc2626;">${overBudgetItems}</div>
         </div>
-      </body>
-      </html>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Near Limit</div>
+          <div style="font-size: 12px; font-weight: bold; color: #d97706;">${nearLimitItems}</div>
+        </div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Safe</div>
+          <div style="font-size: 12px; font-weight: bold; color: #059669;">${safeItems}</div>
+        </div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Klaim Pending</div>
+          <div style="font-size: 12px; font-weight: bold; color: #d97706;">${pendingClaims}</div>
+        </div>
+        <div style="flex: 1; min-width: 90px; background: #f9fafb; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #e5e7eb;">
+          <div style="font-size: 7px; color: #6b7280; text-transform: uppercase;">Klaim Approved</div>
+          <div style="font-size: 12px; font-weight: bold; color: #059669;">${approvedClaims}</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1.5px solid #111827;">📋 Detail Breakdown per Project</div>
+        ${projectDetailsHtml}
+        <div style="margin-top: 12px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; font-weight: bold; font-size: 10px;">
+          <span>GRAND TOTAL</span>
+          <span>Budget: ${formatRp(grandTotalBudget)}</span>
+          <span>Realisasi: ${formatRp(grandTotalRealization)}</span>
+          <span>Sisa: ${formatRp(grandTotalBudget - grandTotalRealization)}</span>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 13px; font-weight: bold; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1.5px solid #111827;">📝 Riwayat Klaim</div>
+        ${claimsHtml}
+      </div>
+      
+      <div style="margin-top: 20px; text-align: center; font-size: 7px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+        <p>Laporan ini dibuat secara otomatis oleh Sistem Monitoring RAB</p>
+        <p>&copy; ${new Date().getFullYear()} - RAB Monitoring System</p>
+      </div>
     `;
+    
+    document.body.appendChild(pdfContainer);
     
     const opt = {
       margin: [0.5, 0.5, 0.5, 0.5],
-      filename: `${reportTitle.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
+      filename: `${reportTitle}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, letterRendering: true, useCORS: true, logging: false },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     
-    const element = document.createElement('div');
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.top = '-9999px';
-    element.style.width = '210mm';
-    element.style.backgroundColor = 'white';
-    element.innerHTML = reportHTML;
-    document.body.appendChild(element);
+    await html2pdf().set(opt).from(pdfContainer).save();
     
-    await html2pdf().set(opt).from(element).save();
-    
-    document.body.removeChild(element);
+    document.body.removeChild(pdfContainer);
     triggerNotification('PDF report berhasil dibuat!', true);
     
   } catch (err) {
