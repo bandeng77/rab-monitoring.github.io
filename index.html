@@ -19,7 +19,6 @@
       min-height: 100vh;
     }
 
-    /* Loading Screen */
     #loadingScreen {
       position: fixed;
       top: 0;
@@ -50,12 +49,10 @@
       font-weight: 600;
     }
 
-    /* Main App - Hidden Initially */
     #mainAppBody {
       display: none;
     }
 
-    /* Sidebar Styles */
     .sidebar {
       width: 280px;
       background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
@@ -135,12 +132,10 @@
     }
     .btn-logout-sidebar:hover { background: #ef4444; color: white; }
 
-    /* Main Content */
     .main { margin-left: 280px; width: calc(100% - 280px); padding: 28px 36px; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
     .header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #1e293b, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    /* Button Styles */
     .btn { padding: 10px 24px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.25s; }
     .btn-primary { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
@@ -149,18 +144,15 @@
     .btn-danger { background: linear-gradient(95deg, #ef4444, #f87171); color: white; }
     .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
     .btn-warning { background: linear-gradient(95deg, #f59e0b, #fbbf24); color: white; }
-    .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
 
-    /* Cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px; }
     .card { background: rgba(255,255,255,0.95); padding: 24px 22px; border-radius: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: 0.3s; }
     .card:hover { transform: translateY(-6px); }
     .card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #5b6e8c; margin-bottom: 12px; }
     .card p { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0f172a, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    /* Progress Bar */
     .progress-wrapper {
       display: flex;
       align-items: center;
@@ -186,7 +178,6 @@
       min-width: 40px;
     }
 
-    /* Manual Progress Input */
     .manual-progress-group {
       display: flex;
       align-items: center;
@@ -215,11 +206,9 @@
       transform: scale(1.02);
     }
 
-    /* Sections */
     .section { background: rgba(255,255,255,0.92); padding: 28px 32px; border-radius: 36px; margin-bottom: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); }
     .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1f2a48; }
 
-    /* Tables */
     .info-box { background: #eef2ff; padding: 16px; border-radius: 24px; margin-bottom: 16px; font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { padding: 14px 12px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; text-align: left; vertical-align: middle; }
@@ -227,7 +216,6 @@
     .text-right { text-align: right; }
     .text-center { text-align: center; }
 
-    /* Badges */
     .badge { padding: 5px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; display: inline-block; text-transform: uppercase; }
     .badge-success { background: #d1fae5; color: #065f46; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
@@ -235,11 +223,9 @@
     .badge-info { background: #dbeafe; color: #1e40af; }
     .badge-secondary { background: #e2e8f0; color: #475569; }
 
-    /* Project Row */
     .project-row { cursor: pointer; transition: all 0.2s; }
     .project-row:hover { background: #eef2ff; transform: scale(1.005); }
 
-    /* Multi Item Container */
     .multi-item-container { background: #f8fafc; border-radius: 24px; padding: 20px; margin-top: 20px; }
     .item-row { display: flex; flex-direction: column; gap: 12px; background: white; padding: 18px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 16px; position: relative; }
     .item-row-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
@@ -247,12 +233,10 @@
     .item-row select, .item-row input { width: 100%; padding: 10px 14px; border-radius: 14px; border: 1px solid #cbd5e1; outline: none; font-size: 0.85rem; }
     .item-row .remove-item { position: absolute; top: -10px; right: -10px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-    /* Form Fields */
     .form-group { margin-bottom: 18px; }
     .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: #334155; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border-radius: 16px; border: 1px solid #cbd5e1; outline: none; background: #fff; font-size: 0.9rem; }
 
-    /* File Tree */
     .file-tree { list-style-type: none; padding-left: 5px; }
     .file-tree li { margin: 8px 0; font-size: 0.9rem; }
     .root-node { font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 1rem; border-bottom: 2px dashed #cbd5e1; margin-bottom: 12px; padding-bottom: 10px; }
@@ -268,14 +252,12 @@
     .file-node .delete-file-btn:hover { background: #fecaca; transform: scale(1.02); }
     .nested-tree { margin-left: 16px; padding-left: 12px; border-left: 1.5px dashed #cbd5e1; list-style: none; }
 
-    /* Modals */
     .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index: 1000; padding: 20px; }
     .modal-overlay.active { display: flex; }
     .modal-container { background: white; padding: 32px; border-radius: 36px; width: 100%; max-width: 1000px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
     .modal-container h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #0f172a; }
     .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
-    /* Notification */
     .notify-popup { position: fixed; bottom: 24px; right: 24px; background: white; color: #1e293b; padding: 16px 24px; border-radius: 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transform: translateY(150%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 99999; border-left: 5px solid #3b82f6; font-weight: 500; }
     .notify-popup.active { transform: translateY(0); }
     .notify-popup.success { border-left-color: #10b981; }
@@ -285,7 +267,6 @@
     .notify-popup.info { border-left-color: #f59e0b; }
     .notify-popup.info i { color: #f59e0b; }
 
-    /* Utility */
     .hidden-section { display: none !important; }
     .page { animation: fadeUp 0.3s; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -295,10 +276,9 @@
     .btn-reset { background: #fef3c7; color: #92400e; }
     .btn-delete { background: #fee2e2; color: #991b1b; }
 
-    /* Report Diagrams Grid */
     .diagram-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 24px;
       margin-bottom: 24px;
     }
@@ -317,13 +297,13 @@
       align-items: center;
       gap: 8px;
     }
-    canvas { max-width: 100%; height: auto; max-height: 320px; width: 100% !important; }
+    canvas { max-width: 100%; height: auto; max-height: 280px; width: 100% !important; }
 
-    /* Responsive */
     @media (max-width: 900px) {
       .sidebar { width: 100%; position: relative; height: auto; }
-      .main { margin-left: 0; width: 100%; }
+      .main { margin-left: 0; width: 100%; padding: 20px; }
       .diagram-grid { grid-template-columns: 1fr; }
+      .section { padding: 20px; }
     }
   </style>
 </head>
@@ -364,7 +344,6 @@
         <button class="btn btn-primary" id="globalActionBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
       </div>
 
-      <!-- Dashboard Page -->
       <div id="dashboardPage" class="page">
         <div class="cards" id="cardsContainer"></div>
         <div class="section">
@@ -384,7 +363,6 @@
         </div>
       </div>
 
-      <!-- Master Project Page -->
       <div id="masterProjectPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-database"></i> Master Project Data</h2>
@@ -412,7 +390,6 @@
         </div>
       </div>
 
-      <!-- Claim Request Page -->
       <div id="claimRequestPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-hand-holding-usd"></i> Submit Multi-Item Claim</h2>
@@ -437,7 +414,6 @@
         </div>
       </div>
 
-      <!-- Approval Budget Page -->
       <div id="approvalBudgetPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-check-double"></i> Pending Claim Approval Pipeline</h2>
@@ -452,7 +428,6 @@
         </div>
       </div>
 
-      <!-- Monitoring Page -->
       <div id="monitoringPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-chart-bar"></i> Project Financial Metrics</h2>
@@ -467,7 +442,6 @@
         </div>
       </div>
 
-      <!-- Reports Page - Per Project Selection -->
       <div id="reportsPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-chart-pie"></i> Financial Dashboard & Analytics</h2>
@@ -510,7 +484,6 @@
         </div>
       </div>
 
-      <!-- Upload Document Page -->
       <div id="uploadDocumentPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-cloud-upload-alt"></i> Upload Document to Storage</h2>
@@ -529,7 +502,6 @@
         </div>
       </div>
 
-      <!-- Files Page (Explorer) -->
       <div id="filesPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-folder-tree"></i> File Explorer - Document Management</h2>
@@ -539,7 +511,6 @@
         </div>
       </div>
 
-      <!-- User Management Page -->
       <div id="userManagementPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-users"></i> User Management & System Access</h2>
@@ -556,7 +527,7 @@
       </div>
     </div>
 
-    <!-- Project Modal -->
+    <!-- Modals -->
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-folder-plus"></i> Add New Project</h3>
@@ -567,7 +538,6 @@
       </div>
     </div>
 
-    <!-- RAB Modal -->
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-plus-circle"></i> Add RAB Component</h3>
@@ -578,7 +548,6 @@
       </div>
     </div>
 
-    <!-- Monitoring Details Modal -->
     <div id="monitoringDetailsModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 1000px;">
         <h3><i class="fas fa-chart-pie"></i> RAB Components - <span id="modalDetailsProjectName"></span></h3>
@@ -594,7 +563,6 @@
       </div>
     </div>
 
-    <!-- User Management Modal -->
     <div id="userModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 500px;">
         <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add New User</h3>
@@ -606,7 +574,6 @@
       </div>
     </div>
 
-    <!-- Reset Password Modal -->
     <div id="resetPasswordModal" class="modal-overlay">
       <div class="modal-container" style="max-width: 450px;">
         <h3><i class="fas fa-key"></i> Reset User Password</h3>
