@@ -31,6 +31,7 @@ let currentRole = "";
 let currentUserEmail = "";
 let currentUserUid = "";
 let currentSelectedReportProject = "all";
+let isDataLoaded = false;
 
 // Chart instances
 let mainBarChartInstance = null;
@@ -296,35 +297,49 @@ function enforceRoleVisibility() {
 
 // ==================== REALTIME CLOUD LISTENERS ====================
 function initCloudDatabaseListeners() {
+  let loadedCount = 0;
+  const totalListeners = 5;
+
+  function checkAllLoaded() {
+    loadedCount++;
+    if (loadedCount >= totalListeners && !isDataLoaded) {
+      isDataLoaded = true;
+      hideLoadingScreen();
+      updateWholeUI();
+    }
+  }
+
   onValue(ref(db, 'projects'), (snapshot) => {
     const data = snapshot.val();
     projects = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    updateWholeUI();
     populateReportProjectSelect();
+    checkAllLoaded();
   });
 
   onValue(ref(db, 'rabItems'), (snapshot) => {
     const data = snapshot.val();
     rabItems = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    updateWholeUI();
+    checkAllLoaded();
   });
 
   onValue(ref(db, 'claims'), (snapshot) => {
     const data = snapshot.val();
     claims = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    updateWholeUI();
+    checkAllLoaded();
   });
 
   onValue(ref(db, 'truenasFiles'), (snapshot) => {
     const data = snapshot.val();
     truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     renderTreeHierarchy();
+    checkAllLoaded();
   });
 
   onValue(ref(db, 'users'), (snapshot) => {
     const data = snapshot.val();
     users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     renderUsersTable();
+    checkAllLoaded();
   });
 }
 
@@ -1768,7 +1783,6 @@ onAuthStateChanged(auth, (user) => {
         
         enforceRoleVisibility();
         initCloudDatabaseListeners();
-        hideLoadingScreen();
       } else {
         set(ref(db, `users/${user.uid}`), {
           email: user.email,
@@ -1782,11 +1796,17 @@ onAuthStateChanged(auth, (user) => {
           if (roleLabel) roleLabel.innerText = currentRole;
           enforceRoleVisibility();
           initCloudDatabaseListeners();
-          hideLoadingScreen();
         });
       }
     });
   } else {
-    hideLoadingScreen();
+    // User not logged in - show a clear message
+    const emailLabel = document.getElementById('sidebarUserEmail');
+    const roleLabel = document.getElementById('sidebarUserRole');
+    if (emailLabel) emailLabel.innerText = 'Tidak Login';
+    if (roleLabel) roleLabel.innerText = 'Guest';
+    
+    // Still load data for demo/guest mode
+    initCloudDatabaseListeners();
   }
 });
