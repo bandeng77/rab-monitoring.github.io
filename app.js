@@ -420,7 +420,10 @@ function renderMasterProject() {
         <td>${p.client}</td>
         <td>${formatRp(p.totalBudget)}</td>
         <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
-        <td><button class="btn btn-danger btn-del-proj" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button></td>
+        <td>
+          <button class="btn btn-edit-project btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-danger btn-del-proj" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button>
+        </td>
       </tr>`;
     }).join('');
     
@@ -433,6 +436,48 @@ function renderMasterProject() {
         }
       });
     });
+    
+    document.querySelectorAll('.btn-edit-proj').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        const client = btn.dataset.client;
+        const budget = btn.dataset.budget;
+        
+        document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Project';
+        document.getElementById('modalProjectName').value = name;
+        document.getElementById('modalClientName').value = client;
+        document.getElementById('modalBudget').value = budget;
+        document.getElementById('editProjectId').value = id;
+        document.getElementById('projectModal').classList.add('active');
+        
+        document.getElementById('saveProjectBtn').onclick = () => {
+          const updatedName = document.getElementById('modalProjectName').value.trim();
+          const updatedClient = document.getElementById('modalClientName').value.trim();
+          const updatedBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
+          
+          if (!updatedName || !updatedClient || updatedBudget <= 0) {
+            triggerNotification('Please fill all fields correctly!', false, 'error');
+            return;
+          }
+          
+          update(ref(db, `projects/${id}`), {
+            name: updatedName,
+            client: updatedClient,
+            totalBudget: updatedBudget
+          }).then(() => {
+            document.getElementById('projectModal').classList.remove('active');
+            document.getElementById('modalProjectName').value = '';
+            document.getElementById('modalClientName').value = '';
+            document.getElementById('modalBudget').value = '';
+            document.getElementById('editProjectId').value = '';
+            document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+            document.getElementById('saveProjectBtn').onclick = saveNewProject;
+            triggerNotification('Project updated successfully!');
+          });
+        };
+      });
+    });
   }
   
   const filter = document.getElementById('filterProjectRAB');
@@ -442,6 +487,29 @@ function renderMasterProject() {
     if (prevVal && projects.find(p => p.id === prevVal)) filter.value = prevVal;
   }
   renderRABItemsSubTable();
+}
+
+function saveNewProject() {
+  const name = document.getElementById('modalProjectName').value.trim();
+  const client = document.getElementById('modalClientName').value.trim();
+  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
+  
+  if (!name || !client || budget <= 0) { 
+    triggerNotification('Please fill all fields correctly!', false, 'error'); 
+    return; 
+  }
+  
+  const newProjectRef = push(ref(db, 'projects'));
+  set(newProjectRef, { name, client, totalBudget: budget }).then(() => {
+    document.getElementById('projectModal').classList.remove('active');
+    document.getElementById('modalProjectName').value = '';
+    document.getElementById('modalClientName').value = '';
+    document.getElementById('modalBudget').value = '';
+    document.getElementById('editProjectId').value = '';
+    document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+    document.getElementById('saveProjectBtn').onclick = saveNewProject;
+    triggerNotification('Project added successfully!');
+  });
 }
 
 function renderRABItemsSubTable() {
@@ -598,25 +666,7 @@ document.getElementById('reportProjectSelect')?.addEventListener('change', (e) =
   renderReportDiagramsByProject();
 });
 
-document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
-  const name = document.getElementById('modalProjectName').value.trim();
-  const client = document.getElementById('modalClientName').value.trim();
-  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
-  
-  if (!name || !client || budget <= 0) { 
-    triggerNotification('Please fill all fields correctly!', false, 'error'); 
-    return; 
-  }
-  
-  const newProjectRef = push(ref(db, 'projects'));
-  set(newProjectRef, { name, client, totalBudget: budget }).then(() => {
-    document.getElementById('projectModal').classList.remove('active');
-    document.getElementById('modalProjectName').value = '';
-    document.getElementById('modalClientName').value = '';
-    document.getElementById('modalBudget').value = '';
-    triggerNotification('Project added successfully!');
-  });
-});
+document.getElementById('saveProjectBtn')?.addEventListener('click', saveNewProject);
 
 document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   if (!currentSelectedProjectId) { 
@@ -1606,6 +1656,12 @@ function renderTreeHierarchy() {
 
 // ==================== MODAL CONTROLS ====================
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => {
+  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+  document.getElementById('modalProjectName').value = '';
+  document.getElementById('modalClientName').value = '';
+  document.getElementById('modalBudget').value = '';
+  document.getElementById('editProjectId').value = '';
+  document.getElementById('saveProjectBtn').onclick = saveNewProject;
   document.getElementById('projectModal').classList.add('active');
 });
 document.getElementById('closeProjectModalBtn')?.addEventListener('click', () => {
@@ -1732,15 +1788,5 @@ onAuthStateChanged(auth, (user) => {
     });
   } else {
     hideLoadingScreen();
-    currentRole = 'Administrator';
-    currentUserEmail = 'demo@genetek.co.id';
-    
-    const emailLabel = document.getElementById('sidebarUserEmail');
-    const roleLabel = document.getElementById('sidebarUserRole');
-    if (emailLabel) emailLabel.innerText = currentUserEmail;
-    if (roleLabel) roleLabel.innerText = currentRole;
-    
-    enforceRoleVisibility();
-    initCloudDatabaseListeners();
   }
 });
