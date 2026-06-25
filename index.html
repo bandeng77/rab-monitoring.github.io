@@ -550,6 +550,16 @@
       </div>
     </div>
 
+    <div id="editRabItemModal" class="modal-overlay">
+      <div class="modal-container">
+        <h3><i class="fas fa-edit"></i> Edit RAB Item</h3>
+        <input type="hidden" id="editRabItemId">
+        <div class="form-group"><label>Item Name</label><input type="text" id="editRabItemName" placeholder="Item Name"></div>
+        <div class="form-group"><label>Budget Amount (IDR)</label><input type="number" id="editRabBudget" placeholder="0"></div>
+        <div class="modal-buttons"><button class="btn btn-danger" id="closeEditRabItemModalBtn">Cancel</button><button class="btn btn-primary" id="saveEditRabItemBtn">Update Item</button></div>
+      </div>
+    </div>
+
     <div id="rabModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-plus-circle"></i> Add RAB Component</h3>
