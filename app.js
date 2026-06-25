@@ -421,8 +421,8 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
         <td>
-          <button class="btn btn-primary btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" style="padding: 4px 12px; font-size: 0.7rem; margin-right: 6px;"><i class="fas fa-edit"></i> Edit</button>
-          <button class="btn btn-danger btn-del-proj" data-id="${p.id}" style="padding: 4px 12px; font-size: 0.7rem;"><i class="fas fa-trash"></i> Delete</button>
+          <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-danger btn-del-proj" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button>
         </td>
       </tr>`;
     }).join('');
@@ -439,11 +439,7 @@ function renderMasterProject() {
     
     document.querySelectorAll('.btn-edit-proj').forEach(btn => {
       btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const name = btn.dataset.name;
-        const client = btn.dataset.client;
-        const budget = btn.dataset.budget;
-        openEditProjectModal(id, name, client, budget);
+        openEditProjectModal(btn.dataset.id, btn.dataset.name, btn.dataset.client, btn.dataset.budget);
       });
     });
   }
@@ -458,25 +454,23 @@ function renderMasterProject() {
 }
 
 function openEditProjectModal(id, name, client, budget) {
-  document.getElementById('modalProjectId').value = id;
-  document.getElementById('modalProjectName').value = name;
-  document.getElementById('modalClientName').value = client;
-  document.getElementById('modalBudget').value = budget;
-  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Project';
-  document.getElementById('saveProjectBtn').innerHTML = '<i class="fas fa-save"></i> Update Project';
-  document.getElementById('saveProjectBtn').onclick = updateProject;
-  document.getElementById('projectModal').classList.add('active');
+  const modal = document.getElementById('editProjectModal');
+  document.getElementById('editProjectId').value = id;
+  document.getElementById('editProjectName').value = name;
+  document.getElementById('editClientName').value = client;
+  document.getElementById('editBudget').value = budget;
+  modal.classList.add('active');
 }
 
-async function updateProject() {
-  const id = document.getElementById('modalProjectId').value;
-  const name = document.getElementById('modalProjectName').value.trim();
-  const client = document.getElementById('modalClientName').value.trim();
-  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
+async function saveEditProject() {
+  const id = document.getElementById('editProjectId').value;
+  const name = document.getElementById('editProjectName').value.trim();
+  const client = document.getElementById('editClientName').value.trim();
+  const budget = parseFloat(document.getElementById('editBudget').value) || 0;
   
-  if (!name || !client || budget <= 0) { 
-    triggerNotification('Please fill all fields correctly!', false, 'error'); 
-    return; 
+  if (!name || !client || budget <= 0) {
+    triggerNotification('Please fill all fields correctly!', false, 'error');
+    return;
   }
   
   try {
@@ -485,43 +479,12 @@ async function updateProject() {
       client: client,
       totalBudget: budget
     });
-    document.getElementById('projectModal').classList.remove('active');
-    document.getElementById('modalProjectName').value = '';
-    document.getElementById('modalClientName').value = '';
-    document.getElementById('modalBudget').value = '';
-    document.getElementById('modalProjectId').value = '';
-    document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
-    document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
-    document.getElementById('saveProjectBtn').onclick = saveNewProject;
+    document.getElementById('editProjectModal').classList.remove('active');
     triggerNotification('Project updated successfully!');
   } catch (error) {
     console.error("Error updating project:", error);
     triggerNotification('Failed to update project!', false, 'error');
   }
-}
-
-async function saveNewProject() {
-  const name = document.getElementById('modalProjectName').value.trim();
-  const client = document.getElementById('modalClientName').value.trim();
-  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
-  
-  if (!name || !client || budget <= 0) { 
-    triggerNotification('Please fill all fields correctly!', false, 'error'); 
-    return; 
-  }
-  
-  const newProjectRef = push(ref(db, 'projects'));
-  set(newProjectRef, { name, client, totalBudget: budget }).then(() => {
-    document.getElementById('projectModal').classList.remove('active');
-    document.getElementById('modalProjectName').value = '';
-    document.getElementById('modalClientName').value = '';
-    document.getElementById('modalBudget').value = '';
-    document.getElementById('modalProjectId').value = '';
-    document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
-    document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
-    document.getElementById('saveProjectBtn').onclick = saveNewProject;
-    triggerNotification('Project added successfully!');
-  });
 }
 
 function renderRABItemsSubTable() {
@@ -545,10 +508,7 @@ function renderRABItemsSubTable() {
       <td>${formatRp(i.budget)}</td>
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
-      <td>
-        <button class="btn btn-primary btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}" style="padding: 4px 12px; font-size: 0.7rem; margin-right: 6px;"><i class="fas fa-edit"></i></button>
-        <button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}" style="padding: 4px 12px; font-size: 0.7rem;"><i class="fas fa-trash"></i></button>
-      </td>
+      <td><button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
     </tr>
   `).join('');
   
@@ -559,82 +519,6 @@ function renderRABItemsSubTable() {
         remove(ref(db, `rabItems/${id}`));
       }
     });
-  });
-  
-  document.querySelectorAll('.btn-edit-rab-sub').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const name = btn.dataset.name;
-      const budget = btn.dataset.budget;
-      openEditRABModal(id, name, budget);
-    });
-  });
-}
-
-function openEditRABModal(id, name, budget) {
-  document.getElementById('rabItemId').value = id;
-  document.getElementById('rabItemName').value = name;
-  document.getElementById('rabBudget').value = budget;
-  document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit RAB Component';
-  document.getElementById('saveRabBtn').innerHTML = '<i class="fas fa-save"></i> Update Item';
-  document.getElementById('saveRabBtn').onclick = updateRABItem;
-  document.getElementById('rabModal').classList.add('active');
-}
-
-async function updateRABItem() {
-  const id = document.getElementById('rabItemId').value;
-  const name = document.getElementById('rabItemName').value.trim();
-  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
-  
-  if (!name || budget <= 0) { 
-    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
-    return; 
-  }
-  
-  try {
-    await update(ref(db, `rabItems/${id}`), {
-      itemName: name,
-      budget: budget
-    });
-    document.getElementById('rabModal').classList.remove('active');
-    document.getElementById('rabItemName').value = '';
-    document.getElementById('rabBudget').value = '';
-    document.getElementById('rabItemId').value = '';
-    document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
-    document.getElementById('saveRabBtn').innerHTML = 'Save Item';
-    document.getElementById('saveRabBtn').onclick = saveNewRABItem;
-    triggerNotification('RAB item updated successfully!');
-  } catch (error) {
-    console.error("Error updating RAB item:", error);
-    triggerNotification('Failed to update RAB item!', false, 'error');
-  }
-}
-
-async function saveNewRABItem() {
-  const name = document.getElementById('rabItemName').value.trim();
-  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
-  
-  if (!name || budget <= 0) { 
-    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
-    return; 
-  }
-  
-  const newRabRef = push(ref(db, 'rabItems'));
-  set(newRabRef, {
-    projectId: currentSelectedProjectId,
-    itemName: name,
-    budget: budget,
-    realisasi: 0,
-    manualProgress: 0
-  }).then(() => {
-    document.getElementById('rabModal').classList.remove('active');
-    document.getElementById('rabItemName').value = '';
-    document.getElementById('rabBudget').value = '';
-    document.getElementById('rabItemId').value = '';
-    document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
-    document.getElementById('saveRabBtn').innerHTML = 'Save Item';
-    document.getElementById('saveRabBtn').onclick = saveNewRABItem;
-    triggerNotification('RAB item added successfully!');
   });
 }
 
@@ -757,7 +641,27 @@ document.getElementById('reportProjectSelect')?.addEventListener('change', (e) =
   renderReportDiagramsByProject();
 });
 
-document.getElementById('saveProjectBtn')?.addEventListener('click', saveNewProject);
+document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
+  const name = document.getElementById('modalProjectName').value.trim();
+  const client = document.getElementById('modalClientName').value.trim();
+  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
+  
+  if (!name || !client || budget <= 0) { 
+    triggerNotification('Please fill all fields correctly!', false, 'error'); 
+    return; 
+  }
+  
+  const newProjectRef = push(ref(db, 'projects'));
+  set(newProjectRef, { name, client, totalBudget: budget }).then(() => {
+    document.getElementById('projectModal').classList.remove('active');
+    document.getElementById('modalProjectName').value = '';
+    document.getElementById('modalClientName').value = '';
+    document.getElementById('modalBudget').value = '';
+    triggerNotification('Project added successfully!');
+  });
+});
+
+document.getElementById('saveEditProjectBtn')?.addEventListener('click', saveEditProject);
 
 document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   if (!currentSelectedProjectId) { 
@@ -768,14 +672,30 @@ document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   document.getElementById('rabModalProjectName').value = proj ? proj.name : '';
   document.getElementById('rabItemName').value = '';
   document.getElementById('rabBudget').value = '';
-  document.getElementById('rabItemId').value = '';
-  document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
-  document.getElementById('saveRabBtn').innerHTML = 'Save Item';
-  document.getElementById('saveRabBtn').onclick = saveNewRABItem;
   document.getElementById('rabModal').classList.add('active');
 });
 
-document.getElementById('saveRabBtn')?.addEventListener('click', saveNewRABItem);
+document.getElementById('saveRabBtn')?.addEventListener('click', () => {
+  const name = document.getElementById('rabItemName').value.trim();
+  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
+  
+  if (!name || budget <= 0) { 
+    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
+    return; 
+  }
+  
+  const newRabRef = push(ref(db, 'rabItems'));
+  set(newRabRef, {
+    projectId: currentSelectedProjectId,
+    itemName: name,
+    budget: budget,
+    realisasi: 0,
+    manualProgress: 0
+  }).then(() => {
+    document.getElementById('rabModal').classList.remove('active');
+    triggerNotification('RAB item added successfully!');
+  });
+});
 
 // ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
@@ -1731,17 +1651,13 @@ function renderTreeHierarchy() {
 
 // ==================== MODAL CONTROLS ====================
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => {
-  document.getElementById('modalProjectId').value = '';
-  document.getElementById('modalProjectName').value = '';
-  document.getElementById('modalClientName').value = '';
-  document.getElementById('modalBudget').value = '';
-  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
-  document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
-  document.getElementById('saveProjectBtn').onclick = saveNewProject;
   document.getElementById('projectModal').classList.add('active');
 });
 document.getElementById('closeProjectModalBtn')?.addEventListener('click', () => {
   document.getElementById('projectModal').classList.remove('active');
+});
+document.getElementById('closeEditProjectModalBtn')?.addEventListener('click', () => {
+  document.getElementById('editProjectModal').classList.remove('active');
 });
 document.getElementById('closeRabModalBtn')?.addEventListener('click', () => {
   document.getElementById('rabModal').classList.remove('active');
@@ -1864,15 +1780,6 @@ onAuthStateChanged(auth, (user) => {
     });
   } else {
     hideLoadingScreen();
-    currentRole = 'Administrator';
-    currentUserEmail = '';
-    
-    const emailLabel = document.getElementById('sidebarUserEmail');
-    const roleLabel = document.getElementById('sidebarUserRole');
-    if (emailLabel) emailLabel.innerText = 'Not Logged In';
-    if (roleLabel) roleLabel.innerText = currentRole;
-    
-    enforceRoleVisibility();
-    initCloudDatabaseListeners();
+    window.location.href = 'login.html';
   }
 });
