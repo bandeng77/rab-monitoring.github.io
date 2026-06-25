@@ -487,6 +487,38 @@ async function saveEditProject() {
   }
 }
 
+// ==================== RAB ITEMS EDIT FUNCTION ====================
+function openEditRabItemModal(itemId, itemName, budget) {
+  const modal = document.getElementById('editRabItemModal');
+  document.getElementById('editRabItemId').value = itemId;
+  document.getElementById('editRabItemName').value = itemName;
+  document.getElementById('editRabBudget').value = budget;
+  modal.classList.add('active');
+}
+
+async function saveEditRabItem() {
+  const id = document.getElementById('editRabItemId').value;
+  const name = document.getElementById('editRabItemName').value.trim();
+  const budget = parseFloat(document.getElementById('editRabBudget').value) || 0;
+  
+  if (!name || budget <= 0) {
+    triggerNotification('Please fill all fields correctly!', false, 'error');
+    return;
+  }
+  
+  try {
+    await update(ref(db, `rabItems/${id}`), {
+      itemName: name,
+      budget: budget
+    });
+    document.getElementById('editRabItemModal').classList.remove('active');
+    triggerNotification('RAB item updated successfully!');
+  } catch (error) {
+    console.error("Error updating RAB item:", error);
+    triggerNotification('Failed to update RAB item!', false, 'error');
+  }
+}
+
 function renderRABItemsSubTable() {
   const tbody = document.getElementById('rabItemsMasterBody');
   if (!tbody) return;
@@ -508,7 +540,10 @@ function renderRABItemsSubTable() {
       <td>${formatRp(i.budget)}</td>
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
-      <td><button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
+      <td>
+        <button class="btn btn-warning btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}"><i class="fas fa-edit"></i> Edit</button>
+        <button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i> Delete</button>
+      </td>
     </tr>
   `).join('');
   
@@ -518,6 +553,12 @@ function renderRABItemsSubTable() {
       if (confirm('Delete this RAB item?')) {
         remove(ref(db, `rabItems/${id}`));
       }
+    });
+  });
+  
+  document.querySelectorAll('.btn-edit-rab-sub').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditRabItemModal(btn.dataset.id, btn.dataset.name, btn.dataset.budget);
     });
   });
 }
@@ -662,6 +703,7 @@ document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('saveEditProjectBtn')?.addEventListener('click', saveEditProject);
+document.getElementById('saveEditRabItemBtn')?.addEventListener('click', saveEditRabItem);
 
 document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   if (!currentSelectedProjectId) { 
@@ -1658,6 +1700,9 @@ document.getElementById('closeProjectModalBtn')?.addEventListener('click', () =>
 });
 document.getElementById('closeEditProjectModalBtn')?.addEventListener('click', () => {
   document.getElementById('editProjectModal').classList.remove('active');
+});
+document.getElementById('closeEditRabItemModalBtn')?.addEventListener('click', () => {
+  document.getElementById('editRabItemModal').classList.remove('active');
 });
 document.getElementById('closeRabModalBtn')?.addEventListener('click', () => {
   document.getElementById('rabModal').classList.remove('active');
