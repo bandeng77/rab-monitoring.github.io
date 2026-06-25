@@ -31,8 +31,6 @@ let currentRole = "";
 let currentUserEmail = "";
 let currentUserUid = "";
 let currentSelectedReportProject = "all";
-let isDataLoaded = false;
-let loadingTimeout = null;
 
 // Chart instances
 let mainBarChartInstance = null;
@@ -48,22 +46,10 @@ const rolePermissions = {
 
 // ==================== HELPER FUNCTIONS ====================
 function hideLoadingScreen() {
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-    loadingTimeout = null;
-  }
   const loadingScreen = document.getElementById('loadingScreen');
   const mainAppBody = document.getElementById('mainAppBody');
   if (loadingScreen) loadingScreen.style.display = 'none';
   if (mainAppBody) mainAppBody.style.display = 'block';
-}
-
-function forceHideLoadingScreen() {
-  // Force hide loading screen after 5 seconds maximum
-  loadingTimeout = setTimeout(() => {
-    hideLoadingScreen();
-    triggerNotification('Loading timeout - data may be incomplete', false, 'error');
-  }, 5000);
 }
 
 function triggerNotification(message, isSuccess = true, type = 'success') {
@@ -310,53 +296,36 @@ function enforceRoleVisibility() {
 
 // ==================== REALTIME CLOUD LISTENERS ====================
 function initCloudDatabaseListeners() {
-  let loadedCount = 0;
-  const totalListeners = 5;
-
-  function checkAllLoaded() {
-    loadedCount++;
-    if (loadedCount >= totalListeners && !isDataLoaded) {
-      isDataLoaded = true;
-      hideLoadingScreen();
-      updateWholeUI();
-    }
-  }
-
   onValue(ref(db, 'projects'), (snapshot) => {
     const data = snapshot.val();
     projects = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
+    updateWholeUI();
     populateReportProjectSelect();
-    checkAllLoaded();
   });
 
   onValue(ref(db, 'rabItems'), (snapshot) => {
     const data = snapshot.val();
     rabItems = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    checkAllLoaded();
+    updateWholeUI();
   });
 
   onValue(ref(db, 'claims'), (snapshot) => {
     const data = snapshot.val();
     claims = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
-    checkAllLoaded();
+    updateWholeUI();
   });
 
   onValue(ref(db, 'truenasFiles'), (snapshot) => {
     const data = snapshot.val();
     truenasFiles = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     renderTreeHierarchy();
-    checkAllLoaded();
   });
 
   onValue(ref(db, 'users'), (snapshot) => {
     const data = snapshot.val();
     users = data ? Object.keys(data).map(k => ({id: k, ...data[k]})) : [];
     renderUsersTable();
-    checkAllLoaded();
   });
-  
-  // Force hide loading after timeout
-  forceHideLoadingScreen();
 }
 
 function updateWholeUI() {
@@ -452,8 +421,8 @@ function renderMasterProject() {
         <td>${formatRp(p.totalBudget)}</td>
         <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
         <td>
-          <button class="btn btn-edit-project btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}"><i class="fas fa-edit"></i> Edit</button>
-          <button class="btn btn-danger btn-del-proj" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button>
+          <button class="btn btn-primary btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" style="padding: 4px 12px; font-size: 0.7rem; margin-right: 6px;"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-danger btn-del-proj" data-id="${p.id}" style="padding: 4px 12px; font-size: 0.7rem;"><i class="fas fa-trash"></i> Delete</button>
         </td>
       </tr>`;
     }).join('');
@@ -474,39 +443,7 @@ function renderMasterProject() {
         const name = btn.dataset.name;
         const client = btn.dataset.client;
         const budget = btn.dataset.budget;
-        
-        document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Project';
-        document.getElementById('modalProjectName').value = name;
-        document.getElementById('modalClientName').value = client;
-        document.getElementById('modalBudget').value = budget;
-        document.getElementById('editProjectId').value = id;
-        document.getElementById('projectModal').classList.add('active');
-        
-        document.getElementById('saveProjectBtn').onclick = () => {
-          const updatedName = document.getElementById('modalProjectName').value.trim();
-          const updatedClient = document.getElementById('modalClientName').value.trim();
-          const updatedBudget = parseFloat(document.getElementById('modalBudget').value) || 0;
-          
-          if (!updatedName || !updatedClient || updatedBudget <= 0) {
-            triggerNotification('Please fill all fields correctly!', false, 'error');
-            return;
-          }
-          
-          update(ref(db, `projects/${id}`), {
-            name: updatedName,
-            client: updatedClient,
-            totalBudget: updatedBudget
-          }).then(() => {
-            document.getElementById('projectModal').classList.remove('active');
-            document.getElementById('modalProjectName').value = '';
-            document.getElementById('modalClientName').value = '';
-            document.getElementById('modalBudget').value = '';
-            document.getElementById('editProjectId').value = '';
-            document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
-            document.getElementById('saveProjectBtn').onclick = saveNewProject;
-            triggerNotification('Project updated successfully!');
-          });
-        };
+        openEditProjectModal(id, name, client, budget);
       });
     });
   }
@@ -520,7 +457,50 @@ function renderMasterProject() {
   renderRABItemsSubTable();
 }
 
-function saveNewProject() {
+function openEditProjectModal(id, name, client, budget) {
+  document.getElementById('modalProjectId').value = id;
+  document.getElementById('modalProjectName').value = name;
+  document.getElementById('modalClientName').value = client;
+  document.getElementById('modalBudget').value = budget;
+  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Project';
+  document.getElementById('saveProjectBtn').innerHTML = '<i class="fas fa-save"></i> Update Project';
+  document.getElementById('saveProjectBtn').onclick = updateProject;
+  document.getElementById('projectModal').classList.add('active');
+}
+
+async function updateProject() {
+  const id = document.getElementById('modalProjectId').value;
+  const name = document.getElementById('modalProjectName').value.trim();
+  const client = document.getElementById('modalClientName').value.trim();
+  const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
+  
+  if (!name || !client || budget <= 0) { 
+    triggerNotification('Please fill all fields correctly!', false, 'error'); 
+    return; 
+  }
+  
+  try {
+    await update(ref(db, `projects/${id}`), {
+      name: name,
+      client: client,
+      totalBudget: budget
+    });
+    document.getElementById('projectModal').classList.remove('active');
+    document.getElementById('modalProjectName').value = '';
+    document.getElementById('modalClientName').value = '';
+    document.getElementById('modalBudget').value = '';
+    document.getElementById('modalProjectId').value = '';
+    document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+    document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
+    document.getElementById('saveProjectBtn').onclick = saveNewProject;
+    triggerNotification('Project updated successfully!');
+  } catch (error) {
+    console.error("Error updating project:", error);
+    triggerNotification('Failed to update project!', false, 'error');
+  }
+}
+
+async function saveNewProject() {
   const name = document.getElementById('modalProjectName').value.trim();
   const client = document.getElementById('modalClientName').value.trim();
   const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
@@ -536,8 +516,9 @@ function saveNewProject() {
     document.getElementById('modalProjectName').value = '';
     document.getElementById('modalClientName').value = '';
     document.getElementById('modalBudget').value = '';
-    document.getElementById('editProjectId').value = '';
+    document.getElementById('modalProjectId').value = '';
     document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+    document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
     document.getElementById('saveProjectBtn').onclick = saveNewProject;
     triggerNotification('Project added successfully!');
   });
@@ -564,7 +545,10 @@ function renderRABItemsSubTable() {
       <td>${formatRp(i.budget)}</td>
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
-      <td><button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i></button></td>
+      <td>
+        <button class="btn btn-primary btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}" style="padding: 4px 12px; font-size: 0.7rem; margin-right: 6px;"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}" style="padding: 4px 12px; font-size: 0.7rem;"><i class="fas fa-trash"></i></button>
+      </td>
     </tr>
   `).join('');
   
@@ -575,6 +559,82 @@ function renderRABItemsSubTable() {
         remove(ref(db, `rabItems/${id}`));
       }
     });
+  });
+  
+  document.querySelectorAll('.btn-edit-rab-sub').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      const budget = btn.dataset.budget;
+      openEditRABModal(id, name, budget);
+    });
+  });
+}
+
+function openEditRABModal(id, name, budget) {
+  document.getElementById('rabItemId').value = id;
+  document.getElementById('rabItemName').value = name;
+  document.getElementById('rabBudget').value = budget;
+  document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit RAB Component';
+  document.getElementById('saveRabBtn').innerHTML = '<i class="fas fa-save"></i> Update Item';
+  document.getElementById('saveRabBtn').onclick = updateRABItem;
+  document.getElementById('rabModal').classList.add('active');
+}
+
+async function updateRABItem() {
+  const id = document.getElementById('rabItemId').value;
+  const name = document.getElementById('rabItemName').value.trim();
+  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
+  
+  if (!name || budget <= 0) { 
+    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
+    return; 
+  }
+  
+  try {
+    await update(ref(db, `rabItems/${id}`), {
+      itemName: name,
+      budget: budget
+    });
+    document.getElementById('rabModal').classList.remove('active');
+    document.getElementById('rabItemName').value = '';
+    document.getElementById('rabBudget').value = '';
+    document.getElementById('rabItemId').value = '';
+    document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
+    document.getElementById('saveRabBtn').innerHTML = 'Save Item';
+    document.getElementById('saveRabBtn').onclick = saveNewRABItem;
+    triggerNotification('RAB item updated successfully!');
+  } catch (error) {
+    console.error("Error updating RAB item:", error);
+    triggerNotification('Failed to update RAB item!', false, 'error');
+  }
+}
+
+async function saveNewRABItem() {
+  const name = document.getElementById('rabItemName').value.trim();
+  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
+  
+  if (!name || budget <= 0) { 
+    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
+    return; 
+  }
+  
+  const newRabRef = push(ref(db, 'rabItems'));
+  set(newRabRef, {
+    projectId: currentSelectedProjectId,
+    itemName: name,
+    budget: budget,
+    realisasi: 0,
+    manualProgress: 0
+  }).then(() => {
+    document.getElementById('rabModal').classList.remove('active');
+    document.getElementById('rabItemName').value = '';
+    document.getElementById('rabBudget').value = '';
+    document.getElementById('rabItemId').value = '';
+    document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
+    document.getElementById('saveRabBtn').innerHTML = 'Save Item';
+    document.getElementById('saveRabBtn').onclick = saveNewRABItem;
+    triggerNotification('RAB item added successfully!');
   });
 }
 
@@ -708,30 +768,14 @@ document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   document.getElementById('rabModalProjectName').value = proj ? proj.name : '';
   document.getElementById('rabItemName').value = '';
   document.getElementById('rabBudget').value = '';
+  document.getElementById('rabItemId').value = '';
+  document.getElementById('rabModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add RAB Component';
+  document.getElementById('saveRabBtn').innerHTML = 'Save Item';
+  document.getElementById('saveRabBtn').onclick = saveNewRABItem;
   document.getElementById('rabModal').classList.add('active');
 });
 
-document.getElementById('saveRabBtn')?.addEventListener('click', () => {
-  const name = document.getElementById('rabItemName').value.trim();
-  const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
-  
-  if (!name || budget <= 0) { 
-    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
-    return; 
-  }
-  
-  const newRabRef = push(ref(db, 'rabItems'));
-  set(newRabRef, {
-    projectId: currentSelectedProjectId,
-    itemName: name,
-    budget: budget,
-    realisasi: 0,
-    manualProgress: 0
-  }).then(() => {
-    document.getElementById('rabModal').classList.remove('active');
-    triggerNotification('RAB item added successfully!');
-  });
-});
+document.getElementById('saveRabBtn')?.addEventListener('click', saveNewRABItem);
 
 // ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
@@ -1221,7 +1265,7 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD ====================
+// ==================== PDF DOWNLOAD - FIXED WORKING VERSION ====================
 async function downloadPDF() {
   const downloadBtn = document.getElementById('downloadPDFBtn');
   const originalBtnText = downloadBtn?.innerHTML;
@@ -1275,6 +1319,7 @@ async function downloadPDF() {
     const pendingClaims = filteredClaims.filter(c => c.status === 'pending').length;
     const approvedClaims = filteredClaims.filter(c => c.status === 'approved').length;
     const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
+    const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
     
     // Build project details HTML
     let projectDetailsHtml = '';
@@ -1686,11 +1731,12 @@ function renderTreeHierarchy() {
 
 // ==================== MODAL CONTROLS ====================
 document.getElementById('openProjectModalBtn')?.addEventListener('click', () => {
-  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+  document.getElementById('modalProjectId').value = '';
   document.getElementById('modalProjectName').value = '';
   document.getElementById('modalClientName').value = '';
   document.getElementById('modalBudget').value = '';
-  document.getElementById('editProjectId').value = '';
+  document.getElementById('projectModalTitle').innerHTML = '<i class="fas fa-folder-plus"></i> Add New Project';
+  document.getElementById('saveProjectBtn').innerHTML = 'Save Project';
   document.getElementById('saveProjectBtn').onclick = saveNewProject;
   document.getElementById('projectModal').classList.add('active');
 });
@@ -1798,6 +1844,7 @@ onAuthStateChanged(auth, (user) => {
         
         enforceRoleVisibility();
         initCloudDatabaseListeners();
+        hideLoadingScreen();
       } else {
         set(ref(db, `users/${user.uid}`), {
           email: user.email,
@@ -1811,17 +1858,21 @@ onAuthStateChanged(auth, (user) => {
           if (roleLabel) roleLabel.innerText = currentRole;
           enforceRoleVisibility();
           initCloudDatabaseListeners();
+          hideLoadingScreen();
         });
       }
     });
   } else {
-    // User not logged in - show guest mode
+    hideLoadingScreen();
+    currentRole = 'Administrator';
+    currentUserEmail = '';
+    
     const emailLabel = document.getElementById('sidebarUserEmail');
     const roleLabel = document.getElementById('sidebarUserRole');
-    if (emailLabel) emailLabel.innerText = 'Guest Mode';
-    if (roleLabel) roleLabel.innerText = 'Viewer';
+    if (emailLabel) emailLabel.innerText = 'Not Logged In';
+    if (roleLabel) roleLabel.innerText = currentRole;
     
-    // Still load data for guest mode
+    enforceRoleVisibility();
     initCloudDatabaseListeners();
   }
 });
