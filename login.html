@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RAB Pro | Secure Gateway Login</title>
+  <title>RAB Monitoring | Secure Gateway Login</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
@@ -132,7 +132,7 @@
 </div>
 
 <div class="login-container">
-  <h2>RAB Tracker Pro</h2>
+  <h2>RAB Monitoring</h2>
   <p>Silakan masuk menggunakan akun kredensial Anda</p>
   
   <form id="loginForm">
@@ -140,7 +140,7 @@
       <label>Alamat Email</label>
       <div class="input-wrapper">
         <i class="fas fa-envelope"></i>
-        <input type="email" id="loginEmail" placeholder="nama@genetek.co.id" required>
+        <input type="email" id="loginEmail" placeholder="nama@perusahaan.co.id" required>
       </div>
     </div>
     
@@ -195,18 +195,15 @@
       .then((userCredential) => {
         const uid = userCredential.user.uid;
         
-        // 1. Coba cari role berdasarkan UID langsung
         return get(ref(db, `users/${uid}`)).then((snapshot) => {
           if (snapshot.exists()) {
             window.location.href = 'index.html';
           } else {
-            // 2. Jika UID belum ada, cari berdasarkan Email yang di-sanitasi (titik diubah jadi koma)
             const sanitizedEmail = email.toLowerCase().replace(/\./g, ',');
             return get(ref(db, `user_emails/${sanitizedEmail}`)).then((emailSnap) => {
               if (emailSnap.exists()) {
                 const pendingProfile = emailSnap.val();
                 
-                // Pindahkan data ke node users/${uid} agar sinkron secara permanen
                 return set(ref(db, `users/${uid}`), {
                   email: email.toLowerCase(),
                   role: pendingProfile.role,
