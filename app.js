@@ -32,6 +32,7 @@ let currentUserEmail = "";
 let currentUserUid = "";
 let currentSelectedReportProject = "all";
 let isDataLoaded = false;
+let loadingTimeout = null;
 
 // Chart instances
 let mainBarChartInstance = null;
@@ -47,10 +48,22 @@ const rolePermissions = {
 
 // ==================== HELPER FUNCTIONS ====================
 function hideLoadingScreen() {
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
   const loadingScreen = document.getElementById('loadingScreen');
   const mainAppBody = document.getElementById('mainAppBody');
   if (loadingScreen) loadingScreen.style.display = 'none';
   if (mainAppBody) mainAppBody.style.display = 'block';
+}
+
+function forceHideLoadingScreen() {
+  // Force hide loading screen after 5 seconds maximum
+  loadingTimeout = setTimeout(() => {
+    hideLoadingScreen();
+    triggerNotification('Loading timeout - data may be incomplete', false, 'error');
+  }, 5000);
 }
 
 function triggerNotification(message, isSuccess = true, type = 'success') {
@@ -341,6 +354,9 @@ function initCloudDatabaseListeners() {
     renderUsersTable();
     checkAllLoaded();
   });
+  
+  // Force hide loading after timeout
+  forceHideLoadingScreen();
 }
 
 function updateWholeUI() {
@@ -1205,7 +1221,7 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD - FIXED WORKING VERSION ====================
+// ==================== PDF DOWNLOAD ====================
 async function downloadPDF() {
   const downloadBtn = document.getElementById('downloadPDFBtn');
   const originalBtnText = downloadBtn?.innerHTML;
@@ -1259,7 +1275,6 @@ async function downloadPDF() {
     const pendingClaims = filteredClaims.filter(c => c.status === 'pending').length;
     const approvedClaims = filteredClaims.filter(c => c.status === 'approved').length;
     const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
-    const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
     
     // Build project details HTML
     let projectDetailsHtml = '';
@@ -1800,13 +1815,13 @@ onAuthStateChanged(auth, (user) => {
       }
     });
   } else {
-    // User not logged in - show a clear message
+    // User not logged in - show guest mode
     const emailLabel = document.getElementById('sidebarUserEmail');
     const roleLabel = document.getElementById('sidebarUserRole');
-    if (emailLabel) emailLabel.innerText = 'Tidak Login';
-    if (roleLabel) roleLabel.innerText = 'Guest';
+    if (emailLabel) emailLabel.innerText = 'Guest Mode';
+    if (roleLabel) roleLabel.innerText = 'Viewer';
     
-    // Still load data for demo/guest mode
+    // Still load data for guest mode
     initCloudDatabaseListeners();
   }
 });
