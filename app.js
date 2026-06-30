@@ -911,16 +911,32 @@ function renderClaimView() {
   if (historyBody) {
     historyBody.innerHTML = claims.map(c => {
       const p = projects.find(pr => pr.id === c.projectId);
-      // Build items with their individual dates
-      const summaries = c.items ? c.items.map(ci => {
-        const r = rabItems.find(rab => rab.id === ci.itemId);
-        const itemDate = ci.tanggal || '-';
-        return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'} | Tgl: ${itemDate})</small>`;
-      }).join('<br>') : '-';
+      
+      // Build items with their individual dates - split into separate columns
+      let itemsHtml = '';
+      let datesHtml = '';
+      if (c.items && c.items.length > 0) {
+        c.items.forEach(ci => {
+          const r = rabItems.find(rab => rab.id === ci.itemId);
+          const itemName = r ? r.itemName : 'Komponen';
+          const vendor = ci.vendor || '-';
+          const nominal = formatRp(ci.nominal);
+          const tanggal = ci.tanggal || '-';
+          
+          itemsHtml += `<div style="margin-bottom: 4px;">• <strong>${itemName}</strong> (${nominal})<br><small>Vendor: ${vendor}</small></div>`;
+          datesHtml += `<div style="margin-bottom: 4px; text-align: center;">${tanggal}</div>`;
+        });
+      } else {
+        itemsHtml = '-';
+        datesHtml = '-';
+      }
+      
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
+      
       return `<tr>
         <td><strong>${p ? p.name : '-'}</strong></td>
-        <td style="font-size:0.8rem;">${summaries}</td>
+        <td style="font-size:0.8rem;">${datesHtml}</td>
+        <td style="font-size:0.8rem;">${itemsHtml}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
       </tr>`;
@@ -1172,7 +1188,7 @@ function openItemClaimHistory(itemId) {
   const tbody = document.getElementById('claimHistoryDetailBody');
   if (tbody) {
     if (itemClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
     } else {
       tbody.innerHTML = itemClaims.map(c => {
         const claimItem = c.items.find(ci => ci.itemId === itemId);
