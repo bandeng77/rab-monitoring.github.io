@@ -860,6 +860,7 @@ function renderClaimItemsBuildLayout() {
       </div>
       <div class="item-row-subgrid">
         <div><input type="text" data-idx="${idx}" class="item-vendor-node" placeholder="Vendor" value="${item.vendor || ''}" /></div>
+        <div><input type="date" data-idx="${idx}" class="item-date-node" value="${item.tanggal || ''}" /></div>
         <div><input type="text" data-idx="${idx}" class="item-notes-node" placeholder="Catatan" value="${item.desc || ''}" /></div>
       </div>
     </div>
@@ -878,6 +879,11 @@ function renderClaimItemsBuildLayout() {
   container.querySelectorAll('.item-vendor-node').forEach(inp => {
     inp.addEventListener('input', (e) => {
       claimItemsListArray[parseInt(inp.dataset.idx)].vendor = e.target.value;
+    });
+  });
+  container.querySelectorAll('.item-date-node').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      claimItemsListArray[parseInt(inp.dataset.idx)].tanggal = e.target.value;
     });
   });
   container.querySelectorAll('.item-notes-node').forEach(inp => {
@@ -910,9 +916,11 @@ function renderClaimView() {
         return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'})</small>`;
       }).join('<br>') : '-';
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
+      // Get date from first item or use claim timestamp
+      const claimDate = c.items && c.items.length > 0 && c.items[0].tanggal ? c.items[0].tanggal : formatDate(c.timestamp);
       return `<tr>
         <td><strong>${p ? p.name : '-'}</strong></td>
-        <td>${formatDate(c.timestamp)}</td>
+        <td>${claimDate}</td>
         <td style="font-size:0.8rem;">${summaries}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
@@ -931,16 +939,16 @@ document.getElementById('addItemBtn')?.addEventListener('click', () => {
     triggerNotification('Pilih project terlebih dahulu!', false, 'error');
     return;
   }
-  claimItemsListArray.push({ itemId: '', nominal: 0, vendor: '', desc: '' });
+  claimItemsListArray.push({ itemId: '', nominal: 0, vendor: '', tanggal: '', desc: '' });
   renderClaimItemsBuildLayout();
 });
 
 document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   const projectId = document.getElementById('claimProjectSelect').value;
-  const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor);
+  const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor && it.tanggal);
   
   if (!projectId || validItems.length === 0) {
-    triggerNotification('Lengkapi minimal satu item (Komponen, Nominal, Vendor)!', false, 'error');
+    triggerNotification('Lengkapi minimal satu item (Komponen, Nominal, Vendor, Tanggal)!', false, 'error');
     return;
   }
   
@@ -1165,13 +1173,13 @@ function openItemClaimHistory(itemId) {
   const tbody = document.getElementById('claimHistoryDetailBody');
   if (tbody) {
     if (itemClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
     } else {
       tbody.innerHTML = itemClaims.map(c => {
         const claimItem = c.items.find(ci => ci.itemId === itemId);
         const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
         return `<tr>
-          <td>${formatDateTime(c.timestamp)}</td>
+          <td>${claimItem && claimItem.tanggal ? claimItem.tanggal : formatDate(c.timestamp)}</td>
           <td>${claimItem ? formatRp(claimItem.nominal) : '-'}</td>
           <td>${claimItem ? claimItem.vendor || '-' : '-'}</td>
           <td><span class="badge ${badgeClass}">${c.status}</span></td>
@@ -1544,6 +1552,7 @@ async function downloadPDF() {
         const p = filteredProjects.find(pr => pr.id === c.projectId);
         const statusColor = c.status === 'approved' ? '#065f46' : (c.status === 'rejected' ? '#991b1b' : '#9a3412');
         const statusBg = c.status === 'approved' ? '#d1fae5' : (c.status === 'rejected' ? '#fee2e2' : '#fed7aa');
+        const claimDate = c.items && c.items.length > 0 && c.items[0].tanggal ? c.items[0].tanggal : formatDate(c.timestamp);
         
         claimsHtml += `
           <div style="border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; page-break-inside: avoid;">
@@ -1555,7 +1564,7 @@ async function downloadPDF() {
               <div style="font-size: 10px; color: #4b5563;">Total: ${formatRp(c.totalNominal)}</div>
             </div>
             <div style="padding: 6px 12px; font-size: 9px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f3f4f6;">
-              Submitted: ${formatDateTime(c.timestamp)}
+              Date: ${claimDate}
             </div>
             <div style="padding: 8px 12px; background: #ffffff;">
               <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
