@@ -911,16 +911,15 @@ function renderClaimView() {
   if (historyBody) {
     historyBody.innerHTML = claims.map(c => {
       const p = projects.find(pr => pr.id === c.projectId);
+      // Build items with their individual dates
       const summaries = c.items ? c.items.map(ci => {
         const r = rabItems.find(rab => rab.id === ci.itemId);
-        return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'})</small>`;
+        const itemDate = ci.tanggal || '-';
+        return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'} | Tgl: ${itemDate})</small>`;
       }).join('<br>') : '-';
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
-      // Get date from first item or use claim timestamp
-      const claimDate = c.items && c.items.length > 0 && c.items[0].tanggal ? c.items[0].tanggal : formatDate(c.timestamp);
       return `<tr>
         <td><strong>${p ? p.name : '-'}</strong></td>
-        <td>${claimDate}</td>
         <td style="font-size:0.8rem;">${summaries}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
@@ -983,7 +982,7 @@ function renderApprovalList() {
     const p = projects.find(pr => pr.id === c.projectId);
     const details = c.items ? c.items.map(ci => {
       const r = rabItems.find(rab => rab.id === ci.itemId);
-      return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'}</small>`;
+      return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'} | Tgl: ${ci.tanggal || '-'}</small>`;
     }).join('<br>') : '-';
     return `<tr>
       <td><strong>${p ? p.name : '-'}</strong></td>
@@ -1173,7 +1172,7 @@ function openItemClaimHistory(itemId) {
   const tbody = document.getElementById('claimHistoryDetailBody');
   if (tbody) {
     if (itemClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
     } else {
       tbody.innerHTML = itemClaims.map(c => {
         const claimItem = c.items.find(ci => ci.itemId === itemId);
@@ -1552,7 +1551,6 @@ async function downloadPDF() {
         const p = filteredProjects.find(pr => pr.id === c.projectId);
         const statusColor = c.status === 'approved' ? '#065f46' : (c.status === 'rejected' ? '#991b1b' : '#9a3412');
         const statusBg = c.status === 'approved' ? '#d1fae5' : (c.status === 'rejected' ? '#fee2e2' : '#fed7aa');
-        const claimDate = c.items && c.items.length > 0 && c.items[0].tanggal ? c.items[0].tanggal : formatDate(c.timestamp);
         
         claimsHtml += `
           <div style="border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; page-break-inside: avoid;">
@@ -1564,7 +1562,7 @@ async function downloadPDF() {
               <div style="font-size: 10px; color: #4b5563;">Total: ${formatRp(c.totalNominal)}</div>
             </div>
             <div style="padding: 6px 12px; font-size: 9px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f3f4f6;">
-              Date: ${claimDate}
+              Submitted: ${formatDateTime(c.timestamp)}
             </div>
             <div style="padding: 8px 12px; background: #ffffff;">
               <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
@@ -1573,6 +1571,7 @@ async function downloadPDF() {
                     <th style="padding: 4px 6px; text-align: left;">Item</th>
                     <th style="padding: 4px 6px; text-align: right;">Amount</th>
                     <th style="padding: 4px 6px; text-align: left;">Vendor</th>
+                    <th style="padding: 4px 6px; text-align: left;">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1586,6 +1585,7 @@ async function downloadPDF() {
                 <td style="padding: 4px 6px;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
                 <td style="padding: 4px 6px; text-align: right;">${formatRp(item.nominal)}</td>
                 <td style="padding: 4px 6px;">${escapeHtml(item.vendor || '-')}</td>
+                <td style="padding: 4px 6px;">${item.tanggal || '-'}</td>
               </tr>
             `;
           }
