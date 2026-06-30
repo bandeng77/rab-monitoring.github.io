@@ -31,6 +31,8 @@ let currentRole = "";
 let currentUserEmail = "";
 let currentUserUid = "";
 let currentSelectedReportProject = "all";
+let currentSelectedRabComponentId = null;
+let currentSelectedProjectForDetail = null;
 
 // Chart instances
 let mainBarChartInstance = null;
@@ -43,6 +45,9 @@ const rolePermissions = {
   "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document', 'files'],
   "Project Manager": ['dashboard', 'master-project', 'claim-request', 'monitoring', 'upload-document', 'files']
 };
+
+// RAB Category Options
+const RAB_CATEGORIES = ['Manajemen Item', 'Manajemen Team', 'Manajemen Cost'];
 
 // ==================== HELPER FUNCTIONS ====================
 function hideLoadingScreen() {
@@ -137,6 +142,16 @@ function formatDate(timestamp) {
   try {
     const date = new Date(timestamp);
     return date.toLocaleDateString('id-ID');
+  } catch {
+    return '-';
+  }
+}
+
+function formatDateTime(timestamp) {
+  if (!timestamp) return '-';
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString('id-ID');
   } catch {
     return '-';
   }
@@ -251,6 +266,24 @@ async function deleteUserAccount(uid, email) {
   } catch (error) {
     console.error("Error deleting user:", error);
     triggerNotification("Failed to delete user!", false, 'error');
+    return { success: false };
+  }
+}
+
+// ==================== PROJECT LOCK FUNCTIONS ====================
+async function toggleProjectLock(projectId, currentLockStatus) {
+  try {
+    const newLockStatus = !currentLockStatus;
+    await update(ref(db, `projects/${projectId}`), {
+      isLocked: newLockStatus,
+      lockedAt: newLockStatus ? new Date().toLocaleString() : null,
+      lockedBy: newLockStatus ? currentUserEmail : null
+    });
+    triggerNotification(`Project ${newLockStatus ? '🔒 Locked' : '🔓 Unlocked'} successfully!`, true);
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling project lock:", error);
+    triggerNotification("Failed to toggle project lock!", false, 'error');
     return { success: false };
   }
 }
@@ -374,6 +407,13 @@ function populateDropdownMenus() {
     claimSel.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (oldVal && projects.find(p => p.id === oldVal)) claimSel.value = oldVal;
   }
+
+  // Populate category dropdown for RAB
+  const categorySel = document.getElementById('rabCategorySelect');
+  if (categorySel) {
+    categorySel.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
+      RAB_CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+  }
 }
 
 // ==================== DASHBOARD ====================
@@ -414,15 +454,26 @@ function renderMasterProject() {
   if (tbody) {
     tbody.innerHTML = projects.map(p => {
       const totalAllocated = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
-      const remaining = p.totalBudget - totalAllocated;
+      const remaining = (p.totalBudget || 0) - totalAllocated;
+      const isLocked = p.isLocked || false;
+      
       return `<tr>
-        <td><strong>${p.name}</strong></td>
+        <td><strong>${p.noSo ? 'SO: ' + p.noSo + ' - ' : ''}${p.name}</strong></td>
         <td>${p.client}</td>
-        <td>${formatRp(p.totalBudget)}</td>
+        <td>${formatRp(p.contractValue || p.totalBudget || 0)}</td>
+        <td>${formatRp(p.totalBudget || 0)}</td>
         <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
         <td>
-          <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}"><i class="fas fa-edit"></i> Edit</button>
-          <button class="btn btn-danger btn-del-proj" data-id="${p.id}"><i class="fas fa-trash"></i> Delete</button>
+          <span class="badge ${isLocked ? 'badge-danger' : 'badge-success'}">${isLocked ? '🔒 Locked' : '🔓 Unlocked'}</span>
+        </td>
+        <td>
+          ${currentRole === 'Administrator' ? `
+            <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" data-contract="${p.contractValue || p.totalBudget}" data-noso="${p.noSo || ''}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-edit"></i> Edit</button>
+            <button class="btn btn-danger btn-del-proj" data-id="${p.id}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i> Delete</button>
+            <button class="btn ${isLocked ? 'btn-success' : 'btn-warning'} btn-lock-proj" data-id="${p.id}" data-locked="${isLocked}"><i class="fas ${isLocked ? 'fa-unlock' : 'fa-lock'}"></i> ${isLocked ? 'Unlock' : 'Lock'}</button>
+          ` : `
+            <span class="badge badge-secondary">Read Only</span>
+          `}
         </td>
       </tr>`;
     }).join('');
@@ -439,7 +490,22 @@ function renderMasterProject() {
     
     document.querySelectorAll('.btn-edit-proj').forEach(btn => {
       btn.addEventListener('click', () => {
-        openEditProjectModal(btn.dataset.id, btn.dataset.name, btn.dataset.client, btn.dataset.budget);
+        openEditProjectModal(
+          btn.dataset.id, 
+          btn.dataset.name, 
+          btn.dataset.client, 
+          btn.dataset.budget,
+          btn.dataset.contract,
+          btn.dataset.noso
+        );
+      });
+    });
+
+    document.querySelectorAll('.btn-lock-proj').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const currentLocked = btn.dataset.locked === 'true';
+        toggleProjectLock(id, currentLocked);
       });
     });
   }
@@ -453,12 +519,14 @@ function renderMasterProject() {
   renderRABItemsSubTable();
 }
 
-function openEditProjectModal(id, name, client, budget) {
+function openEditProjectModal(id, name, client, budget, contractValue, noSo) {
   const modal = document.getElementById('editProjectModal');
   document.getElementById('editProjectId').value = id;
   document.getElementById('editProjectName').value = name;
   document.getElementById('editClientName').value = client;
   document.getElementById('editBudget').value = budget;
+  document.getElementById('editContractValue').value = contractValue || budget;
+  document.getElementById('editNoSo').value = noSo || '';
   modal.classList.add('active');
 }
 
@@ -467,6 +535,8 @@ async function saveEditProject() {
   const name = document.getElementById('editProjectName').value.trim();
   const client = document.getElementById('editClientName').value.trim();
   const budget = parseFloat(document.getElementById('editBudget').value) || 0;
+  const contractValue = parseFloat(document.getElementById('editContractValue').value) || budget;
+  const noSo = document.getElementById('editNoSo').value.trim();
   
   if (!name || !client || budget <= 0) {
     triggerNotification('Please fill all fields correctly!', false, 'error');
@@ -477,7 +547,9 @@ async function saveEditProject() {
     await update(ref(db, `projects/${id}`), {
       name: name,
       client: client,
-      totalBudget: budget
+      totalBudget: budget,
+      contractValue: contractValue,
+      noSo: noSo
     });
     document.getElementById('editProjectModal').classList.remove('active');
     triggerNotification('Project updated successfully!');
@@ -488,11 +560,12 @@ async function saveEditProject() {
 }
 
 // ==================== RAB ITEMS EDIT FUNCTION ====================
-function openEditRabItemModal(itemId, itemName, budget) {
+function openEditRabItemModal(itemId, itemName, budget, category) {
   const modal = document.getElementById('editRabItemModal');
   document.getElementById('editRabItemId').value = itemId;
   document.getElementById('editRabItemName').value = itemName;
   document.getElementById('editRabBudget').value = budget;
+  document.getElementById('editRabCategory').value = category || '';
   modal.classList.add('active');
 }
 
@@ -500,8 +573,9 @@ async function saveEditRabItem() {
   const id = document.getElementById('editRabItemId').value;
   const name = document.getElementById('editRabItemName').value.trim();
   const budget = parseFloat(document.getElementById('editRabBudget').value) || 0;
+  const category = document.getElementById('editRabCategory').value;
   
-  if (!name || budget <= 0) {
+  if (!name || budget <= 0 || !category) {
     triggerNotification('Please fill all fields correctly!', false, 'error');
     return;
   }
@@ -509,7 +583,8 @@ async function saveEditRabItem() {
   try {
     await update(ref(db, `rabItems/${id}`), {
       itemName: name,
-      budget: budget
+      budget: budget,
+      category: category
     });
     document.getElementById('editRabItemModal').classList.remove('active');
     triggerNotification('RAB item updated successfully!');
@@ -524,24 +599,25 @@ function renderRABItemsSubTable() {
   if (!tbody) return;
   
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
     return;
   }
   
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada item RAB pada project ini</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada item RAB pada project ini</td></tr>';
     return;
   }
   
   tbody.innerHTML = filtered.map(i => `
     <tr>
+      <td><span class="badge badge-info">${i.category || 'Uncategorized'}</span></td>
       <td>${i.itemName}</td>
       <td>${formatRp(i.budget)}</td>
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
       <td>
-        <button class="btn btn-warning btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}"><i class="fas fa-edit"></i> Edit</button>
+        <button class="btn btn-warning btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}" data-category="${i.category || ''}"><i class="fas fa-edit"></i> Edit</button>
         <button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i> Delete</button>
       </td>
     </tr>
@@ -558,7 +634,7 @@ function renderRABItemsSubTable() {
   
   document.querySelectorAll('.btn-edit-rab-sub').forEach(btn => {
     btn.addEventListener('click', () => {
-      openEditRabItemModal(btn.dataset.id, btn.dataset.name, btn.dataset.budget);
+      openEditRabItemModal(btn.dataset.id, btn.dataset.name, btn.dataset.budget, btn.dataset.category);
     });
   });
 }
@@ -686,6 +762,8 @@ document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
   const name = document.getElementById('modalProjectName').value.trim();
   const client = document.getElementById('modalClientName').value.trim();
   const budget = parseFloat(document.getElementById('modalBudget').value) || 0;
+  const contractValue = parseFloat(document.getElementById('modalContractValue').value) || budget;
+  const noSo = document.getElementById('modalNoSo').value.trim();
   
   if (!name || !client || budget <= 0) { 
     triggerNotification('Please fill all fields correctly!', false, 'error'); 
@@ -693,11 +771,21 @@ document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
   }
   
   const newProjectRef = push(ref(db, 'projects'));
-  set(newProjectRef, { name, client, totalBudget: budget }).then(() => {
+  set(newProjectRef, { 
+    name, 
+    client, 
+    totalBudget: budget,
+    contractValue: contractValue,
+    noSo: noSo,
+    isLocked: false,
+    createdAt: new Date().toLocaleString()
+  }).then(() => {
     document.getElementById('projectModal').classList.remove('active');
     document.getElementById('modalProjectName').value = '';
     document.getElementById('modalClientName').value = '';
     document.getElementById('modalBudget').value = '';
+    document.getElementById('modalContractValue').value = '';
+    document.getElementById('modalNoSo').value = '';
     triggerNotification('Project added successfully!');
   });
 });
@@ -714,25 +802,29 @@ document.getElementById('openRABModalBtn')?.addEventListener('click', () => {
   document.getElementById('rabModalProjectName').value = proj ? proj.name : '';
   document.getElementById('rabItemName').value = '';
   document.getElementById('rabBudget').value = '';
+  document.getElementById('rabCategorySelect').value = '';
   document.getElementById('rabModal').classList.add('active');
 });
 
 document.getElementById('saveRabBtn')?.addEventListener('click', () => {
+  const category = document.getElementById('rabCategorySelect').value;
   const name = document.getElementById('rabItemName').value.trim();
   const budget = parseFloat(document.getElementById('rabBudget').value) || 0;
   
-  if (!name || budget <= 0) { 
-    triggerNotification('Please fill item name and budget correctly!', false, 'error'); 
+  if (!category || !name || budget <= 0) { 
+    triggerNotification('Please select category, fill item name and budget correctly!', false, 'error'); 
     return; 
   }
   
   const newRabRef = push(ref(db, 'rabItems'));
   set(newRabRef, {
     projectId: currentSelectedProjectId,
+    category: category,
     itemName: name,
     budget: budget,
     realisasi: 0,
-    manualProgress: 0
+    manualProgress: 0,
+    createdAt: new Date().toLocaleString()
   }).then(() => {
     document.getElementById('rabModal').classList.remove('active');
     triggerNotification('RAB item added successfully!');
@@ -761,7 +853,7 @@ function renderClaimItemsBuildLayout() {
         <div>
           <select data-idx="${idx}" class="item-sel-node">
             <option value="">-- Pilih Komponen --</option>
-            ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected' : ''}>${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
+            ${availableItems.map(av => `<option value="${av.id}" ${item.itemId === av.id ? 'selected' : ''}>[${av.category || 'Uncategorized'}] ${av.itemName} (Sisa: ${formatRp(av.budget - av.realisasi)})</option>`).join('')}
           </select>
         </div>
         <div>
@@ -828,6 +920,7 @@ function renderClaimView() {
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
       return `<tr>
         <td><strong>${p ? p.name : '-'}</strong></td>
+        <td>${formatDate(c.timestamp)}</td>
         <td style="font-size:0.8rem;">${summaries}</td>
         <td>${formatRp(c.totalNominal)}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
@@ -970,42 +1063,79 @@ function openMonitoringDetail(projectId) {
   const proj = projects.find(p => p.id === projectId);
   if (!proj) return;
   
+  currentSelectedProjectForDetail = projectId;
+  
   document.getElementById('modalDetailsProjectName').innerText = proj.name;
+  
+  // Group items by category
   const items = rabItems.filter(i => i.projectId === projectId);
+  const groupedItems = {};
+  items.forEach(item => {
+    const category = item.category || 'Uncategorized';
+    if (!groupedItems[category]) {
+      groupedItems[category] = [];
+    }
+    groupedItems[category].push(item);
+  });
+  
   const tbody = document.getElementById('modalDetailsComponentsTableGridBody');
   
   if (tbody) {
     if (items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No components yet</td></tr>';
     } else {
-      tbody.innerHTML = items.map(i => {
-        const progressPercent = i.manualProgress !== undefined && i.manualProgress !== null ? i.manualProgress : (i.budget > 0 ? Math.min(Math.round((i.realisasi / i.budget) * 100), 100) : 0);
-        const barColor = getProgressColor(progressPercent);
-        return `<tr>
-          <td><strong>${i.itemName}</strong></td>
-          <td>${formatRp(i.budget)}</td>
-          <td>${formatRp(i.realisasi)}</td>
-          <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
-          <td>${getBadge(i.realisasi, i.budget)}</td>
-          <td>
-            <div class="progress-wrapper" id="progress_display_${i.id}">
-              <div class="progress-bar-container">
-                <div class="progress-bar-fill" style="width: ${progressPercent}%; background-color: ${barColor};"></div>
-              </div>
-              <span class="progress-percent-label">${progressPercent}%</span>
-            </div>
-             </td>
-          <td>
-            <div class="manual-progress-group">
-              <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
-              <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
-            </div>
-             </td>
+      let html = '';
+      Object.keys(groupedItems).forEach(category => {
+        const categoryItems = groupedItems[category];
+        const categoryBudget = categoryItems.reduce((sum, i) => sum + i.budget, 0);
+        const categoryReal = categoryItems.reduce((sum, i) => sum + i.realisasi, 0);
+        
+        html += `<tr class="category-header" style="background-color: #eef2ff; font-weight: bold;">
+          <td colspan="7" style="padding: 8px 12px;">
+            <i class="fas fa-folder-open"></i> ${category} 
+            <span style="font-weight: normal; font-size: 0.8rem; margin-left: 12px;">
+              Budget: ${formatRp(categoryBudget)} | Realisasi: ${formatRp(categoryReal)} | 
+              ${categoryBudget > 0 ? ((categoryReal / categoryBudget) * 100).toFixed(1) : 0}%
+            </span>
+          </td>
         </tr>`;
-      }).join('');
+        
+        categoryItems.forEach(i => {
+          const progressPercent = i.manualProgress !== undefined && i.manualProgress !== null ? i.manualProgress : (i.budget > 0 ? Math.min(Math.round((i.realisasi / i.budget) * 100), 100) : 0);
+          const barColor = getProgressColor(progressPercent);
+          const itemClaims = claims.filter(c => c.projectId === projectId && c.items && c.items.some(ci => ci.itemId === i.id));
+          const hasClaims = itemClaims.length > 0;
+          
+          html += `<tr class="rab-item-row" data-itemid="${i.id}" style="cursor: pointer;">
+            <td style="padding-left: 20px;"><strong>${i.itemName}</strong></td>
+            <td>${formatRp(i.budget)}</td>
+            <td>${formatRp(i.realisasi)}</td>
+            <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
+            <td>${getBadge(i.realisasi, i.budget)}</td>
+            <td>
+              <div class="progress-wrapper" id="progress_display_${i.id}">
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill" style="width: ${progressPercent}%; background-color: ${barColor};"></div>
+                </div>
+                <span class="progress-percent-label">${progressPercent}%</span>
+              </div>
+            </td>
+            <td>
+              <div class="manual-progress-group">
+                <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
+                <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
+                ${hasClaims ? `<span class="badge badge-info" style="margin-left: 8px;">${itemClaims.length} claims</span>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        });
+      });
+      
+      tbody.innerHTML = html;
       
       document.querySelectorAll('.progress-update-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const itemId = btn.getAttribute('data-id');
           const input = document.getElementById(`progress_input_${itemId}`);
           const newProgress = parseFloat(input.value);
@@ -1017,9 +1147,49 @@ function openMonitoringDetail(projectId) {
           }
         });
       });
+      
+      document.querySelectorAll('.rab-item-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const itemId = row.getAttribute('data-itemid');
+          if (itemId) {
+            openItemClaimHistory(itemId);
+          }
+        });
+      });
     }
   }
   document.getElementById('monitoringDetailsModal').classList.add('active');
+}
+
+function openItemClaimHistory(itemId) {
+  const rabItem = rabItems.find(r => r.id === itemId);
+  if (!rabItem) return;
+  
+  const itemClaims = claims.filter(c => c.projectId === rabItem.projectId && c.items && c.items.some(ci => ci.itemId === itemId));
+  const project = projects.find(p => p.id === rabItem.projectId);
+  
+  document.getElementById('claimHistoryItemName').innerText = `${project ? project.name + ' - ' : ''}${rabItem.itemName}`;
+  
+  const tbody = document.getElementById('claimHistoryDetailBody');
+  if (tbody) {
+    if (itemClaims.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
+    } else {
+      tbody.innerHTML = itemClaims.map(c => {
+        const claimItem = c.items.find(ci => ci.itemId === itemId);
+        const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
+        return `<tr>
+          <td>${formatDateTime(c.timestamp)}</td>
+          <td>${claimItem ? formatRp(claimItem.nominal) : '-'}</td>
+          <td>${claimItem ? claimItem.vendor || '-' : '-'}</td>
+          <td>${claimItem ? claimItem.tanggal || '-' : '-'}</td>
+          <td><span class="badge ${badgeClass}">${c.status}</span></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+  
+  document.getElementById('claimHistoryModal').classList.add('active');
 }
 
 // ==================== REPORTS PER PROJECT ====================
@@ -1059,7 +1229,7 @@ function renderReportsByProject() {
         const itemRemaining = item.budget - item.realisasi;
         const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
         html += `<tr>
-          <td>${item.itemName}</td>
+          <td><span class="badge badge-info">${item.category || 'Uncategorized'}</span> ${item.itemName}</td>
           <td class="text-right">${formatRp(item.budget)}</td>
           <td class="text-right">${formatRp(item.realisasi)}</td>
           <td class="text-right">${formatRp(itemRemaining)}</td>
@@ -1303,10 +1473,11 @@ async function downloadPDF() {
           <div style="padding: 12px 16px; background: #f3f4f6; border-bottom: 1px solid #d1d5db;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
               <div>
-                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #111827;">${escapeHtml(p.name)}</h3>
+                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #111827;">${p.noSo ? 'SO: ' + p.noSo + ' - ' : ''}${escapeHtml(p.name)}</h3>
                 <p style="margin: 0; font-size: 10px; color: #4b5563;">Client: ${escapeHtml(p.client)}</p>
               </div>
               <div style="text-align: right;">
+                <div style="font-size: 11px; color: #374151;">Contract Value: ${formatRp(p.contractValue || p.totalBudget)}</div>
                 <div style="font-size: 11px; color: #374151;">Initial Budget: ${formatRp(p.totalBudget)}</div>
                 <div style="font-size: 10px; color: #6b7280;">Remaining: ${formatRp(p.totalBudget - projectRealization)}</div>
               </div>
@@ -1341,6 +1512,7 @@ async function downloadPDF() {
             <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
               <thead>
                 <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                  <th style="padding: 6px 8px; text-align: left;">Category</th>
                   <th style="padding: 6px 8px; text-align: left;">Item Name</th>
                   <th style="padding: 6px 8px; text-align: right;">Budget</th>
                   <th style="padding: 6px 8px; text-align: right;">Realisasi</th>
@@ -1357,6 +1529,7 @@ async function downloadPDF() {
           
           projectDetailsHtml += `
             <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 6px 8px; text-align: left;"><span style="background: #dbeafe; padding: 2px 8px; border-radius: 4px; font-size: 7px;">${escapeHtml(item.category || 'Uncategorized')}</span></td>
               <td style="padding: 6px 8px; text-align: left;">${escapeHtml(item.itemName)}</td>
               <td style="padding: 6px 8px; text-align: right;">${formatRp(item.budget)}</td>
               <td style="padding: 6px 8px; text-align: right;">${formatRp(item.realisasi)}</td>
@@ -1394,7 +1567,7 @@ async function downloadPDF() {
               <div style="font-size: 10px; color: #4b5563;">Total: ${formatRp(c.totalNominal)}</div>
             </div>
             <div style="padding: 6px 12px; font-size: 9px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f3f4f6;">
-              Submitted: ${formatDate(c.timestamp)}
+              Submitted: ${formatDateTime(c.timestamp)}
             </div>
             <div style="padding: 8px 12px; background: #ffffff;">
               <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
@@ -1709,6 +1882,9 @@ document.getElementById('closeRabModalBtn')?.addEventListener('click', () => {
 });
 document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => {
   document.getElementById('monitoringDetailsModal').classList.remove('active');
+});
+document.getElementById('closeClaimHistoryModalBtn')?.addEventListener('click', () => {
+  document.getElementById('claimHistoryModal').classList.remove('active');
 });
 document.getElementById('openAddUserModalBtn')?.addEventListener('click', () => {
   document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Add New User';
