@@ -31,7 +31,6 @@ let currentRole = "";
 let currentUserEmail = "";
 let currentUserUid = "";
 let currentSelectedReportProject = "all";
-let currentSelectedRabComponentId = null;
 let currentSelectedProjectForDetail = null;
 
 // Chart instances
@@ -408,7 +407,6 @@ function populateDropdownMenus() {
     if (oldVal && projects.find(p => p.id === oldVal)) claimSel.value = oldVal;
   }
 
-  // Populate category dropdown for RAB
   const categorySel = document.getElementById('rabCategorySelect');
   if (categorySel) {
     categorySel.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
@@ -862,7 +860,6 @@ function renderClaimItemsBuildLayout() {
       </div>
       <div class="item-row-subgrid">
         <div><input type="text" data-idx="${idx}" class="item-vendor-node" placeholder="Vendor" value="${item.vendor || ''}" /></div>
-        <div><input type="date" data-idx="${idx}" class="item-date-node" value="${item.tanggal || ''}" /></div>
         <div><input type="text" data-idx="${idx}" class="item-notes-node" placeholder="Catatan" value="${item.desc || ''}" /></div>
       </div>
     </div>
@@ -881,11 +878,6 @@ function renderClaimItemsBuildLayout() {
   container.querySelectorAll('.item-vendor-node').forEach(inp => {
     inp.addEventListener('input', (e) => {
       claimItemsListArray[parseInt(inp.dataset.idx)].vendor = e.target.value;
-    });
-  });
-  container.querySelectorAll('.item-date-node').forEach(inp => {
-    inp.addEventListener('change', (e) => {
-      claimItemsListArray[parseInt(inp.dataset.idx)].tanggal = e.target.value;
     });
   });
   container.querySelectorAll('.item-notes-node').forEach(inp => {
@@ -915,7 +907,7 @@ function renderClaimView() {
       const p = projects.find(pr => pr.id === c.projectId);
       const summaries = c.items ? c.items.map(ci => {
         const r = rabItems.find(rab => rab.id === ci.itemId);
-        return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'} | Tgl: ${ci.tanggal || '-'})</small>`;
+        return `• <strong>${r ? r.itemName : 'Komponen'}</strong>: ${formatRp(ci.nominal)}<br><small>(Vendor: ${ci.vendor || '-'})</small>`;
       }).join('<br>') : '-';
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
       return `<tr>
@@ -939,16 +931,16 @@ document.getElementById('addItemBtn')?.addEventListener('click', () => {
     triggerNotification('Pilih project terlebih dahulu!', false, 'error');
     return;
   }
-  claimItemsListArray.push({ itemId: '', nominal: 0, vendor: '', tanggal: '', desc: '' });
+  claimItemsListArray.push({ itemId: '', nominal: 0, vendor: '', desc: '' });
   renderClaimItemsBuildLayout();
 });
 
 document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   const projectId = document.getElementById('claimProjectSelect').value;
-  const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor && it.tanggal);
+  const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor);
   
   if (!projectId || validItems.length === 0) {
-    triggerNotification('Lengkapi minimal satu item (Komponen, Nominal, Vendor, Tanggal)!', false, 'error');
+    triggerNotification('Lengkapi minimal satu item (Komponen, Nominal, Vendor)!', false, 'error');
     return;
   }
   
@@ -1067,7 +1059,6 @@ function openMonitoringDetail(projectId) {
   
   document.getElementById('modalDetailsProjectName').innerText = proj.name;
   
-  // Group items by category
   const items = rabItems.filter(i => i.projectId === projectId);
   const groupedItems = {};
   items.forEach(item => {
@@ -1082,7 +1073,7 @@ function openMonitoringDetail(projectId) {
   
   if (tbody) {
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No components yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No components yet</td></tr>';
     } else {
       let html = '';
       Object.keys(groupedItems).forEach(category => {
@@ -1091,7 +1082,7 @@ function openMonitoringDetail(projectId) {
         const categoryReal = categoryItems.reduce((sum, i) => sum + i.realisasi, 0);
         
         html += `<tr class="category-header" style="background-color: #eef2ff; font-weight: bold;">
-          <td colspan="7" style="padding: 8px 12px;">
+          <td colspan="8" style="padding: 8px 12px;">
             <i class="fas fa-folder-open"></i> ${category} 
             <span style="font-weight: normal; font-size: 0.8rem; margin-left: 12px;">
               Budget: ${formatRp(categoryBudget)} | Realisasi: ${formatRp(categoryReal)} | 
@@ -1107,6 +1098,7 @@ function openMonitoringDetail(projectId) {
           const hasClaims = itemClaims.length > 0;
           
           html += `<tr class="rab-item-row" data-itemid="${i.id}" style="cursor: pointer;">
+            <td><span class="badge badge-info">${i.category || 'Uncategorized'}</span></td>
             <td style="padding-left: 20px;"><strong>${i.itemName}</strong></td>
             <td>${formatRp(i.budget)}</td>
             <td>${formatRp(i.realisasi)}</td>
@@ -1124,7 +1116,7 @@ function openMonitoringDetail(projectId) {
               <div class="manual-progress-group">
                 <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
                 <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
-                ${hasClaims ? `<span class="badge badge-info" style="margin-left: 8px;">${itemClaims.length} claims</span>` : ''}
+                ${hasClaims ? `<span class="badge badge-info" style="margin-left: 8px; cursor: pointer;" onclick="event.stopPropagation(); openItemClaimHistory('${i.id}')">${itemClaims.length} claims</span>` : ''}
               </div>
             </td>
           </tr>`;
@@ -1182,7 +1174,6 @@ function openItemClaimHistory(itemId) {
           <td>${formatDateTime(c.timestamp)}</td>
           <td>${claimItem ? formatRp(claimItem.nominal) : '-'}</td>
           <td>${claimItem ? claimItem.vendor || '-' : '-'}</td>
-          <td>${claimItem ? claimItem.tanggal || '-' : '-'}</td>
           <td><span class="badge ${badgeClass}">${c.status}</span></td>
         </tr>`;
       }).join('');
@@ -1206,7 +1197,7 @@ function renderReportsByProject() {
   }
   
   if (filteredProjects.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No projects available</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No projects available</td></tr>';
     return;
   }
   
@@ -1219,17 +1210,18 @@ function renderReportsByProject() {
     const percentage = totalBudget > 0 ? ((totalReal / totalBudget) * 100).toFixed(1) : 0;
     
     html += `<tr style="background-color: #f1f5f9;">
-      <td colspan="6" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
+      <td colspan="7" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
      </tr>`;
     
     if (items.length === 0) {
-      html += `<tr><td colspan="6" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
+      html += `<tr><td colspan="7" style="text-align: center; padding: 8px;">No RAB items</td></tr>`;
     } else {
       items.forEach(item => {
         const itemRemaining = item.budget - item.realisasi;
         const itemPercentage = item.budget > 0 ? ((item.realisasi / item.budget) * 100).toFixed(1) : 0;
         html += `<tr>
-          <td><span class="badge badge-info">${item.category || 'Uncategorized'}</span> ${item.itemName}</td>
+          <td><span class="badge badge-info">${item.category || 'Uncategorized'}</span></td>
+          <td>${item.itemName}</td>
           <td class="text-right">${formatRp(item.budget)}</td>
           <td class="text-right">${formatRp(item.realisasi)}</td>
           <td class="text-right">${formatRp(itemRemaining)}</td>
@@ -1240,7 +1232,7 @@ function renderReportsByProject() {
     }
     
     html += `<tr style="background-color: #f8fafc; font-weight: bold;">
-      <td>TOTAL for ${p.name}</td>
+      <td colspan="2">TOTAL for ${p.name}</td>
       <td class="text-right">${formatRp(totalBudget)}</td>
       <td class="text-right">${formatRp(totalReal)}</td>
       <td class="text-right">${formatRp(remaining)}</td>
@@ -1397,7 +1389,7 @@ function renderReportDiagramsByProject() {
   }
 }
 
-// ==================== PDF DOWNLOAD - FIXED WORKING VERSION ====================
+// ==================== PDF DOWNLOAD ====================
 async function downloadPDF() {
   const downloadBtn = document.getElementById('downloadPDFBtn');
   const originalBtnText = downloadBtn?.innerHTML;
@@ -1440,7 +1432,6 @@ async function downloadPDF() {
       return;
     }
     
-    // Calculate summary statistics
     const totalBudget = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
     const totalRealization = filteredRabItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
     const totalProjects = filteredProjects.length;
@@ -1451,9 +1442,7 @@ async function downloadPDF() {
     const pendingClaims = filteredClaims.filter(c => c.status === 'pending').length;
     const approvedClaims = filteredClaims.filter(c => c.status === 'approved').length;
     const rejectedClaims = filteredClaims.filter(c => c.status === 'rejected').length;
-    const totalClaimsAmount = filteredClaims.reduce((sum, c) => sum + (c.totalNominal || 0), 0);
     
-    // Build project details HTML
     let projectDetailsHtml = '';
     let grandTotalBudget = 0;
     let grandTotalRealization = 0;
@@ -1549,7 +1538,6 @@ async function downloadPDF() {
       projectDetailsHtml += `</div>`;
     }
     
-    // Build claims HTML
     let claimsHtml = '';
     if (filteredClaims.length > 0) {
       for (const c of filteredClaims) {
@@ -1576,7 +1564,6 @@ async function downloadPDF() {
                     <th style="padding: 4px 6px; text-align: left;">Item</th>
                     <th style="padding: 4px 6px; text-align: right;">Amount</th>
                     <th style="padding: 4px 6px; text-align: left;">Vendor</th>
-                    <th style="padding: 4px 6px; text-align: left;">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1590,7 +1577,6 @@ async function downloadPDF() {
                 <td style="padding: 4px 6px;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
                 <td style="padding: 4px 6px; text-align: right;">${formatRp(item.nominal)}</td>
                 <td style="padding: 4px 6px;">${escapeHtml(item.vendor || '-')}</td>
-                <td style="padding: 4px 6px;">${item.tanggal || '-'}</td>
               </tr>
             `;
           }
@@ -1613,7 +1599,6 @@ async function downloadPDF() {
     
     const reportTitle = `RAB_Report_${projectNameForTitle.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}`;
     
-    // Create a temporary div for PDF content
     const pdfContainer = document.createElement('div');
     pdfContainer.style.position = 'absolute';
     pdfContainer.style.left = '-9999px';
