@@ -300,11 +300,24 @@
     }
     canvas { max-width: 100%; height: auto; max-height: 280px; width: 100% !important; }
 
+    .category-header {
+      background-color: #eef2ff !important;
+      font-weight: bold;
+    }
+    .category-header td {
+      padding: 8px 12px !important;
+    }
+    .rab-item-row:hover {
+      background-color: #f1f5f9;
+    }
+
     @media (max-width: 900px) {
       .sidebar { width: 100%; position: relative; height: auto; }
       .main { margin-left: 0; width: 100%; padding: 20px; }
       .diagram-grid { grid-template-columns: 1fr; }
       .section { padding: 20px; }
+      .item-row-grid { grid-template-columns: 1fr; }
+      .item-row-subgrid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -371,7 +384,7 @@
           <div style="overflow-x:auto; margin-top:20px;">
             <table>
               <thead>
-                <tr><th>Project Name</th><th>Client</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Action</th></tr>
+                <tr><th>Project Name</th><th>Client</th><th>Contract Value</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody id="masterProjectBody"></tbody>
             </table>
@@ -384,7 +397,7 @@
           <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Add RAB Item</button>
           <table>
             <thead>
-              <tr><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
+              <tr><th>Category</th><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
             </thead>
             <tbody id="rabItemsMasterBody"></tbody>
           </table>
@@ -408,7 +421,7 @@
           <h2><i class="fas fa-history"></i> Claim History Log</h2>
           <table>
             <thead>
-              <tr><th>Project Name</th><th>Items</th><th>Total Amount</th><th>Status</th></tr>
+              <tr><th>Project Name</th><th>Date</th><th>Items</th><th>Total Amount</th><th>Status</th></tr>
             </thead>
             <tbody id="historyClaimBody"></tbody>
           </table>
@@ -477,7 +490,7 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>Item Name</th><th class="text-right">Budget</th><th class="text-right">Realization</th><th class="text-right">Balance</th><th class="text-center">Usage %</th><th class="text-center">Status</th></tr>
+                <tr><th>Category</th><th>Item Name</th><th class="text-right">Budget</th><th class="text-right">Realization</th><th class="text-right">Balance</th><th class="text-center">Usage %</th><th class="text-center">Status</th></tr>
               </thead>
               <tbody id="reportsTableGridBody"></tbody>
             </table>
@@ -532,8 +545,10 @@
     <div id="projectModal" class="modal-overlay">
       <div class="modal-container">
         <h3><i class="fas fa-folder-plus"></i> Add New Project</h3>
+        <div class="form-group"><label>No. SO</label><input type="text" id="modalNoSo" placeholder="SO-2024-001"></div>
         <div class="form-group"><label>Project Name</label><input type="text" id="modalProjectName" placeholder="Example: Fiber Optic Infrastructure"></div>
         <div class="form-group"><label>Client Name</label><input type="text" id="modalClientName" placeholder="Example: PT Bank Nasional"></div>
+        <div class="form-group"><label>Contract Value (IDR)</label><input type="number" id="modalContractValue" placeholder="0"></div>
         <div class="form-group"><label>Budget Ceiling (IDR)</label><input type="number" id="modalBudget" placeholder="0"></div>
         <div class="modal-buttons"><button class="btn btn-danger" id="closeProjectModalBtn">Cancel</button><button class="btn btn-primary" id="saveProjectBtn">Save Project</button></div>
       </div>
@@ -543,8 +558,10 @@
       <div class="modal-container">
         <h3><i class="fas fa-edit"></i> Edit Project</h3>
         <input type="hidden" id="editProjectId">
+        <div class="form-group"><label>No. SO</label><input type="text" id="editNoSo" placeholder="SO-2024-001"></div>
         <div class="form-group"><label>Project Name</label><input type="text" id="editProjectName" placeholder="Project Name"></div>
         <div class="form-group"><label>Client Name</label><input type="text" id="editClientName" placeholder="Client Name"></div>
+        <div class="form-group"><label>Contract Value (IDR)</label><input type="number" id="editContractValue" placeholder="0"></div>
         <div class="form-group"><label>Budget Ceiling (IDR)</label><input type="number" id="editBudget" placeholder="0"></div>
         <div class="modal-buttons"><button class="btn btn-danger" id="closeEditProjectModalBtn">Cancel</button><button class="btn btn-primary" id="saveEditProjectBtn">Update Project</button></div>
       </div>
@@ -554,6 +571,14 @@
       <div class="modal-container">
         <h3><i class="fas fa-edit"></i> Edit RAB Item</h3>
         <input type="hidden" id="editRabItemId">
+        <div class="form-group"><label>Category</label>
+          <select id="editRabCategory">
+            <option value="">-- Pilih Kategori --</option>
+            <option value="Manajemen Item">Manajemen Item</option>
+            <option value="Manajemen Team">Manajemen Team</option>
+            <option value="Manajemen Cost">Manajemen Cost</option>
+          </select>
+        </div>
         <div class="form-group"><label>Item Name</label><input type="text" id="editRabItemName" placeholder="Item Name"></div>
         <div class="form-group"><label>Budget Amount (IDR)</label><input type="number" id="editRabBudget" placeholder="0"></div>
         <div class="modal-buttons"><button class="btn btn-danger" id="closeEditRabItemModalBtn">Cancel</button><button class="btn btn-primary" id="saveEditRabItemBtn">Update Item</button></div>
@@ -564,6 +589,14 @@
       <div class="modal-container">
         <h3><i class="fas fa-plus-circle"></i> Add RAB Component</h3>
         <div class="form-group"><label>Target Project</label><input type="text" id="rabModalProjectName" readonly></div>
+        <div class="form-group"><label>Category</label>
+          <select id="rabCategorySelect">
+            <option value="">-- Pilih Kategori --</option>
+            <option value="Manajemen Item">Manajemen Item</option>
+            <option value="Manajemen Team">Manajemen Team</option>
+            <option value="Manajemen Cost">Manajemen Cost</option>
+          </select>
+        </div>
         <div class="form-group"><label>Component Item Name</label><input type="text" id="rabItemName" placeholder="Example: Edge Switch Layer 3"></div>
         <div class="form-group"><label>Budget Amount (IDR)</label><input type="number" id="rabBudget" placeholder="0"></div>
         <div class="modal-buttons"><button class="btn btn-danger" id="closeRabModalBtn">Cancel</button><button class="btn btn-primary" id="saveRabBtn">Save Item</button></div>
@@ -571,17 +604,32 @@
     </div>
 
     <div id="monitoringDetailsModal" class="modal-overlay">
-      <div class="modal-container" style="max-width: 1000px;">
+      <div class="modal-container" style="max-width: 1200px;">
         <h3><i class="fas fa-chart-pie"></i> RAB Components - <span id="modalDetailsProjectName"></span></h3>
         <div style="overflow-x:auto;">
           <table>
             <thead>
-              <tr><th>Item Name</th><th>Budget</th><th>Realization</th><th>Balance</th><th>Status</th><th>Progress</th><th>Manual Update</th></tr>
+              <tr><th>Category</th><th>Item Name</th><th>Budget</th><th>Realization</th><th>Balance</th><th>Status</th><th>Progress</th><th>Manual Update</th></tr>
             </thead>
             <tbody id="modalDetailsComponentsTableGridBody"></tbody>
           </table>
         </div>
         <div class="modal-buttons"><button class="btn btn-primary" id="closeMonitoringDetailsModalBtn">Close</button></div>
+      </div>
+    </div>
+
+    <div id="claimHistoryModal" class="modal-overlay">
+      <div class="modal-container" style="max-width: 800px;">
+        <h3><i class="fas fa-history"></i> Claim History - <span id="claimHistoryItemName"></span></h3>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Amount</th><th>Vendor</th><th>Claim Date</th><th>Status</th></tr>
+            </thead>
+            <tbody id="claimHistoryDetailBody"></tbody>
+          </table>
+        </div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeClaimHistoryModalBtn">Close</button></div>
       </div>
     </div>
 
