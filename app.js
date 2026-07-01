@@ -33,6 +33,14 @@ let currentUserUid = "";
 let currentSelectedReportProject = "all";
 let currentSelectedProjectForDetail = null;
 
+// Pagination state
+let projectCurrentPage = 1;
+const PROJECTS_PER_PAGE = 10;
+
+// Search state
+let projectSearchQuery = "";
+let monitoringSearchQuery = "";
+
 // Chart instances
 let mainBarChartInstance = null;
 let reportPieChartInstance = null;
@@ -40,9 +48,9 @@ let reportDoughnutChartInstance = null;
 let reportUtilizationChartInstance = null;
 
 const rolePermissions = {
-  "Administrator": ['dashboard', 'master-project', 'claim-request', 'approval-budget', 'monitoring', 'reports', 'upload-document', 'files', 'user-management'],
+  "Administrator": ['dashboard', 'master-project', 'rab-items', 'claim-request', 'approval-budget', 'monitoring', 'reports', 'upload-document', 'files', 'user-management'],
   "Finance": ['dashboard', 'approval-budget', 'claim-request', 'reports', 'upload-document', 'files'],
-  "Project Manager": ['dashboard', 'master-project', 'claim-request', 'monitoring', 'upload-document', 'files']
+  "Project Manager": ['dashboard', 'master-project', 'rab-items', 'claim-request', 'monitoring', 'upload-document', 'files']
 };
 
 // RAB Category Options
@@ -370,6 +378,7 @@ function updateWholeUI() {
   refreshGraphicCharts();
   renderReportDiagramsByProject();
   populateDropdownMenus();
+  renderRABItemsSubTable();
 }
 
 function populateReportProjectSelect() {
@@ -396,8 +405,12 @@ function populateDropdownMenus() {
   const filterRAB = document.getElementById('filterProjectRAB');
   if (filterRAB) {
     const prevVal = filterRAB.value;
-    filterRAB.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    filterRAB.innerHTML = '<option value="">-- Select Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (prevVal && projects.find(p => p.id === prevVal)) filterRAB.value = prevVal;
+    if (!prevVal && projects.length > 0) {
+      filterRAB.value = projects[0].id;
+      currentSelectedProjectId = projects[0].id;
+    }
   }
   
   const claimSel = document.getElementById('claimProjectSelect');
@@ -446,76 +459,167 @@ function renderDashboard() {
   }
 }
 
-// ==================== MASTER PROJECT ====================
+// ==================== MASTER PROJECT with SEARCH & PAGINATION ====================
 function renderMasterProject() {
   const tbody = document.getElementById('masterProjectBody');
-  if (tbody) {
-    tbody.innerHTML = projects.map(p => {
-      const totalAllocated = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
-      const remaining = (p.totalBudget || 0) - totalAllocated;
-      const isLocked = p.isLocked || false;
-      
-      return `<tr>
-        <td><strong>${p.noSo ? 'SO: ' + p.noSo + ' - ' : ''}${p.name}</strong></td>
-        <td>${p.client}</td>
-        <td>${formatRp(p.contractValue || p.totalBudget || 0)}</td>
-        <td>${formatRp(p.totalBudget || 0)}</td>
-        <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
-        <td>
-          <span class="badge ${isLocked ? 'badge-danger' : 'badge-success'}">${isLocked ? '🔒 Locked' : '🔓 Unlocked'}</span>
-        </td>
-        <td>
-          ${currentRole === 'Administrator' ? `
-            <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" data-contract="${p.contractValue || p.totalBudget}" data-noso="${p.noSo || ''}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-edit"></i> Edit</button>
-            <button class="btn btn-danger btn-del-proj" data-id="${p.id}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i> Delete</button>
-            <button class="btn ${isLocked ? 'btn-success' : 'btn-warning'} btn-lock-proj" data-id="${p.id}" data-locked="${isLocked}"><i class="fas ${isLocked ? 'fa-unlock' : 'fa-lock'}"></i> ${isLocked ? 'Unlock' : 'Lock'}</button>
-          ` : `
-            <span class="badge badge-secondary">Read Only</span>
-          `}
-        </td>
-      </tr>`;
-    }).join('');
+  if (!tbody) return;
+  
+  // Filter projects based on search query
+  let filteredProjects = projects;
+  if (projectSearchQuery.trim()) {
+    const query = projectSearchQuery.toLowerCase().trim();
+    filteredProjects = projects.filter(p => 
+      (p.name && p.name.toLowerCase().includes(query)) ||
+      (p.client && p.client.toLowerCase().includes(query)) ||
+      (p.noSo && p.noSo.toLowerCase().includes(query))
+    );
+  }
+  
+  // Sort projects by name
+  filteredProjects.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  
+  // Pagination
+  const totalFiltered = filteredProjects.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PROJECTS_PER_PAGE));
+  if (projectCurrentPage > totalPages) projectCurrentPage = totalPages;
+  if (projectCurrentPage < 1) projectCurrentPage = 1;
+  
+  const startIdx = (projectCurrentPage - 1) * PROJECTS_PER_PAGE;
+  const endIdx = Math.min(startIdx + PROJECTS_PER_PAGE, totalFiltered);
+  const pageProjects = filteredProjects.slice(startIdx, endIdx);
+  
+  // Render table rows
+  tbody.innerHTML = pageProjects.map(p => {
+    const totalAllocated = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
+    const remaining = (p.totalBudget || 0) - totalAllocated;
+    const isLocked = p.isLocked || false;
     
-    document.querySelectorAll('.btn-del-proj').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        if (confirm('Delete project and all its RAB items?')) {
-          remove(ref(db, `projects/${id}`));
-          rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
+    return `<tr>
+      <td><strong>${p.noSo || '-'}</strong></td>
+      <td><strong>${p.name}</strong></td>
+      <td>${p.client}</td>
+      <td>${formatRp(p.contractValue || p.totalBudget || 0)}</td>
+      <td>${formatRp(p.totalBudget || 0)}</td>
+      <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
+      <td>
+        <span class="badge ${isLocked ? 'badge-danger' : 'badge-success'}">${isLocked ? '🔒 Locked' : '🔓 Unlocked'}</span>
+      </td>
+      <td>
+        ${currentRole === 'Administrator' ? `
+          <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" data-contract="${p.contractValue || p.totalBudget}" data-noso="${p.noSo || ''}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-danger btn-del-proj" data-id="${p.id}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i> Delete</button>
+          <button class="btn ${isLocked ? 'btn-success' : 'btn-warning'} btn-lock-proj" data-id="${p.id}" data-locked="${isLocked}"><i class="fas ${isLocked ? 'fa-unlock' : 'fa-lock'}"></i> ${isLocked ? 'Unlock' : 'Lock'}</button>
+        ` : `
+          <span class="badge badge-secondary">Read Only</span>
+        `}
+      </td>
+    </tr>`;
+  }).join('');
+  
+  if (pageProjects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 30px; color: #64748b;">
+      <i class="fas fa-search" style="font-size: 1.5rem; display:block; margin-bottom: 8px;"></i>
+      Tidak ada project ditemukan${projectSearchQuery ? ` untuk "${projectSearchQuery}"` : ''}
+    </td></tr>`;
+  }
+  
+  // Update pagination info
+  const infoEl = document.getElementById('projectPaginationInfo');
+  if (infoEl) {
+    infoEl.textContent = `Showing ${totalFiltered > 0 ? startIdx + 1 : 0}-${endIdx} of ${totalFiltered} projects`;
+  }
+  
+  // Render pagination controls
+  const controlsEl = document.getElementById('projectPaginationControls');
+  if (controlsEl) {
+    controlsEl.innerHTML = `
+      <button ${projectCurrentPage <= 1 ? 'disabled' : ''} data-page="prev"><i class="fas fa-chevron-left"></i></button>
+      ${Array.from({length: Math.min(totalPages, 5)}, (_, i) => {
+        let pageNum = i + 1;
+        if (totalPages > 5 && projectCurrentPage > 3) {
+          pageNum = projectCurrentPage - 2 + i;
+          if (pageNum > totalPages) pageNum = totalPages - 4 + i;
+          if (pageNum < 1) pageNum = i + 1;
         }
-      });
-    });
+        const isActive = pageNum === projectCurrentPage;
+        return `<button class="${isActive ? 'active-page' : ''}" data-page="${pageNum}">${pageNum}</button>`;
+      }).join('')}
+      <button ${projectCurrentPage >= totalPages ? 'disabled' : ''} data-page="next"><i class="fas fa-chevron-right"></i></button>
+    `;
     
-    document.querySelectorAll('.btn-edit-proj').forEach(btn => {
+    controlsEl.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
-        openEditProjectModal(
-          btn.dataset.id, 
-          btn.dataset.name, 
-          btn.dataset.client, 
-          btn.dataset.budget,
-          btn.dataset.contract,
-          btn.dataset.noso
-        );
-      });
-    });
-
-    document.querySelectorAll('.btn-lock-proj').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const currentLocked = btn.dataset.locked === 'true';
-        toggleProjectLock(id, currentLocked);
+        const page = btn.dataset.page;
+        if (page === 'prev' && projectCurrentPage > 1) {
+          projectCurrentPage--;
+        } else if (page === 'next' && projectCurrentPage < totalPages) {
+          projectCurrentPage++;
+        } else if (page !== 'prev' && page !== 'next') {
+          projectCurrentPage = parseInt(page);
+        }
+        renderMasterProject();
       });
     });
   }
   
-  const filter = document.getElementById('filterProjectRAB');
-  if (filter) {
-    const prevVal = currentSelectedProjectId;
-    filter.innerHTML = '<option value="">-- Filter Master Project --</option>' + projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (prevVal && projects.find(p => p.id === prevVal)) filter.value = prevVal;
-  }
-  renderRABItemsSubTable();
+  // Attach event listeners for project actions
+  document.querySelectorAll('.btn-del-proj').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      if (confirm('Delete project and all its RAB items?')) {
+        remove(ref(db, `projects/${id}`));
+        rabItems.filter(i => i.projectId === id).forEach(i => remove(ref(db, `rabItems/${i.id}`)));
+      }
+    });
+  });
+  
+  document.querySelectorAll('.btn-edit-proj').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditProjectModal(
+        btn.dataset.id, 
+        btn.dataset.name, 
+        btn.dataset.client, 
+        btn.dataset.budget,
+        btn.dataset.contract,
+        btn.dataset.noso
+      );
+    });
+  });
+
+  document.querySelectorAll('.btn-lock-proj').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const currentLocked = btn.dataset.locked === 'true';
+      toggleProjectLock(id, currentLocked);
+    });
+  });
 }
+
+// Search event listeners for Master Project
+document.getElementById('projectSearchInput')?.addEventListener('input', (e) => {
+  projectSearchQuery = e.target.value;
+  projectCurrentPage = 1;
+  renderMasterProject();
+});
+
+document.getElementById('clearProjectSearchBtn')?.addEventListener('click', () => {
+  document.getElementById('projectSearchInput').value = '';
+  projectSearchQuery = '';
+  projectCurrentPage = 1;
+  renderMasterProject();
+});
+
+// Search event listeners for Monitoring
+document.getElementById('monitoringSearchInput')?.addEventListener('input', (e) => {
+  monitoringSearchQuery = e.target.value;
+  renderMonitoringTable();
+});
+
+document.getElementById('clearMonitoringSearchBtn')?.addEventListener('click', () => {
+  document.getElementById('monitoringSearchInput').value = '';
+  monitoringSearchQuery = '';
+  renderMonitoringTable();
+});
 
 function openEditProjectModal(id, name, client, budget, contractValue, noSo) {
   const modal = document.getElementById('editProjectModal');
@@ -596,14 +700,19 @@ function renderRABItemsSubTable() {
   const tbody = document.getElementById('rabItemsMasterBody');
   if (!tbody) return;
   
+  const filterSelect = document.getElementById('filterProjectRAB');
+  if (filterSelect) {
+    currentSelectedProjectId = filterSelect.value;
+  }
+  
   if (!currentSelectedProjectId) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Pilih project terlebih dahulu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#64748b;"><i class="fas fa-info-circle"></i> Pilih project terlebih dahulu</td></tr>';
     return;
   }
   
   const filtered = rabItems.filter(i => i.projectId === currentSelectedProjectId);
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada item RAB pada project ini</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#64748b;"><i class="fas fa-inbox"></i> Belum ada item RAB pada project ini</td></tr>';
     return;
   }
   
@@ -912,7 +1021,6 @@ function renderClaimView() {
     historyBody.innerHTML = claims.map(c => {
       const p = projects.find(pr => pr.id === c.projectId);
       
-      // Build items with their individual dates - split into separate columns
       let itemsHtml = '';
       let datesHtml = '';
       if (c.items && c.items.length > 0) {
@@ -1042,12 +1150,30 @@ async function executeApproval(claimId, isApproved) {
   }
 }
 
-// ==================== MONITORING ====================
+// ==================== MONITORING with SEARCH ====================
 function renderMonitoringTable() {
   const tbody = document.getElementById('monitoringMainGridBody');
   if (!tbody) return;
   
-  tbody.innerHTML = projects.map(p => {
+  // Filter projects based on search query
+  let filteredProjects = projects;
+  if (monitoringSearchQuery.trim()) {
+    const query = monitoringSearchQuery.toLowerCase().trim();
+    filteredProjects = projects.filter(p => 
+      (p.name && p.name.toLowerCase().includes(query)) ||
+      (p.client && p.client.toLowerCase().includes(query))
+    );
+  }
+  
+  if (filteredProjects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#64748b;">
+      <i class="fas fa-search" style="font-size: 1.5rem; display:block; margin-bottom:8px;"></i>
+      Tidak ada project ditemukan${monitoringSearchQuery ? ` untuk "${monitoringSearchQuery}"` : ''}
+    </td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = filteredProjects.map(p => {
     const subItems = rabItems.filter(i => i.projectId === p.id);
     const spent = subItems.reduce((sum, i) => sum + (parseFloat(i.realisasi) || 0), 0);
     let status = '<span class="badge badge-success">Healthy</span>';
@@ -1055,7 +1181,7 @@ function renderMonitoringTable() {
     else if (p.totalBudget > 0 && (spent / p.totalBudget) >= 0.88) status = '<span class="badge badge-warning">Attention</span>';
     
     return `<tr class="project-row" data-id="${p.id}" style="cursor:pointer;">
-      <td><i class="fas fa-folder"></i> ${p.name}</td>
+      <td><i class="fas fa-folder"></i> ${p.noSo ? '[' + p.noSo + '] ' : ''}${p.name}</td>
       <td>${p.client}</td>
       <td>${formatRp(p.totalBudget)}</td>
       <td style="color:#2563eb; font-weight:700;">${formatRp(spent)}</td>
@@ -1074,6 +1200,7 @@ function renderMonitoringTable() {
   });
 }
 
+// ==================== MONITORING DRILL-DOWN: Project → Categories → Items → Claim History ====================
 function openMonitoringDetail(projectId) {
   const proj = projects.find(p => p.id === projectId);
   if (!proj) return;
@@ -1083,6 +1210,8 @@ function openMonitoringDetail(projectId) {
   document.getElementById('modalDetailsProjectName').innerText = proj.name;
   
   const items = rabItems.filter(i => i.projectId === projectId);
+  
+  // Group by category with totals
   const groupedItems = {};
   items.forEach(item => {
     const category = item.category || 'Uncategorized';
@@ -1092,11 +1221,11 @@ function openMonitoringDetail(projectId) {
     groupedItems[category].push(item);
   });
   
-  const tbody = document.getElementById('modalDetailsComponentsTableGridBody');
+  const tbody = document.getElementById('modalDetailsCategoryGridBody');
   
   if (tbody) {
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No components yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">Belum ada komponen RAB</td></tr>';
     } else {
       let html = '';
       Object.keys(groupedItems).forEach(category => {
@@ -1104,76 +1233,78 @@ function openMonitoringDetail(projectId) {
         const categoryBudget = categoryItems.reduce((sum, i) => sum + i.budget, 0);
         const categoryReal = categoryItems.reduce((sum, i) => sum + i.realisasi, 0);
         
-        html += `<tr class="category-header" style="background-color: #eef2ff; font-weight: bold;">
-          <td colspan="8" style="padding: 8px 12px;">
-            <i class="fas fa-folder-open"></i> ${category} 
-            <span style="font-weight: normal; font-size: 0.8rem; margin-left: 12px;">
-              Budget: ${formatRp(categoryBudget)} | Realisasi: ${formatRp(categoryReal)} | 
-              ${categoryBudget > 0 ? ((categoryReal / categoryBudget) * 100).toFixed(1) : 0}%
-            </span>
-          </td>
+        html += `<tr class="category-clickable" data-category="${category}" style="cursor:pointer;">
+          <td><i class="fas fa-folder-open" style="color:#eab308;"></i> <strong>${category}</strong></td>
+          <td>${formatRp(categoryBudget)}</td>
+          <td>${formatRp(categoryReal)}</td>
+          <td>${categoryItems.length} items</td>
         </tr>`;
-        
-        categoryItems.forEach(i => {
-          const progressPercent = i.manualProgress !== undefined && i.manualProgress !== null ? i.manualProgress : (i.budget > 0 ? Math.min(Math.round((i.realisasi / i.budget) * 100), 100) : 0);
-          const barColor = getProgressColor(progressPercent);
-          const itemClaims = claims.filter(c => c.projectId === projectId && c.items && c.items.some(ci => ci.itemId === i.id));
-          const hasClaims = itemClaims.length > 0;
-          
-          html += `<tr class="rab-item-row" data-itemid="${i.id}" style="cursor: pointer;">
-            <td><span class="badge badge-info">${i.category || 'Uncategorized'}</span></td>
-            <td style="padding-left: 20px;"><strong>${i.itemName}</strong></td>
-            <td>${formatRp(i.budget)}</td>
-            <td>${formatRp(i.realisasi)}</td>
-            <td style="color:${(i.budget - i.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(i.budget - i.realisasi)}</td>
-            <td>${getBadge(i.realisasi, i.budget)}</td>
-            <td>
-              <div class="progress-wrapper" id="progress_display_${i.id}">
-                <div class="progress-bar-container">
-                  <div class="progress-bar-fill" style="width: ${progressPercent}%; background-color: ${barColor};"></div>
-                </div>
-                <span class="progress-percent-label">${progressPercent}%</span>
-              </div>
-            </td>
-            <td>
-              <div class="manual-progress-group">
-                <input type="number" class="manual-progress-input" id="progress_input_${i.id}" value="${progressPercent}" min="0" max="100" step="1" style="width:70px;">
-                <button class="progress-update-btn" data-id="${i.id}"><i class="fas fa-save"></i> Set</button>
-                ${hasClaims ? `<span class="badge badge-info" style="margin-left: 8px; cursor: pointer;" onclick="event.stopPropagation(); openItemClaimHistory('${i.id}')">${itemClaims.length} claims</span>` : ''}
-              </div>
-            </td>
-          </tr>`;
-        });
       });
       
       tbody.innerHTML = html;
       
-      document.querySelectorAll('.progress-update-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const itemId = btn.getAttribute('data-id');
-          const input = document.getElementById(`progress_input_${itemId}`);
-          const newProgress = parseFloat(input.value);
-          if (!isNaN(newProgress) && newProgress >= 0 && newProgress <= 100) {
-            await updateManualProgress(itemId, newProgress);
-            input.value = newProgress;
-          } else {
-            triggerNotification('Please enter a value between 0 and 100', false, 'error');
-          }
-        });
-      });
-      
-      document.querySelectorAll('.rab-item-row').forEach(row => {
+      // Make category rows clickable to drill down
+      document.querySelectorAll('.category-clickable').forEach(row => {
         row.addEventListener('click', () => {
-          const itemId = row.getAttribute('data-itemid');
-          if (itemId) {
-            openItemClaimHistory(itemId);
-          }
+          const category = row.getAttribute('data-category');
+          openCategoryDetail(projectId, category);
         });
       });
     }
   }
   document.getElementById('monitoringDetailsModal').classList.add('active');
+}
+
+function openCategoryDetail(projectId, category) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+  
+  const items = rabItems.filter(i => i.projectId === projectId && (i.category || 'Uncategorized') === category);
+  
+  document.getElementById('categoryDetailModalTitle').innerText = `${proj.name} - ${category}`;
+  
+  const tbody = document.getElementById('categoryDetailItemsBody');
+  if (tbody) {
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada item dalam kategori ini</td></tr>';
+    } else {
+      tbody.innerHTML = items.map(item => {
+        const progressPercent = item.manualProgress !== undefined && item.manualProgress !== null ? item.manualProgress : (item.budget > 0 ? Math.min(Math.round((item.realisasi / item.budget) * 100), 100) : 0);
+        const barColor = getProgressColor(progressPercent);
+        
+        // Count claims for this item
+        const itemClaims = claims.filter(c => c.projectId === projectId && c.items && c.items.some(ci => ci.itemId === item.id));
+        const claimCount = itemClaims.length;
+        const lastClaimStatus = itemClaims.length > 0 ? itemClaims[itemClaims.length - 1].status : null;
+        
+        let claimBadge = '';
+        if (claimCount > 0) {
+          const statusClass = lastClaimStatus === 'approved' ? 'badge-success' : (lastClaimStatus === 'rejected' ? 'badge-danger' : 'badge-warning');
+          claimBadge = `<span class="badge ${statusClass}" style="cursor:pointer;" onclick="event.stopPropagation(); openItemClaimHistory('${item.id}')">${claimCount} claims</span>`;
+        } else {
+          claimBadge = '<span class="badge badge-secondary">No claims</span>';
+        }
+        
+        return `<tr style="cursor:pointer;" onclick="openItemClaimHistory('${item.id}')">
+          <td><strong>${item.itemName}</strong></td>
+          <td>${formatRp(item.budget)}</td>
+          <td>${formatRp(item.realisasi)}</td>
+          <td style="color:${(item.budget - item.realisasi) < 0 ? '#ef4444' : '#10b981'}">${formatRp(item.budget - item.realisasi)}</td>
+          <td>
+            <div class="progress-wrapper" style="min-width:80px;">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${progressPercent}%; background-color: ${barColor};"></div>
+              </div>
+              <span class="progress-percent-label">${progressPercent}%</span>
+            </div>
+          </td>
+          <td>${claimBadge}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+  
+  document.getElementById('categoryDetailModal').classList.add('active');
 }
 
 function openItemClaimHistory(itemId) {
@@ -1188,7 +1319,7 @@ function openItemClaimHistory(itemId) {
   const tbody = document.getElementById('claimHistoryDetailBody');
   if (tbody) {
     if (itemClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada klaim untuk item ini</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Tidak ada klaim untuk item ini</td></tr>';
     } else {
       tbody.innerHTML = itemClaims.map(c => {
         const claimItem = c.items.find(ci => ci.itemId === itemId);
@@ -1233,7 +1364,7 @@ function renderReportsByProject() {
     const percentage = totalBudget > 0 ? ((totalReal / totalBudget) * 100).toFixed(1) : 0;
     
     html += `<tr style="background-color: #f1f5f9;">
-      <td colspan="7" style="padding: 12px; font-weight: bold;">${p.name} (${p.client})</td>
+      <td colspan="7" style="padding: 12px; font-weight: bold;">${p.noSo ? '[' + p.noSo + '] ' : ''}${p.name} (${p.client})</td>
      </tr>`;
     
     if (items.length === 0) {
@@ -1893,6 +2024,9 @@ document.getElementById('closeRabModalBtn')?.addEventListener('click', () => {
 document.getElementById('closeMonitoringDetailsModalBtn')?.addEventListener('click', () => {
   document.getElementById('monitoringDetailsModal').classList.remove('active');
 });
+document.getElementById('closeCategoryDetailModalBtn')?.addEventListener('click', () => {
+  document.getElementById('categoryDetailModal').classList.remove('active');
+});
 document.getElementById('closeClaimHistoryModalBtn')?.addEventListener('click', () => {
   document.getElementById('claimHistoryModal').classList.remove('active');
 });
@@ -1918,6 +2052,7 @@ document.getElementById('logoutBtn')?.addEventListener('click', () => {
 const pageMap = {
   dashboard: 'dashboardPage',
   'master-project': 'masterProjectPage',
+  'rab-items': 'rabItemsPage',
   'claim-request': 'claimRequestPage',
   'approval-budget': 'approvalBudgetPage',
   monitoring: 'monitoringPage',
@@ -1962,6 +2097,12 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
     
     if (page === 'files') {
       setTimeout(() => renderTreeHierarchy(), 100);
+    }
+    
+    // Reset pagination when switching to master project
+    if (page === 'master-project') {
+      projectCurrentPage = 1;
+      setTimeout(() => renderMasterProject(), 50);
     }
   });
 });
