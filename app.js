@@ -53,7 +53,6 @@ const rolePermissions = {
   "Project Manager": ['dashboard', 'master-project', 'rab-items', 'claim-request', 'monitoring', 'upload-document', 'files']
 };
 
-// RAB Category Options
 const RAB_CATEGORIES = ['Equipment Cost', 'Material/Other Cost', 'Management Cost'];
 
 // ==================== HELPER FUNCTIONS ====================
@@ -108,26 +107,6 @@ function getProgressColor(percent) {
   if (percent >= 100) return '#ef4444';
   if (percent >= 90) return '#f59e0b';
   return '#10b981';
-}
-
-function createProgressBarMarkup(real, budget, progress = null) {
-  let percent = 0;
-  if (progress !== null && !isNaN(progress)) {
-    percent = Math.min(Math.max(parseFloat(progress), 0), 100);
-  } else if (budget > 0) {
-    percent = Math.min(Math.round((real / budget) * 100), 100);
-  }
-  
-  let barColor = getProgressColor(percent);
-
-  return `
-    <div class="progress-wrapper">
-      <div class="progress-bar-container">
-        <div class="progress-bar-fill" style="width: ${percent}%; background-color: ${barColor};"></div>
-      </div>
-      <span class="progress-percent-label">${percent}%</span>
-    </div>
-  `;
 }
 
 function escapeHtml(text) {
@@ -459,12 +438,11 @@ function renderDashboard() {
   }
 }
 
-// ==================== MASTER PROJECT with SEARCH & PAGINATION ====================
+// ==================== MASTER PROJECT with SEARCH, PAGINATION & ICON ACTIONS ====================
 function renderMasterProject() {
   const tbody = document.getElementById('masterProjectBody');
   if (!tbody) return;
   
-  // Filter projects based on search query
   let filteredProjects = projects;
   if (projectSearchQuery.trim()) {
     const query = projectSearchQuery.toLowerCase().trim();
@@ -475,10 +453,8 @@ function renderMasterProject() {
     );
   }
   
-  // Sort projects by name
   filteredProjects.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   
-  // Pagination
   const totalFiltered = filteredProjects.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PROJECTS_PER_PAGE));
   if (projectCurrentPage > totalPages) projectCurrentPage = totalPages;
@@ -488,11 +464,11 @@ function renderMasterProject() {
   const endIdx = Math.min(startIdx + PROJECTS_PER_PAGE, totalFiltered);
   const pageProjects = filteredProjects.slice(startIdx, endIdx);
   
-  // Render table rows
   tbody.innerHTML = pageProjects.map(p => {
     const totalAllocated = rabItems.filter(i => i.projectId === p.id).reduce((sum, i) => sum + (parseFloat(i.budget) || 0), 0);
     const remaining = (p.totalBudget || 0) - totalAllocated;
     const isLocked = p.isLocked || false;
+    const isAdmin = currentRole === 'Administrator';
     
     return `<tr>
       <td><strong>${p.noSo || '-'}</strong></td>
@@ -502,13 +478,15 @@ function renderMasterProject() {
       <td>${formatRp(p.totalBudget || 0)}</td>
       <td style="color:${remaining < 0 ? '#ef4444':'#10b981'}">${formatRp(remaining)}</td>
       <td>
-        <span class="badge ${isLocked ? 'badge-danger' : 'badge-success'}">${isLocked ? '🔒 Locked' : '🔓 Unlocked'}</span>
+        <span class="badge ${isLocked ? 'badge-danger' : 'badge-success'}">${isLocked ? '🔒' : '🔓'}</span>
       </td>
       <td>
-        ${currentRole === 'Administrator' ? `
-          <button class="btn btn-warning btn-edit-proj" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" data-contract="${p.contractValue || p.totalBudget}" data-noso="${p.noSo || ''}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-edit"></i> Edit</button>
-          <button class="btn btn-danger btn-del-proj" data-id="${p.id}" ${isLocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i> Delete</button>
-          <button class="btn ${isLocked ? 'btn-success' : 'btn-warning'} btn-lock-proj" data-id="${p.id}" data-locked="${isLocked}"><i class="fas ${isLocked ? 'fa-unlock' : 'fa-lock'}"></i> ${isLocked ? 'Unlock' : 'Lock'}</button>
+        ${isAdmin ? `
+          <div class="action-icons">
+            <button class="btn-icon btn-edit-icon" title="Edit Project" data-id="${p.id}" data-name="${p.name}" data-client="${p.client}" data-budget="${p.totalBudget}" data-contract="${p.contractValue || p.totalBudget}" data-noso="${p.noSo || ''}" ${isLocked ? 'disabled' : ''}><i class="fas fa-edit"></i></button>
+            <button class="btn-icon btn-delete-icon" title="Delete Project" data-id="${p.id}" ${isLocked ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
+            <button class="btn-icon ${isLocked ? 'btn-unlock-icon' : 'btn-lock-icon'}" title="${isLocked ? 'Unlock' : 'Lock'} Project" data-id="${p.id}" data-locked="${isLocked}"><i class="fas ${isLocked ? 'fa-unlock' : 'fa-lock'}"></i></button>
+          </div>
         ` : `
           <span class="badge badge-secondary">Read Only</span>
         `}
@@ -523,13 +501,11 @@ function renderMasterProject() {
     </td></tr>`;
   }
   
-  // Update pagination info
   const infoEl = document.getElementById('projectPaginationInfo');
   if (infoEl) {
     infoEl.textContent = `Showing ${totalFiltered > 0 ? startIdx + 1 : 0}-${endIdx} of ${totalFiltered} projects`;
   }
   
-  // Render pagination controls
   const controlsEl = document.getElementById('projectPaginationControls');
   if (controlsEl) {
     controlsEl.innerHTML = `
@@ -563,7 +539,7 @@ function renderMasterProject() {
   }
   
   // Attach event listeners for project actions
-  document.querySelectorAll('.btn-del-proj').forEach(btn => {
+  document.querySelectorAll('.btn-delete-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       if (confirm('Delete project and all its RAB items?')) {
@@ -573,7 +549,7 @@ function renderMasterProject() {
     });
   });
   
-  document.querySelectorAll('.btn-edit-proj').forEach(btn => {
+  document.querySelectorAll('.btn-edit-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       openEditProjectModal(
         btn.dataset.id, 
@@ -586,7 +562,7 @@ function renderMasterProject() {
     });
   });
 
-  document.querySelectorAll('.btn-lock-proj').forEach(btn => {
+  document.querySelectorAll('.btn-lock-icon, .btn-unlock-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       const currentLocked = btn.dataset.locked === 'true';
@@ -595,7 +571,7 @@ function renderMasterProject() {
   });
 }
 
-// Search event listeners for Master Project
+// Search event listeners
 document.getElementById('projectSearchInput')?.addEventListener('input', (e) => {
   projectSearchQuery = e.target.value;
   projectCurrentPage = 1;
@@ -609,7 +585,6 @@ document.getElementById('clearProjectSearchBtn')?.addEventListener('click', () =
   renderMasterProject();
 });
 
-// Search event listeners for Monitoring
 document.getElementById('monitoringSearchInput')?.addEventListener('input', (e) => {
   monitoringSearchQuery = e.target.value;
   renderMonitoringTable();
@@ -661,7 +636,7 @@ async function saveEditProject() {
   }
 }
 
-// ==================== RAB ITEMS EDIT FUNCTION ====================
+// ==================== RAB ITEMS ====================
 function openEditRabItemModal(itemId, itemName, budget, category) {
   const modal = document.getElementById('editRabItemModal');
   document.getElementById('editRabItemId').value = itemId;
@@ -724,13 +699,15 @@ function renderRABItemsSubTable() {
       <td>${formatRp(i.realisasi)}</td>
       <td>${formatRp(i.budget - i.realisasi)}</td>
       <td>
-        <button class="btn btn-warning btn-edit-rab-sub" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}" data-category="${i.category || ''}"><i class="fas fa-edit"></i> Edit</button>
-        <button class="btn btn-danger btn-del-rab-sub" data-id="${i.id}"><i class="fas fa-trash"></i> Delete</button>
+        <div class="action-icons">
+          <button class="btn-icon btn-edit-icon" title="Edit RAB Item" data-id="${i.id}" data-name="${i.itemName}" data-budget="${i.budget}" data-category="${i.category || ''}"><i class="fas fa-edit"></i></button>
+          <button class="btn-icon btn-delete-icon" title="Delete RAB Item" data-id="${i.id}"><i class="fas fa-trash"></i></button>
+        </div>
       </td>
     </tr>
   `).join('');
   
-  document.querySelectorAll('.btn-del-rab-sub').forEach(btn => {
+  document.querySelectorAll('.btn-delete-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       if (confirm('Delete this RAB item?')) {
@@ -739,7 +716,7 @@ function renderRABItemsSubTable() {
     });
   });
   
-  document.querySelectorAll('.btn-edit-rab-sub').forEach(btn => {
+  document.querySelectorAll('.btn-edit-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       openEditRabItemModal(btn.dataset.id, btn.dataset.name, btn.dataset.budget, btn.dataset.category);
     });
@@ -1155,7 +1132,6 @@ function renderMonitoringTable() {
   const tbody = document.getElementById('monitoringMainGridBody');
   if (!tbody) return;
   
-  // Filter projects based on search query
   let filteredProjects = projects;
   if (monitoringSearchQuery.trim()) {
     const query = monitoringSearchQuery.toLowerCase().trim();
@@ -1211,7 +1187,6 @@ function openMonitoringDetail(projectId) {
   
   const items = rabItems.filter(i => i.projectId === projectId);
   
-  // Group by category with totals
   const groupedItems = {};
   items.forEach(item => {
     const category = item.category || 'Uncategorized';
@@ -1243,7 +1218,6 @@ function openMonitoringDetail(projectId) {
       
       tbody.innerHTML = html;
       
-      // Make category rows clickable to drill down
       document.querySelectorAll('.category-clickable').forEach(row => {
         row.addEventListener('click', () => {
           const category = row.getAttribute('data-category');
@@ -1271,21 +1245,9 @@ function openCategoryDetail(projectId, category) {
       tbody.innerHTML = items.map(item => {
         const progressPercent = item.manualProgress !== undefined && item.manualProgress !== null ? item.manualProgress : (item.budget > 0 ? Math.min(Math.round((item.realisasi / item.budget) * 100), 100) : 0);
         const barColor = getProgressColor(progressPercent);
+        const statusBadge = getBadge(item.realisasi, item.budget);
         
-        // Count claims for this item
-        const itemClaims = claims.filter(c => c.projectId === projectId && c.items && c.items.some(ci => ci.itemId === item.id));
-        const claimCount = itemClaims.length;
-        const lastClaimStatus = itemClaims.length > 0 ? itemClaims[itemClaims.length - 1].status : null;
-        
-        let claimBadge = '';
-        if (claimCount > 0) {
-          const statusClass = lastClaimStatus === 'approved' ? 'badge-success' : (lastClaimStatus === 'rejected' ? 'badge-danger' : 'badge-warning');
-          claimBadge = `<span class="badge ${statusClass}" style="cursor:pointer;" onclick="event.stopPropagation(); openItemClaimHistory('${item.id}')">${claimCount} claims</span>`;
-        } else {
-          claimBadge = '<span class="badge badge-secondary">No claims</span>';
-        }
-        
-        return `<tr style="cursor:pointer;" onclick="openItemClaimHistory('${item.id}')">
+        return `<tr class="rab-item-clickable" data-itemid="${item.id}" style="cursor:pointer;">
           <td><strong>${item.itemName}</strong></td>
           <td>${formatRp(item.budget)}</td>
           <td>${formatRp(item.realisasi)}</td>
@@ -1298,9 +1260,18 @@ function openCategoryDetail(projectId, category) {
               <span class="progress-percent-label">${progressPercent}%</span>
             </div>
           </td>
-          <td>${claimBadge}</td>
+          <td>${statusBadge}</td>
         </tr>`;
       }).join('');
+      
+      document.querySelectorAll('.rab-item-clickable').forEach(row => {
+        row.addEventListener('click', () => {
+          const itemId = row.getAttribute('data-itemid');
+          if (itemId) {
+            openItemClaimHistory(itemId);
+          }
+        });
+      });
     }
   }
   
@@ -1309,24 +1280,35 @@ function openCategoryDetail(projectId, category) {
 
 function openItemClaimHistory(itemId) {
   const rabItem = rabItems.find(r => r.id === itemId);
-  if (!rabItem) return;
+  if (!rabItem) {
+    triggerNotification('Item not found!', false, 'error');
+    return;
+  }
   
-  const itemClaims = claims.filter(c => c.projectId === rabItem.projectId && c.items && c.items.some(ci => ci.itemId === itemId));
   const project = projects.find(p => p.id === rabItem.projectId);
+  const itemClaims = claims.filter(c => 
+    c.projectId === rabItem.projectId && 
+    c.items && 
+    c.items.some(ci => ci.itemId === itemId)
+  );
   
-  document.getElementById('claimHistoryItemName').innerText = `${project ? project.name + ' - ' : ''}${rabItem.itemName}`;
+  // Sort claims by timestamp (newest first)
+  itemClaims.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  
+  document.getElementById('claimHistoryItemName').innerText = 
+    `${project ? project.name + ' - ' : ''}${rabItem.itemName}`;
   
   const tbody = document.getElementById('claimHistoryDetailBody');
   if (tbody) {
     if (itemClaims.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Tidak ada klaim untuk item ini</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">Tidak ada klaim untuk item ini</td></tr>';
     } else {
       tbody.innerHTML = itemClaims.map(c => {
         const claimItem = c.items.find(ci => ci.itemId === itemId);
         const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
         return `<tr>
           <td>${claimItem && claimItem.tanggal ? claimItem.tanggal : formatDate(c.timestamp)}</td>
-          <td>${claimItem ? formatRp(claimItem.nominal) : '-'}</td>
+          <td><strong>${claimItem ? formatRp(claimItem.nominal) : '-'}</strong></td>
           <td>${claimItem ? claimItem.vendor || '-' : '-'}</td>
           <td><span class="badge ${badgeClass}">${c.status}</span></td>
         </tr>`;
@@ -2099,7 +2081,6 @@ document.querySelectorAll('#sidebarMenu li').forEach(li => {
       setTimeout(() => renderTreeHierarchy(), 100);
     }
     
-    // Reset pagination when switching to master project
     if (page === 'master-project') {
       projectCurrentPage = 1;
       setTimeout(() => renderMasterProject(), 50);
