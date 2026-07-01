@@ -107,16 +107,24 @@
       padding: 12px 18px;
       border-radius: 16px;
       cursor: pointer;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
       gap: 14px;
       font-weight: 500;
       transition: 0.25s;
+      font-size: 0.9rem;
     }
     .sidebar ul li:hover { background: rgba(255,255,255,0.12); transform: translateX(6px); }
     .sidebar ul li.active { background: linear-gradient(95deg, #3b82f6, #8b5cf6); color: white; box-shadow: 0 6px 14px rgba(59,130,246,0.3); }
     .sidebar ul li.restricted { display: none !important; }
+    .sidebar ul li.sub-item {
+      padding-left: 48px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .sidebar ul li.sub-item:hover { color: #e2e8f0; }
+    .sidebar ul li.sub-item.active { color: white; }
 
     .btn-logout-sidebar {
       width: 100%;
@@ -147,6 +155,7 @@
     .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
     .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
 
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px; }
     .card { background: rgba(255,255,255,0.95); padding: 24px 22px; border-radius: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: 0.3s; }
@@ -311,6 +320,85 @@
       background-color: #f1f5f9;
     }
 
+    .search-box {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .search-box input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 16px;
+      border-radius: 30px;
+      border: 1px solid #cbd5e1;
+      outline: none;
+      font-size: 0.9rem;
+      background: white;
+      transition: 0.2s;
+    }
+    .search-box input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .pagination-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .pagination-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .pagination-controls button {
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.2s;
+      font-size: 0.8rem;
+    }
+    .pagination-controls button:hover:not(:disabled) {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    .pagination-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .pagination-controls button.active-page {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    .pagination-info {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    /* Category clickable in monitoring modal */
+    .category-clickable {
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .category-clickable:hover {
+      background: #dbeafe !important;
+    }
+    .category-clickable td:first-child {
+      font-weight: 700;
+    }
+
     @media (max-width: 900px) {
       .sidebar { width: 100%; position: relative; height: auto; }
       .main { margin-left: 0; width: 100%; padding: 20px; }
@@ -340,6 +428,7 @@
       <ul id="sidebarMenu">
         <li class="active" data-page="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></li>
         <li data-page="master-project"><i class="fas fa-folder-open"></i> <span>Master Project</span></li>
+        <li data-page="rab-items" class="sub-item"><i class="fas fa-list-check"></i> <span>Add RAB Items</span></li>
         <li data-page="claim-request"><i class="fas fa-receipt"></i> <span>Claim Request</span></li>
         <li data-page="approval-budget"><i class="fas fa-file-invoice-dollar"></i> <span>Approval Budget</span></li>
         <li data-page="monitoring"><i class="fas fa-desktop"></i> <span>Monitoring</span></li>
@@ -381,26 +470,47 @@
         <div class="section">
           <h2><i class="fas fa-database"></i> Master Project Data</h2>
           <button class="btn btn-primary" id="openProjectModalBtn"><i class="fas fa-plus-circle"></i> Add Project</button>
+          
+          <!-- Search Box -->
+          <div class="search-box">
+            <input type="text" id="projectSearchInput" placeholder="🔍 Cari project berdasarkan nama, client, atau No. SO..." />
+            <button class="btn btn-outline btn-sm" id="clearProjectSearchBtn"><i class="fas fa-times"></i> Clear</button>
+          </div>
+          
           <div style="overflow-x:auto; margin-top:20px;">
             <table>
               <thead>
-                <tr><th>Project Name</th><th>Client</th><th>Contract Value</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Status</th><th>Action</th></tr>
+                <tr><th>No. SO</th><th>Project Name</th><th>Client</th><th>Contract Value</th><th>Initial Budget</th><th>Remaining Allocation</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody id="masterProjectBody"></tbody>
             </table>
           </div>
+          
+          <!-- Pagination -->
+          <div class="pagination-wrapper" id="projectPagination">
+            <div class="pagination-info" id="projectPaginationInfo">Showing 0-0 of 0</div>
+            <div class="pagination-controls" id="projectPaginationControls"></div>
+          </div>
         </div>
-        
+      </div>
+
+      <!-- RAB Items Page (formerly part of Master Project) -->
+      <div id="rabItemsPage" class="page hidden-section">
         <div class="section">
-          <h2><i class="fas fa-list-check"></i> RAB Items per Project</h2>
-          <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; margin-bottom:16px; border: 1px solid #cbd5e1; outline:none;"></select>
+          <h2><i class="fas fa-list-check"></i> Add RAB Items</h2>
+          <div class="form-group">
+            <label><i class="fas fa-building"></i> Select Project</label>
+            <select id="filterProjectRAB" style="padding:12px; border-radius:28px; width:100%; border: 1px solid #cbd5e1; outline:none;"></select>
+          </div>
           <button class="btn btn-success" id="openRABModalBtn" style="margin-bottom:16px;"><i class="fas fa-plus"></i> Add RAB Item</button>
-          <table>
-            <thead>
-              <tr><th>Category</th><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
-            </thead>
-            <tbody id="rabItemsMasterBody"></tbody>
-          </table>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>Category</th><th>Item Name</th><th>Budget Allocation</th><th>Claim Realization</th><th>Balance</th><th>Action</th></tr>
+              </thead>
+              <tbody id="rabItemsMasterBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -445,6 +555,13 @@
       <div id="monitoringPage" class="page hidden-section">
         <div class="section">
           <h2><i class="fas fa-chart-bar"></i> Project Financial Metrics</h2>
+          
+          <!-- Search Box for Monitoring -->
+          <div class="search-box">
+            <input type="text" id="monitoringSearchInput" placeholder="🔍 Cari project berdasarkan nama atau client..." />
+            <button class="btn btn-outline btn-sm" id="clearMonitoringSearchBtn"><i class="fas fa-times"></i> Clear</button>
+          </div>
+          
           <div style="overflow-x:auto;">
             <table>
               <thead>
@@ -609,12 +726,28 @@
         <div style="overflow-x:auto;">
           <table>
             <thead>
-              <tr><th>Category</th><th>Item Name</th><th>Budget</th><th>Realization</th><th>Balance</th><th>Status</th><th>Progress</th><th>Manual Update</th></tr>
+              <tr><th>Category</th><th>Category Budget</th><th>Category Realization</th><th>Items Count</th></tr>
             </thead>
-            <tbody id="modalDetailsComponentsTableGridBody"></tbody>
+            <tbody id="modalDetailsCategoryGridBody"></tbody>
           </table>
         </div>
         <div class="modal-buttons"><button class="btn btn-primary" id="closeMonitoringDetailsModalBtn">Close</button></div>
+      </div>
+    </div>
+
+    <!-- Category Detail Modal (Drill-down: shows RAB items in a category) -->
+    <div id="categoryDetailModal" class="modal-overlay">
+      <div class="modal-container" style="max-width: 1100px;">
+        <h3><i class="fas fa-folder-open"></i> RAB Items - <span id="categoryDetailModalTitle"></span></h3>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>Item Name</th><th>Budget</th><th>Realization</th><th>Balance</th><th>Progress</th><th>Claims</th></tr>
+            </thead>
+            <tbody id="categoryDetailItemsBody"></tbody>
+          </table>
+        </div>
+        <div class="modal-buttons"><button class="btn btn-primary" id="closeCategoryDetailModalBtn">Close</button></div>
       </div>
     </div>
 
