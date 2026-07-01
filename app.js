@@ -46,7 +46,7 @@ const rolePermissions = {
 };
 
 // RAB Category Options
-const RAB_CATEGORIES = ['Manajemen Item', 'Manajemen Team', 'Manajemen Cost'];
+const RAB_CATEGORIES = ['Equipment Cost', 'Material/Other Cost', 'Management Cost'];
 
 // ==================== HELPER FUNCTIONS ====================
 function hideLoadingScreen() {
