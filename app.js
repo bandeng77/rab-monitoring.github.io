@@ -4,6 +4,8 @@ import { getDatabase, ref, set, onValue, push, remove, update, get } from "https
 
 // ==================== CONFIGURATIONS ====================
 const API_BASE_URL = "https://api.genetek.co.id"; 
+const GA_REDIRECT_URL = "https://ga.genetek.co.id";
+
 const firebaseConfig = {
   apiKey: "AIzaSyAQWeEYQNtocfIuKvKk8tbpKuIeW4CmZOI",
   authDomain: "rab-monitoring.firebaseapp.com",
@@ -141,6 +143,54 @@ function formatDateTime(timestamp) {
   } catch {
     return '-';
   }
+}
+
+// ==================== PAYMENT METHOD HANDLING ====================
+let selectedPaymentMethod = 'petty-cash';
+
+function initPaymentMethodHandlers() {
+  const paymentOptions = document.querySelectorAll('.payment-option');
+  const gaRedirectInfo = document.getElementById('gaRedirectInfo');
+  
+  paymentOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      paymentOptions.forEach(opt => opt.classList.remove('selected'));
+      this.classList.add('selected');
+      
+      const radio = this.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.checked = true;
+        selectedPaymentMethod = radio.value;
+      }
+      
+      // Show/hide GA redirect info
+      if (selectedPaymentMethod === 'po') {
+        gaRedirectInfo.classList.add('active');
+        triggerNotification('Metode PO dipilih. Anda akan diarahkan ke GA System.', true, 'info');
+      } else {
+        gaRedirectInfo.classList.remove('active');
+      }
+    });
+  });
+  
+  // Also handle radio click directly
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const parent = this.closest('.payment-option');
+      if (parent) {
+        document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+        parent.classList.add('selected');
+        selectedPaymentMethod = this.value;
+        
+        if (selectedPaymentMethod === 'po') {
+          gaRedirectInfo.classList.add('active');
+          triggerNotification('Metode PO dipilih. Anda akan diarahkan ke GA System.', true, 'info');
+        } else {
+          gaRedirectInfo.classList.remove('active');
+        }
+      }
+    });
+  });
 }
 
 // ==================== MANUAL PROGRESS UPDATE ====================
@@ -948,6 +998,12 @@ function renderClaimItemsBuildLayout() {
         <div><input type="text" data-idx="${idx}" class="item-vendor-node" placeholder="Vendor" value="${item.vendor || ''}" /></div>
         <div><input type="date" data-idx="${idx}" class="item-date-node" value="${item.tanggal || ''}" /></div>
         <div><input type="text" data-idx="${idx}" class="item-notes-node" placeholder="Catatan" value="${item.desc || ''}" /></div>
+        <div>
+          <select data-idx="${idx}" class="item-payment-node" style="padding: 10px 14px; border-radius: 14px; border: 1px solid #cbd5e1; outline: none; font-size: 0.85rem; width: 100%;">
+            <option value="petty-cash" ${item.paymentMethod === 'petty-cash' ? 'selected' : ''}>Petty Cash</option>
+            <option value="po" ${item.paymentMethod === 'po' ? 'selected' : ''}>PO</option>
+          </select>
+        </div>
       </div>
     </div>
   `).join('');
@@ -975,6 +1031,11 @@ function renderClaimItemsBuildLayout() {
   container.querySelectorAll('.item-notes-node').forEach(inp => {
     inp.addEventListener('input', (e) => {
       claimItemsListArray[parseInt(inp.dataset.idx)].desc = e.target.value;
+    });
+  });
+  container.querySelectorAll('.item-payment-node').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      claimItemsListArray[parseInt(sel.dataset.idx)].paymentMethod = e.target.value;
     });
   });
   container.querySelectorAll('.remove-item').forEach(btn => {
@@ -1007,8 +1068,10 @@ function renderClaimView() {
           const vendor = ci.vendor || '-';
           const nominal = formatRp(ci.nominal);
           const tanggal = ci.tanggal || '-';
+          const paymentMethod = ci.paymentMethod || 'petty-cash';
+          const paymentLabel = paymentMethod === 'po' ? 'PO' : 'Petty Cash';
           
-          itemsHtml += `<div style="margin-bottom: 4px;">• <strong>${itemName}</strong> (${nominal})<br><small>Vendor: ${vendor}</small></div>`;
+          itemsHtml += `<div style="margin-bottom: 4px;">• <strong>${itemName}</strong> (${nominal})<br><small>Vendor: ${vendor} | Payment: ${paymentLabel}</small></div>`;
           datesHtml += `<div style="margin-bottom: 4px; text-align: center;">${tanggal}</div>`;
         });
       } else {
@@ -1016,6 +1079,8 @@ function renderClaimView() {
         datesHtml = '-';
       }
       
+      const paymentMethod = c.paymentMethod || 'petty-cash';
+      const paymentLabel = paymentMethod === 'po' ? 'PO' : 'Petty Cash';
       const badgeClass = c.status === 'approved' ? 'badge-success' : (c.status === 'rejected' ? 'badge-danger' : 'badge-warning');
       
       return `<tr>
@@ -1023,6 +1088,7 @@ function renderClaimView() {
         <td style="font-size:0.8rem;">${datesHtml}</td>
         <td style="font-size:0.8rem;">${itemsHtml}</td>
         <td>${formatRp(c.totalNominal)}</td>
+        <td><span class="badge ${c.paymentMethod === 'po' ? 'badge-info' : 'badge-secondary'}">${paymentLabel}</span></td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
       </tr>`;
     }).join('');
@@ -1039,12 +1105,24 @@ document.getElementById('addItemBtn')?.addEventListener('click', () => {
     triggerNotification('Pilih project terlebih dahulu!', false, 'error');
     return;
   }
-  claimItemsListArray.push({ itemId: '', nominal: 0, vendor: '', tanggal: '', desc: '' });
+  claimItemsListArray.push({ 
+    itemId: '', 
+    nominal: 0, 
+    vendor: '', 
+    tanggal: '', 
+    desc: '',
+    paymentMethod: selectedPaymentMethod || 'petty-cash'
+  });
   renderClaimItemsBuildLayout();
 });
 
 document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   const projectId = document.getElementById('claimProjectSelect').value;
+  
+  // Check if any item has PO selected
+  const hasPOItem = claimItemsListArray.some(it => it.paymentMethod === 'po' || selectedPaymentMethod === 'po');
+  
+  // Validate items - need at least one complete item
   const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor && it.tanggal);
   
   if (!projectId || validItems.length === 0) {
@@ -1052,13 +1130,43 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
     return;
   }
   
+  // If PO is selected, redirect to GA
+  if (hasPOItem || selectedPaymentMethod === 'po') {
+    triggerNotification('Metode PO dipilih. Mengarahkan ke GA System...', true, 'info');
+    
+    // Open GA in new tab
+    window.open(GA_REDIRECT_URL, '_blank');
+    
+    // Still save the claim but with PO status
+    const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
+    const newClaimRef = push(ref(db, 'claims'));
+    set(newClaimRef, {
+      projectId: projectId,
+      status: 'pending',
+      totalNominal: totalNominal,
+      items: validItems.map(item => ({ ...item, paymentMethod: 'po' })),
+      paymentMethod: 'po',
+      timestamp: Date.now(),
+      redirectedToGA: true,
+      redirectedAt: new Date().toLocaleString()
+    }).then(() => {
+      claimItemsListArray = [];
+      document.getElementById('claimProjectSelect').value = '';
+      renderClaimItemsBuildLayout();
+      triggerNotification('Claim dengan metode PO telah disimpan dan dialihkan ke GA System!', true);
+    });
+    return;
+  }
+  
+  // Normal submission for Petty Cash
   const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
   const newClaimRef = push(ref(db, 'claims'));
   set(newClaimRef, {
     projectId: projectId,
     status: 'pending',
     totalNominal: totalNominal,
-    items: validItems,
+    items: validItems.map(item => ({ ...item, paymentMethod: 'petty-cash' })),
+    paymentMethod: 'petty-cash',
     timestamp: Date.now()
   }).then(() => {
     claimItemsListArray = [];
@@ -1075,7 +1183,7 @@ function renderApprovalList() {
   
   const pending = claims.filter(c => c.status === 'pending');
   if (pending.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending requests</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pending requests</td></tr>';
     return;
   }
   
@@ -1083,12 +1191,16 @@ function renderApprovalList() {
     const p = projects.find(pr => pr.id === c.projectId);
     const details = c.items ? c.items.map(ci => {
       const r = rabItems.find(rab => rab.id === ci.itemId);
-      return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'} | Tgl: ${ci.tanggal || '-'}</small>`;
+      const paymentLabel = ci.paymentMethod === 'po' ? 'PO' : 'Petty Cash';
+      return `• ${r ? r.itemName : '-'}: ${formatRp(ci.nominal)}<br><small>Vendor: ${ci.vendor || '-'} | Tgl: ${ci.tanggal || '-'} | Payment: ${paymentLabel}</small>`;
     }).join('<br>') : '-';
+    const paymentMethod = c.paymentMethod || 'petty-cash';
+    const paymentLabel = paymentMethod === 'po' ? 'PO' : 'Petty Cash';
     return `<tr>
       <td><strong>${p ? p.name : '-'}</strong></td>
       <td style="font-size:0.8rem;">${details}</td>
       <td>${formatRp(c.totalNominal)}</td>
+      <td><span class="badge ${paymentMethod === 'po' ? 'badge-info' : 'badge-secondary'}">${paymentLabel}</span></td>
       <td><span class="badge badge-warning">Pending</span></td>
       <td class="action-buttons">
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
@@ -1292,7 +1404,6 @@ function openItemClaimHistory(itemId) {
     c.items.some(ci => ci.itemId === itemId)
   );
   
-  // Sort claims by timestamp (newest first)
   itemClaims.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   
   document.getElementById('claimHistoryItemName').innerText = 
@@ -1680,6 +1791,7 @@ async function downloadPDF() {
         const p = filteredProjects.find(pr => pr.id === c.projectId);
         const statusColor = c.status === 'approved' ? '#065f46' : (c.status === 'rejected' ? '#991b1b' : '#9a3412');
         const statusBg = c.status === 'approved' ? '#d1fae5' : (c.status === 'rejected' ? '#fee2e2' : '#fed7aa');
+        const paymentLabel = c.paymentMethod === 'po' ? 'PO' : 'Petty Cash';
         
         claimsHtml += `
           <div style="border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; page-break-inside: avoid;">
@@ -1687,11 +1799,13 @@ async function downloadPDF() {
               <div>
                 <strong style="font-size: 11px;">${p ? escapeHtml(p.name) : 'Unknown Project'}</strong>
                 <span style="margin-left: 8px; display: inline-block; padding: 2px 8px; border-radius: 12px; background: ${statusBg}; color: ${statusColor}; font-size: 8px; font-weight: bold;">${c.status.toUpperCase()}</span>
+                <span style="margin-left: 8px; display: inline-block; padding: 2px 8px; border-radius: 12px; background: ${c.paymentMethod === 'po' ? '#dbeafe' : '#f3f4f6'}; color: ${c.paymentMethod === 'po' ? '#1e40af' : '#374151'}; font-size: 8px; font-weight: bold;">${paymentLabel}</span>
               </div>
               <div style="font-size: 10px; color: #4b5563;">Total: ${formatRp(c.totalNominal)}</div>
             </div>
             <div style="padding: 6px 12px; font-size: 9px; color: #6b7280; background: #ffffff; border-bottom: 1px solid #f3f4f6;">
               Submitted: ${formatDateTime(c.timestamp)}
+              ${c.redirectedToGA ? ' | <span style="color: #d97706;">Redirected to GA</span>' : ''}
             </div>
             <div style="padding: 8px 12px; background: #ffffff;">
               <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
@@ -1701,6 +1815,7 @@ async function downloadPDF() {
                     <th style="padding: 4px 6px; text-align: right;">Amount</th>
                     <th style="padding: 4px 6px; text-align: left;">Vendor</th>
                     <th style="padding: 4px 6px; text-align: left;">Date</th>
+                    <th style="padding: 4px 6px; text-align: left;">Payment</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1709,12 +1824,14 @@ async function downloadPDF() {
         if (c.items && c.items.length > 0) {
           for (const item of c.items) {
             const rab = filteredRabItems.find(r => r.id === item.itemId);
+            const itemPayment = item.paymentMethod === 'po' ? 'PO' : 'Petty Cash';
             claimsHtml += `
               <tr style="border-bottom: 1px solid #f3f4f6;">
                 <td style="padding: 4px 6px;">${rab ? escapeHtml(rab.itemName) : '-'}</td>
                 <td style="padding: 4px 6px; text-align: right;">${formatRp(item.nominal)}</td>
                 <td style="padding: 4px 6px;">${escapeHtml(item.vendor || '-')}</td>
                 <td style="padding: 4px 6px;">${item.tanggal || '-'}</td>
+                <td style="padding: 4px 6px;"><span style="padding: 1px 6px; border-radius: 4px; background: ${itemPayment === 'PO' ? '#dbeafe' : '#f3f4f6'}; font-size: 7px;">${itemPayment}</span></td>
               </tr>
             `;
           }
@@ -2113,6 +2230,7 @@ onAuthStateChanged(auth, (user) => {
         
         enforceRoleVisibility();
         initCloudDatabaseListeners();
+        initPaymentMethodHandlers();
         hideLoadingScreen();
       } else {
         set(ref(db, `users/${user.uid}`), {
@@ -2127,6 +2245,7 @@ onAuthStateChanged(auth, (user) => {
           if (roleLabel) roleLabel.innerText = currentRole;
           enforceRoleVisibility();
           initCloudDatabaseListeners();
+          initPaymentMethodHandlers();
           hideLoadingScreen();
         });
       }
