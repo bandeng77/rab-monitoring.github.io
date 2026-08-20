@@ -3,19 +3,17 @@ import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, s
 import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ==================== CONFIGURATIONS ====================
-// MENGGUNAKAN AUTH DARI GA SYSTEM (generalaffair-d18ce)
-// TAPI DATABASE TETAP RAB MONITORING
 const API_BASE_URL = "https://api.genetek.co.id"; 
 const GA_REDIRECT_URL = "https://ga.genetek.co.id";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDihA-hrOGbYojWc9WLwYFi207XoOtfjuU",
-  authDomain: "generalaffair-d18ce.firebaseapp.com",
+  apiKey: "AIzaSyAQWeEYQNtocfIuKvKk8tbpKuIeW4CmZOI",
+  authDomain: "rab-monitoring.firebaseapp.com",
   databaseURL: "https://rab-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "generalaffair-d18ce",
-  storageBucket: "generalaffair-d18ce.firebasestorage.app",
-  messagingSenderId: "726107738231",
-  appId: "1:726107738231:web:8385b1fa08994a2a06f672"
+  projectId: "rab-monitoring",
+  storageBucket: "rab-monitoring.firebasestorage.app",
+  messagingSenderId: "712435056277",
+  appId: "1:712435056277:web:54db7d9ffd327bc3d9259c"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -165,6 +163,7 @@ function initPaymentMethodHandlers() {
         selectedPaymentMethod = radio.value;
       }
       
+      // Show/hide GA redirect info
       if (selectedPaymentMethod === 'po') {
         gaRedirectInfo.classList.add('active');
         triggerNotification('Metode PO dipilih. Anda akan diarahkan ke GA System.', true, 'info');
@@ -174,6 +173,7 @@ function initPaymentMethodHandlers() {
     });
   });
   
+  // Also handle radio click directly
   document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
     radio.addEventListener('change', function() {
       const parent = this.closest('.payment-option');
@@ -588,6 +588,7 @@ function renderMasterProject() {
     });
   }
   
+  // Attach event listeners for project actions
   document.querySelectorAll('.btn-delete-icon').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
@@ -1118,8 +1119,10 @@ document.getElementById('addItemBtn')?.addEventListener('click', () => {
 document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   const projectId = document.getElementById('claimProjectSelect').value;
   
+  // Check if any item has PO selected
   const hasPOItem = claimItemsListArray.some(it => it.paymentMethod === 'po' || selectedPaymentMethod === 'po');
   
+  // Validate items - need at least one complete item
   const validItems = claimItemsListArray.filter(it => it.itemId && it.nominal > 0 && it.vendor && it.tanggal);
   
   if (!projectId || validItems.length === 0) {
@@ -1127,10 +1130,14 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
     return;
   }
   
+  // If PO is selected, redirect to GA
   if (hasPOItem || selectedPaymentMethod === 'po') {
     triggerNotification('Metode PO dipilih. Mengarahkan ke GA System...', true, 'info');
+    
+    // Open GA in new tab
     window.open(GA_REDIRECT_URL, '_blank');
     
+    // Still save the claim but with PO status
     const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
     const newClaimRef = push(ref(db, 'claims'));
     set(newClaimRef, {
@@ -1151,6 +1158,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
     return;
   }
   
+  // Normal submission for Petty Cash
   const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
   const newClaimRef = push(ref(db, 'claims'));
   set(newClaimRef, {
