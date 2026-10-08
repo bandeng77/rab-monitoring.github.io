@@ -151,6 +151,24 @@ let selectedPaymentMethod = 'petty-cash';
 function initPaymentMethodHandlers() {
   const paymentOptions = document.querySelectorAll('.payment-option');
   const gaRedirectInfo = document.getElementById('gaRedirectInfo');
+
+  // Dropdown "Pembayaran" (Pettycash / PO)
+  const paymentSelect = document.getElementById('claimPaymentSelect');
+  if (paymentSelect && !paymentSelect.dataset.bound) {
+    paymentSelect.dataset.bound = '1';
+    paymentSelect.addEventListener('change', function() {
+      selectedPaymentMethod = this.value;
+      // samakan metode pembayaran semua baris item dengan pilihan "Pembayaran"
+      claimItemsListArray.forEach(it => { it.paymentMethod = selectedPaymentMethod; });
+      renderClaimItemsBuildLayout();
+      if (selectedPaymentMethod === 'po') {
+        if (gaRedirectInfo) gaRedirectInfo.classList.add('active');
+        triggerNotification('Pembayaran PO dipilih. Saat Submit Claim, aplikasi GA akan terbuka di tab baru.', true, 'info');
+      } else {
+        if (gaRedirectInfo) gaRedirectInfo.classList.remove('active');
+      }
+    });
+  }
   
   paymentOptions.forEach(option => {
     option.addEventListener('click', function() {
@@ -965,6 +983,43 @@ document.getElementById('saveRabBtn')?.addEventListener('click', () => {
   });
 });
 
+// ==================== RAB -> GA (PO) INTEGRATION ====================
+function buildGARabUrl(claimId, payload) {
+  let url = `${GA_REDIRECT_URL}?rabClaim=${encodeURIComponent(claimId)}`;
+  if (payload) {
+    try {
+      // fallback data (dipakai GA bila tidak bisa membaca database RAB)
+      const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      url += `#rab=${encodeURIComponent(b64)}`;
+    } catch (e) { console.warn('Gagal encode payload GA:', e); }
+  }
+  return url;
+}
+
+function resetClaimPaymentSelect() {
+  selectedPaymentMethod = 'petty-cash';
+  const sel = document.getElementById('claimPaymentSelect');
+  if (sel) sel.value = 'petty-cash';
+  const info = document.getElementById('gaRedirectInfo');
+  if (info) info.classList.remove('active');
+}
+
+function getGAStatusLabel(c) {
+  if (c.paymentMethod !== 'po') return '';
+  const s = c.gaStatus || 'menunggu-form';
+  const map = {
+    'menunggu-form': 'GA: Belum diajukan',
+    'pending': 'GA: Menunggu approval',
+    'approved': 'GA: Disetujui',
+    'rejected': 'GA: Ditolak'
+  };
+  return map[s] || ('GA: ' + s);
+}
+
+window.openClaimInGA = function(claimId) {
+  window.open(buildGARabUrl(claimId), '_blank');
+};
+
 // ==================== MULTI-ITEM CLAIM LOGIC ====================
 let claimItemsListArray = [];
 
@@ -1088,7 +1143,7 @@ function renderClaimView() {
         <td style="font-size:0.8rem;">${datesHtml}</td>
         <td style="font-size:0.8rem;">${itemsHtml}</td>
         <td>${formatRp(c.totalNominal)}</td>
-        <td><span class="badge ${c.paymentMethod === 'po' ? 'badge-info' : 'badge-secondary'}">${paymentLabel}</span></td>
+        <td><span class="badge ${c.paymentMethod === 'po' ? 'badge-info' : 'badge-secondary'}">${paymentLabel}</span>${c.paymentMethod === 'po' ? `<br><small style="color:#64748b;">${getGAStatusLabel(c)}</small><br><a href="javascript:void(0)" onclick="openClaimInGA('${c.id}')" style="font-size:0.75rem;color:#2563eb;"><i class="fas fa-external-link-alt"></i> Buka di GA</a>` : ''}</td>
         <td><span class="badge ${badgeClass}">${c.status}</span></td>
       </tr>`;
     }).join('');
@@ -1130,30 +1185,64 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
     return;
   }
   
-  // If PO is selected, redirect to GA
+  // If PO is selected, redirect to GA (new tab) -> menu RAB > Form Request (auto-fill)
   if (hasPOItem || selectedPaymentMethod === 'po') {
-    triggerNotification('Metode PO dipilih. Mengarahkan ke GA System...', true, 'info');
+    triggerNotification('Pembayaran PO dipilih. Membuka GA System di tab baru...', true, 'info');
     
-    // Open GA in new tab
-    window.open(GA_REDIRECT_URL, '_blank');
-    
-    // Still save the claim but with PO status
     const totalNominal = validItems.reduce((sum, i) => sum + i.nominal, 0);
-    const newClaimRef = push(ref(db, 'claims'));
-    set(newClaimRef, {
+    const newClaimRef = push(ref(db, 'claims')); // key dibuat lokal (sinkron)
+    const claimId = newClaimRef.key;
+    const proj = projects.find(p => p.id === projectId);
+    const poItems = validItems.map(item => {
+      const r = rabItems.find(rab => rab.id === item.itemId);
+      return {
+        ...item,
+        paymentMethod: 'po',
+        itemName: r ? r.itemName : (item.itemName || 'Item'),
+        category: r ? (r.category || '') : ''
+      };
+    });
+    const claimData = {
       projectId: projectId,
+      projectName: proj ? proj.name : '',
       status: 'pending',
       totalNominal: totalNominal,
-      items: validItems.map(item => ({ ...item, paymentMethod: 'po' })),
+      items: poItems,
       paymentMethod: 'po',
       timestamp: Date.now(),
       redirectedToGA: true,
-      redirectedAt: new Date().toLocaleString()
-    }).then(() => {
+      redirectedAt: new Date().toLocaleString(),
+      gaStatus: 'menunggu-form',
+      submittedBy: currentUserEmail || ''
+    };
+    
+    // Open GA in new tab (dipanggil langsung di event klik agar tidak diblok popup blocker)
+    const gaUrl = buildGARabUrl(claimId, {
+      claimId: claimId,
+      projectId: projectId,
+      projectName: claimData.projectName,
+      totalNominal: totalNominal,
+      items: poItems,
+      submittedBy: claimData.submittedBy,
+      timestamp: claimData.timestamp
+    });
+    const gaTab = window.open(gaUrl, '_blank');
+    if (gaTab) { try { gaTab.opener = null; } catch (e) {} }
+    
+    // Still save the claim but with PO status
+    set(newClaimRef, claimData).then(() => {
       claimItemsListArray = [];
       document.getElementById('claimProjectSelect').value = '';
+      resetClaimPaymentSelect();
       renderClaimItemsBuildLayout();
-      triggerNotification('Claim dengan metode PO telah disimpan dan dialihkan ke GA System!', true);
+      if (gaTab) {
+        triggerNotification('Claim PO tersimpan & dialihkan ke GA System (tab baru)!', true);
+      } else {
+        triggerNotification('Claim PO tersimpan. Popup diblokir browser - klik "Buka di GA" pada Claim History.', false, 'info');
+      }
+    }).catch(err => {
+      console.error(err);
+      triggerNotification('Gagal menyimpan claim PO: ' + err.message, false, 'error');
     });
     return;
   }
@@ -1171,6 +1260,7 @@ document.getElementById('submitClaimMainBtn')?.addEventListener('click', () => {
   }).then(() => {
     claimItemsListArray = [];
     document.getElementById('claimProjectSelect').value = '';
+    resetClaimPaymentSelect();
     renderClaimItemsBuildLayout();
     triggerNotification('Claim submitted successfully!');
   });
@@ -1201,10 +1291,15 @@ function renderApprovalList() {
       <td style="font-size:0.8rem;">${details}</td>
       <td>${formatRp(c.totalNominal)}</td>
       <td><span class="badge ${paymentMethod === 'po' ? 'badge-info' : 'badge-secondary'}">${paymentLabel}</span></td>
-      <td><span class="badge badge-warning">Pending</span></td>
+      <td><span class="badge badge-warning">Pending</span>${paymentMethod === 'po' ? `<br><small style="color:#64748b;">${getGAStatusLabel(c)}</small>` : ''}</td>
       <td class="action-buttons">
+        ${paymentMethod === 'po' ? `
+        <span class="badge badge-info"><i class="fas fa-external-link-alt"></i> Approval di GA (Heksi &amp; Rossiana)</span>
+        <a href="javascript:void(0)" onclick="openClaimInGA('${c.id}')" style="font-size:0.75rem;color:#2563eb;display:block;margin-top:4px;">Buka di GA</a>
+        ` : `
         <button class="btn-appr-ok" data-id="${c.id}" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approve</button>
         <button class="btn-appr-no" data-id="${c.id}" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times"></i> Reject</button>
+        `}
         </td>
       </tr>`;
   }).join('');
@@ -1220,6 +1315,10 @@ function renderApprovalList() {
 async function executeApproval(claimId, isApproved) {
   const claim = claims.find(c => c.id === claimId);
   if (!claim) return;
+  if (claim.paymentMethod === 'po') {
+    triggerNotification('Claim PO di-approve melalui aplikasi GA (Heksi & Rossiana).', false, 'info');
+    return;
+  }
   
   if (isApproved && claim.items) {
     for (let item of claim.items) {
