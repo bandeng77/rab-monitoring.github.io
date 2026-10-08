@@ -627,28 +627,23 @@
           
           <!-- PAYMENT METHOD FORM - BARU DITAMBAHKAN -->
           <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-            <label style="font-size: 1rem; font-weight: 700; color: #0f172a;">
-              <i class="fas fa-credit-card"></i> Payment Method
+            <label for="claimPaymentSelect" style="font-size: 1rem; font-weight: 700; color: #0f172a;">
+              <i class="fas fa-credit-card"></i> Pembayaran
             </label>
-            <div class="payment-method-group" id="paymentMethodGroup">
-              <div class="payment-option selected" data-value="petty-cash">
-                <input type="radio" name="paymentMethod" value="petty-cash" id="paymentPettyCash" checked>
-                <label for="paymentPettyCash"><i class="fas fa-coins"></i> Petty Cash</label>
-              </div>
-              <div class="payment-option" data-value="po">
-                <input type="radio" name="paymentMethod" value="po" id="paymentPO">
-                <label for="paymentPO"><i class="fas fa-file-invoice"></i> PO (Purchase Order)</label>
-              </div>
-            </div>
+            <!-- FORM PEMBAYARAN (DROPDOWN): Pettycash / PO -->
+            <select id="claimPaymentSelect" name="claimPayment">
+              <option value="petty-cash" selected>Pettycash</option>
+              <option value="po">PO</option>
+            </select>
             
             <!-- GA Redirect Info -->
             <div class="ga-redirect-info" id="gaRedirectInfo">
               <i class="fas fa-external-link-alt"></i>
               <div>
                 <strong>Redirect ke GA System</strong>
-                <p style="margin: 2px 0 0; font-size: 0.85rem;">Permintaan dengan metode PO akan dialihkan ke aplikasi GA untuk proses approval.</p>
+                <p style="margin: 2px 0 0; font-size: 0.85rem;">Pembayaran PO: setelah klik <b>Submit Claim</b>, aplikasi GA (menu RAB &rarr; Form Request) akan terbuka otomatis di tab baru dengan data claim terisi. Approval oleh Heksi Prasetyo &amp; Rossiana Y.L.</p>
               </div>
-              <a href="https://ga.genetek.co.id" target="_blank" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+              <a href="https://ga.genetek.co.id" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="white-space: nowrap;">
                 <i class="fas fa-arrow-right"></i> Buka GA
               </a>
             </div>
